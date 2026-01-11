@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.jpg
+*.png
+*.json
+output/
+.DS_Store
