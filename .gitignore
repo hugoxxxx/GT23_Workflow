@@ -1,7 +1,7 @@
+# .gitignore
 venv/
 __pycache__/
+output/
 *.jpg
 *.png
-*.json
-output/
 .DS_Store

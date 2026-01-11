@@ -1,0 +1,74 @@
+{
+  "KODAK": {
+    "Portra 160": ["P160", "PORTRA160"],
+    "Portra 400": ["P400", "PORTRA400"],
+    "Portra 800": ["P800", "PORTRA800"],
+    "Ektar 100": ["E100", "EKTAR100"],
+    "Gold 200": ["GOLD", "G200"],
+    "ColorPlus 200": ["CP200", "COLORPLUS"],
+    "Tri-X 400": ["TX400", "400TX", "TRIX"],
+    "T-MAX 100": ["TMX100", "TMAX100"],
+    "T-MAX 400": ["TMY400", "TMAX400"],
+    "Ektachrome E100": ["E100", "E100G", "EKTACHROME"],
+    "Ektachrome 100VS": ["100VS", "VS100"],
+    "Elite Chrome 100": ["EB3", "EB100"],
+    "Vision3 50D": ["50D", "5203"],
+    "Vision3 250D": ["250D", "5207"],
+    "Vision3 200T": ["200T", "5213"],
+    "Vision3 500T": ["500T", "5219"]
+  },
+  "FUJIFILM": {
+    "Provia 100F": ["RDP3", "RDPIII", "PROVIA"],
+    "Velvia 50": ["V50", "RVP50", "RVP3"],
+    "Velvia 100": ["V100", "RVP100"],
+    "Fujicolor C200": ["C200", "FUJI200"],
+    "Superia Premium 400": ["SUPERIA", "S400", "SP400"],
+    "Fujicolor 100": ["FUJI100", "C100"],
+    "Industrial 100": ["BUSINESS100", "业务卷"],
+    "Neopan Acros 100 II": ["ACROS", "ACROS100"],
+    "Natura 1600": ["NATURA", "NP1600"],
+    "Fujicolor Reala 100": ["REALA", "CS100"]
+  },
+  "ILFORD": {
+    "HP5 Plus": ["HP5", "HP5+", "400HP5"],
+    "FP4 Plus": ["FP4", "FP4+", "125FP4"],
+    "Delta 100": ["D100", "DELTA100"],
+    "Delta 400": ["D400", "DELTA400"],
+    "Delta 3200": ["D3200", "DELTA3200"],
+    "XP2 Super": ["XP2", "XP2400"],
+    "Pan F Plus 50": ["PANF", "PANF50"],
+    "Orthos Plus 80": ["ORTHO"]
+  },
+  "CINESTILL": {
+    "800Tungsten": ["800T", "CINE800"],
+    "400Dynamic": ["400D", "CINE400"],
+    "50Daylight": ["50D", "CINE50"],
+    "BwXX": ["DOUBLEX", "XX"]
+  },
+  "AGFA": {
+    "Vista 200": ["VISTA200", "VISTA"],
+    "Vista 400": ["VISTA400"],
+    "APX 100": ["APX100"],
+    "APX 400": ["APX400"],
+    "Ultra 100": ["ULTRA100"]
+  },
+  "ROLLEI": {
+    "Retro 80S": ["80S", "RETRO80"],
+    "Retro 400S": ["400S", "RETRO400"],
+    "RPX 25": ["RPX25"],
+    "RPX 100": ["RPX100"],
+    "RPX 400": ["RPX400"],
+    "Superpan 200": ["SUPERPAN"]
+  },
+  "FOMA": {
+    "Fomapan 100": ["FOMA100"],
+    "Fomapan 200": ["FOMA200"],
+    "Fomapan 400": ["FOMA400"]
+  },
+  "LOMOGRAPHY": {
+    "Color Negative 400": ["LOMO400"],
+    "Color Negative 800": ["LOMO800"],
+    "Metropolis": ["METRO"],
+    "LomoChrome Purple": ["PURPLE"]
+  }
+}
