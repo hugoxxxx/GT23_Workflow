@@ -1,0 +1,22 @@
+{
+  "GLOBAL": {
+    "canvas_w": 4800,
+    "canvas_h": 6000,
+    "dpi": 600
+  },
+  "135": { "cols": 6, "rows": 6, "thumb_size": 700 },
+  "645": { "cols": 4, "rows": 4, "thumb_size": 1050 },
+  "66": {
+   "cols": 3,
+    "rows": 4,
+    "col_gap": 150,    
+    "row_gap": 220,    
+    "margin_x": 220,   
+    "margin_y_top": 600, 
+    "margin_y_bottom": 370
+  },
+  "67":  { "cols": 4, "rows": 3, "thumb_size": 1050 },
+  "69":  { "cols": 3, "rows": 3, "thumb_size": 1380 },
+  "612": { "cols": 2, "rows": 3, "thumb_size": 2100 },
+  "617": { "cols": 1, "rows": 4, "thumb_size": 4200 }
+}
