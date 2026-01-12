@@ -1,0 +1,30 @@
+{
+    "6x6": {
+        "aspect_range": [1.0, 1.09],
+        "all": {
+            "side_ratio": 0.06,
+            "bottom_ratio": 0.18,
+            "font_scale": 0.035
+        }
+    },
+    "6x7_4x5": {
+        "aspect_range": [1.09, 1.28],
+        "landscape": { "side_ratio": 0.05, "bottom_ratio": 0.16, "font_scale": 0.032 },
+        "portrait": { "side_ratio": 0.08, "bottom_ratio": 0.14, "font_scale": 0.028 }
+    },
+    "645_6x8_43": {
+        "aspect_range": [1.28, 1.42],
+        "landscape": { "side_ratio": 0.045, "bottom_ratio": 0.145, "font_scale": 0.032 },
+        "portrait": { "side_ratio": 0.09, "bottom_ratio": 0.13, "font_scale": 0.028 }
+    },
+    "135_6x9": {
+        "aspect_range": [1.42, 1.70],
+        "landscape": { "side_ratio": 0.04, "bottom_ratio": 0.13, "font_scale": 0.032 },
+        "portrait": { "side_ratio": 0.10, "bottom_ratio": 0.12, "font_scale": 0.028 }
+    },
+    "PANORAMIC": {
+        "aspect_range": [1.70, 5.0],
+        "landscape": { "side_ratio": 0.03, "bottom_ratio": 0.12, "font_scale": 0.030 },
+        "portrait": { "side_ratio": 0.12, "bottom_ratio": 0.11, "font_scale": 0.025 }
+    }
+}
