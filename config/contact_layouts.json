@@ -4,19 +4,37 @@
     "canvas_h": 6000,
     "dpi": 600
   },
-  "135": { "cols": 6, "rows": 6, "thumb_size": 700 },
-  "645": { "cols": 4, "rows": 4, "thumb_size": 1050 },
-  "66": {
-   "cols": 3,
-    "rows": 4,
-    "col_gap": 150,    
-    "row_gap": 220,    
-    "margin_x": 220,   
-    "margin_y_top": 600, 
-    "margin_y_bottom": 370
+  "135": {
+    "cols": 6, "rows": 6,
+    "film_ratio": 1.5, "force_rotate": false,
+    "col_gap": 80, "row_gap": 100,
+    "margin_x": 150, "margin_y_top": 500, "margin_y_bottom": 300
   },
-  "67":  { "cols": 4, "rows": 3, "thumb_size": 1050 },
-  "69":  { "cols": 3, "rows": 3, "thumb_size": 1380 },
-  "612": { "cols": 2, "rows": 3, "thumb_size": 2100 },
-  "617": { "cols": 1, "rows": 4, "thumb_size": 4200 }
+  "645_L": {
+    "canvas_w": 6000, "canvas_h": 4800,
+    "orientation": "landscape",
+    "cols": 4, "rows": 4,
+    "col_gap": 120, "row_gap": 150,
+    "margin_x": 250, "margin_y_top": 550, "margin_y_bottom": 350
+  },
+  "645_P": {
+    "canvas_w": 4800, "canvas_h": 6000,
+    "orientation": "portrait",
+    "cols": 4, "rows": 4,
+    "col_gap": 50, 
+    "row_gap": 220,
+    "margin_x": 480, 
+    "margin_y_top": 550, "margin_y_bottom": 350
+  },
+  "66": {
+    "cols": 3, "rows": 4,
+    "film_ratio": 1.0, "force_rotate": false,
+    "col_gap": 150, "row_gap": 220,
+    "margin_x": 220, "margin_y_top": 600, "margin_y_bottom": 370
+  },
+  "67": { "cols": 3, "rows": 4, "film_ratio": 1.25, "force_rotate": false, "col_gap": 150, "row_gap": 180, "margin_x": 250, "margin_y_top": 550, "margin_y_bottom": 350 },
+  "68": { "cols": 3, "rows": 3, "film_ratio": 1.43, "force_rotate": false, "col_gap": 150, "row_gap": 250, "margin_x": 250, "margin_y_top": 600, "margin_y_bottom": 400 },
+  "69": { "cols": 2, "rows": 4, "film_ratio": 1.65, "force_rotate": false, "col_gap": 200, "row_gap": 150, "margin_x": 350, "margin_y_top": 550, "margin_y_bottom": 350 },
+  "612": { "cols": 2, "rows": 3, "film_ratio": 2.15, "force_rotate": false, "col_gap": 150, "row_gap": 250, "margin_x": 350, "margin_y_top": 600, "margin_y_bottom": 400 },
+  "617": { "cols": 1, "rows": 4, "film_ratio": 3.05, "force_rotate": false, "col_gap": 0, "row_gap": 150, "margin_x": 600, "margin_y_top": 550, "margin_y_bottom": 400 }
 }

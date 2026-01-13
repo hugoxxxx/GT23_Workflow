@@ -61,6 +61,31 @@ class MetadataHandler:
 
     def get_contact_layout(self, layout_name):
         return self.contact_db.get(layout_name, self.contact_db.get("135"))
+    
+    def detect_batch_layout(self, img_paths):
+        """
+        EN: Detect format key based on image count and aspect ratio.
+        CN: 中英双语：根据图片数量和长宽比自动探测画幅 Key。
+        """
+        if not img_paths: return "66"
+        count = len(img_paths)
+        
+        # EN: Get ratio of the first image / CN: 获取第一张图的长宽比
+        with Image.open(img_paths[0]) as img:
+            w, h = img.size
+            ratio = max(w, h) / min(w, h)
+
+        # 1. EN: Detect by count (Standard rolls) / CN: 优先按张数判定标准卷
+        if count > 20: return "135"
+        if count > 12: return "645"
+        if 11 <= count <= 12: return "66"
+        
+        # 2. EN: Detect by ratio (Wide formats) / CN: 按比例细分宽幅
+        if ratio < 1.35: return "67"
+        if ratio < 1.55: return "68"
+        if ratio < 1.85: return "69"
+        if ratio < 2.5: return "612"
+        return "617"
 
     def get_data(self, img_path, is_digital_mode=False):
         with open(img_path, 'rb') as f:
