@@ -1,74 +1,35 @@
 {
   "KODAK": {
-    "Portra 160": ["P160", "PORTRA160"],
-    "Portra 400": ["P400", "PORTRA400"],
-    "Portra 800": ["P800", "PORTRA800"],
-    "Ektar 100": ["E100", "EKTAR100"],
-    "Gold 200": ["GOLD", "G200"],
-    "ColorPlus 200": ["CP200", "COLORPLUS"],
-    "Tri-X 400": ["TX400", "400TX", "TRIX"],
-    "T-MAX 100": ["TMX100", "TMAX100"],
-    "T-MAX 400": ["TMY400", "TMAX400"],
-    "Ektachrome E100": ["E100", "E100G", "EKTACHROME"],
-    "Ektachrome 100VS": ["100VS", "VS100"],
-    "Elite Chrome 100": ["EB3", "EB100"],
-    "Vision3 50D": ["50D", "5203"],
-    "Vision3 250D": ["250D", "5207"],
-    "Vision3 200T": ["200T", "5213"],
-    "Vision3 500T": ["500T", "5219"]
+    "Portra 160": { "features": ["P160", "PORTRA160"], "edge_code": "KODAK PORTRA 160", "visual": { "emulsion": "KODAK  PORTRA  160  4061", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Portra 400": { "features": ["P400", "PORTRA400"], "edge_code": "KODAK PORTRA 400", "visual": { "emulsion": "KODAK  PORTRA  400  4062", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Portra 800": { "features": ["P800", "PORTRA800"], "edge_code": "KODAK PORTRA 800", "visual": { "emulsion": "KODAK  PORTRA  800  4063", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Ektar 100": { "features": ["E100", "EKTAR100"], "edge_code": "KODAK EKTAR 100", "visual": { "emulsion": "KODAK  EKTAR  100  4060", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Gold 200": { "features": ["GOLD", "G200"], "edge_code": "KODAK GOLD 200", "visual": { "emulsion": "KODAK  GOLD  200", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "UltraMax 400": { "features": ["UMAX", "ULTRAMAX"], "edge_code": "KODAK ULTRAMAX 400", "visual": { "emulsion": "KODAK  ULTRAMAX  400", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "ColorPlus 200": { "features": ["CP200", "COLORPLUS"], "edge_code": "KODAK CP 200", "visual": { "emulsion": "KODAK  CP  200", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Ektachrome E100": { "features": ["E100", "E100G"], "edge_code": "KODAK E100", "visual": { "emulsion": "KODAK  E100  5085", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
+    "Ektachrome E100VS": { "features": ["E100VS", "VS"], "edge_code": "KODAK E100VS", "visual": { "emulsion": "KODAK  E100VS", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
+    "Tri-X 400": { "features": ["TX400", "400TX"], "edge_code": "400TX", "visual": { "emulsion": "KODAK  400TX  7064", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } },
+    "T-Max 100": { "features": ["TMX", "TMAX100"], "edge_code": "TMX 100", "visual": { "emulsion": "KODAK  TMX  100", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } },
+    "T-Max 400": { "features": ["TMY", "TMAX400"], "edge_code": "TMY 400", "visual": { "emulsion": "KODAK  TMY  400", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } }
   },
   "FUJIFILM": {
-    "Provia 100F": ["RDP3", "RDPIII", "PROVIA"],
-    "Velvia 50": ["V50", "RVP50", "RVP3"],
-    "Velvia 100": ["V100", "RVP100"],
-    "Fujicolor C200": ["C200", "FUJI200"],
-    "Superia Premium 400": ["SUPERIA", "S400", "SP400"],
-    "Fujicolor 100": ["FUJI100", "C100"],
-    "Industrial 100": ["BUSINESS100", "业务卷"],
-    "Neopan Acros 100 II": ["ACROS", "ACROS100"],
-    "Natura 1600": ["NATURA", "NP1600"],
-    "Fujicolor Reala 100": ["REALA", "CS100"]
+    "Provia 100F": { "features": ["RDP3", "RDPIII", "PROVIA"], "edge_code": "RDPIII", "visual": { "emulsion": "FUJIFILM  RDP III  100F", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
+    "Velvia 50": { "features": ["RVP50", "VELVIA50"], "edge_code": "RVP50", "visual": { "emulsion": "FUJIFILM  RVP  50", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
+    "Velvia 100": { "features": ["RVP100", "VELVIA100"], "edge_code": "RVP100", "visual": { "emulsion": "FUJIFILM  RVP  100", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
+    "Superia 400": { "features": ["S400", "SUPERIA400"], "edge_code": "FUJI 400", "visual": { "emulsion": "FUJIFILM  SUPERIA  400", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Fujicolor C200": { "features": ["C200", "FUJICOLOR200"], "edge_code": "FUJI C200", "visual": { "emulsion": "FUJICOLOR  200", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Industrial 100": { "features": ["GY100", "INDUSTRIAL100", "业务卷"], "edge_code": "FUJI 100", "visual": { "emulsion": "FUJIFILM  100", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Industrial 400": { "features": ["GY400", "INDUSTRIAL400", "业务卷"], "edge_code": "FUJI 400", "visual": { "emulsion": "FUJIFILM  400", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
+    "Neopan Acros 100 II": { "features": ["ACROS", "ACROS100"], "edge_code": "ACROS", "visual": { "emulsion": "FUJIFILM  ACROS  100  II", "edge_marking_color": [200, 200, 200, 160], "type": "BW" } }
   },
   "ILFORD": {
-    "HP5 Plus": ["HP5", "HP5+", "400HP5"],
-    "FP4 Plus": ["FP4", "FP4+", "125FP4"],
-    "Delta 100": ["D100", "DELTA100"],
-    "Delta 400": ["D400", "DELTA400"],
-    "Delta 3200": ["D3200", "DELTA3200"],
-    "XP2 Super": ["XP2", "XP2400"],
-    "Pan F Plus 50": ["PANF", "PANF50"],
-    "Orthos Plus 80": ["ORTHO"]
-  },
-  "CINESTILL": {
-    "800Tungsten": ["800T", "CINE800"],
-    "400Dynamic": ["400D", "CINE400"],
-    "50Daylight": ["50D", "CINE50"],
-    "BwXX": ["DOUBLEX", "XX"]
-  },
-  "AGFA": {
-    "Vista 200": ["VISTA200", "VISTA"],
-    "Vista 400": ["VISTA400"],
-    "APX 100": ["APX100"],
-    "APX 400": ["APX400"],
-    "Ultra 100": ["ULTRA100"]
-  },
-  "ROLLEI": {
-    "Retro 80S": ["80S", "RETRO80"],
-    "Retro 400S": ["400S", "RETRO400"],
-    "RPX 25": ["RPX25"],
-    "RPX 100": ["RPX100"],
-    "RPX 400": ["RPX400"],
-    "Superpan 200": ["SUPERPAN"]
-  },
-  "FOMA": {
-    "Fomapan 100": ["FOMA100"],
-    "Fomapan 200": ["FOMA200"],
-    "Fomapan 400": ["FOMA400"]
-  },
-  "LOMOGRAPHY": {
-    "Color Negative 400": ["LOMO400"],
-    "Color Negative 800": ["LOMO800"],
-    "Metropolis": ["METRO"],
-    "LomoChrome Purple": ["PURPLE"]
+    "HP5 Plus": { "features": ["HP5", "HP5+"], "edge_code": "ILFORD HP5 PLUS", "visual": { "emulsion": "ILFORD  HP5  PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW" } },
+    "FP4 Plus": { "features": ["FP4", "FP4+"], "edge_code": "ILFORD FP4 PLUS", "visual": { "emulsion": "ILFORD  FP4  PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW" } },
+    "Delta 100": { "features": ["D100", "DELTA100"], "edge_code": "ILFORD DELTA 100", "visual": { "emulsion": "ILFORD  DELTA  100", "edge_marking_color": [220, 220, 220, 180], "type": "BW" } },
+    "Delta 400": { "features": ["D400", "DELTA400"], "edge_code": "ILFORD DELTA 400", "visual": { "emulsion": "ILFORD  DELTA  400", "edge_marking_color": [220, 220, 220, 180], "type": "BW" } },
+    "Delta 3200": { "features": ["D3200", "DELTA3200"], "edge_code": "ILFORD DELTA 3200", "visual": { "emulsion": "ILFORD  DELTA  3200", "edge_marking_color": [220, 220, 220, 180], "type": "BW" } },
+    "XP2 Super": { "features": ["XP2", "XP2400"], "edge_code": "ILFORD XP2", "visual": { "emulsion": "ILFORD  XP2  SUPER", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } },
+    "Pan F Plus 50": { "features": ["PANF", "PANF50"], "edge_code": "ILFORD PAN F PLUS", "visual": { "emulsion": "ILFORD  PAN F  PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW" } }
   }
 }
