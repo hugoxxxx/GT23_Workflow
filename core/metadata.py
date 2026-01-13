@@ -28,23 +28,19 @@ class MetadataHandler:
         with open(contact_path, 'r', encoding='utf-8') as f:
             self.contact_db = json.load(f)
 
-        # --- EN: Flatten film DB / CN: 拍平胶片库 ---
         self.films_map = {}
-        # --- NEW SURGERY: Added for Contact Sheet / 新增索引页所需映射 ---
         self.edge_code_map = {} 
         self.marking_color_map = {} 
 
         for brand, models in raw_films.items():
             for model_name, content in models.items():
                 full_display_name = f"{brand} {model_name}"
-                
-                # EN: Handle new Object structure / CN: 处理新的对象结构
                 if isinstance(content, dict):
                     aliases = content.get("features", [])
                     self.edge_code_map[full_display_name] = content.get("edge_code", model_name.upper())
                     self.marking_color_map[full_display_name] = content.get("visual", {}).get("color", [245, 130, 35, 210])
                 else:
-                    aliases = content # EN: Legacy List support / CN: 兼容旧列表
+                    aliases = content 
                 
                 self.films_map[model_name.upper()] = full_display_name
                 for alias in aliases:
@@ -69,18 +65,14 @@ class MetadataHandler:
         """
         if not img_paths: return "66"
         count = len(img_paths)
-        
-        # EN: Get ratio of the first image / CN: 获取第一张图的长宽比
         with Image.open(img_paths[0]) as img:
             w, h = img.size
             ratio = max(w, h) / min(w, h)
 
-        # 1. EN: Detect by count (Standard rolls) / CN: 优先按张数判定标准卷
         if count > 20: return "135"
         if count > 12: return "645"
         if 11 <= count <= 12: return "66"
         
-        # 2. EN: Detect by ratio (Wide formats) / CN: 按比例细分宽幅
         if ratio < 1.35: return "67"
         if ratio < 1.55: return "68"
         if ratio < 1.85: return "69"
@@ -88,15 +80,25 @@ class MetadataHandler:
         return "617"
 
     def get_data(self, img_path, is_digital_mode=False):
+        """
+        EN: Extract metadata. FocalLength is now universally extracted.
+        CN: 中英双语：提取元数据。焦距信息现在在所有模式下均会提取。
+        """
         with open(img_path, 'rb') as f:
             tags = exifread.process_file(f, details=False)
 
+        # 1. EN: Date/Time / CN: 提取日期时间
+        dt_raw = tags.get('EXIF DateTimeOriginal') or tags.get('Image DateTime')
+        dt_str = str(dt_raw).strip() if dt_raw else ""
+
+        # 2. EN: Hardware / CN: 提取硬件信息
         make = str(tags.get('Image Make', 'Unknown')).strip()
         model = str(tags.get('Image Model', 'Unknown')).strip()
         lens = str(tags.get('EXIF LensModel', 
                    tags.get('MakerNote LensModel', 
                    tags.get('EXIF LensSpecification', '')))).strip()
 
+        # 3. EN: Exposure / CN: 提取曝光参数
         exposure_time = tags.get('EXIF ExposureTime')
         shutter_str = ""
         if exposure_time:
@@ -109,55 +111,54 @@ class MetadataHandler:
             v = f_number.values[0]
             aperture_str = str(round(float(v.numerator) / float(v.denominator), 1))
 
-        iso_str = ""; focal_str = ""; display_film = ""
-        # --- NEW SURGERY: Default physical values / 默认物理参数 ---
+        # --- EN: Focal Length Extraction (Universal) / CN: 焦距提取 (通用) ---
+        focal_str = ""
+        focal_val = tags.get('EXIF FocalLength')
+        if focal_val:
+            f_num = focal_val.values[0]
+            f_res = float(f_num.numerator) / float(f_num.denominator)
+            focal_str = f"{int(f_res)}mm"
+
+        iso_str = ""; display_film = ""
         edge_code = "SAFETY FILM"; contact_color = (245, 130, 35, 210)
 
         if is_digital_mode:
             iso_val = tags.get('EXIF ISOSpeedRatings')
             iso_str = str(iso_val.values[0]) if iso_val else ""
-            focal_val = tags.get('EXIF FocalLength')
-            if focal_val:
-                f_num = focal_val.values[0]
-                focal_str = f"{int(float(f_num.numerator)/float(f_num.denominator))}mm"
         else:
             film_raw = (tags.get('Image ImageDescription') or 
                         tags.get('EXIF ImageDescription') or 
                         tags.get('EXIF UserComment') or "")
             raw_desc = str(film_raw.values if hasattr(film_raw, 'values') else film_raw).strip()
             display_film = self.match_film(raw_desc)
-            # --- NEW SURGERY: Fetch Edge/Color / 提取物理代码与颜色 ---
             if display_film in self.edge_code_map:
                 edge_code = self.edge_code_map[display_film]
                 contact_color = tuple(self.marking_color_map[display_film])
 
         with Image.open(img_path) as img:
             w, h = img.size
-        
         ratio = max(w, h) / min(w, h)
         is_portrait = h > w
-        eps = 0.01
         layout_params = {"name": "CUSTOM", "side": 0.04, "bottom": 0.13, "font_scale": 0.032, "is_portrait": is_portrait}
         
         for name, cfg in self.layout_db.items():
             r_min, r_max = cfg['aspect_range']
-            if (r_min - eps) <= ratio <= (r_max + eps):
-                params = cfg['all'] if "all" in cfg else cfg.get("portrait" if is_portrait else "landscape")
+            if (r_min - 0.01) <= ratio <= (r_max + 0.01):
+                params = cfg.get("portrait" if is_portrait else "landscape", cfg.get("all"))
                 layout_params = {
                     "name": name, "side": params['side_ratio'], "bottom": params['bottom_ratio'],
                     "font_scale": params.get('font_scale', 0.032), "is_portrait": is_portrait
                 }
                 break
 
-        # --- EN: Final Return (Strictly appended new fields) ---
-        # --- CN: 最终返回（严格追加新字段，不改动原有 Key） ---
         return {
             'Make': make, 'Model': model, 'LensModel': lens,
             'ExposureTimeStr': shutter_str, 'FNumber': aperture_str,
             'ISO': iso_str, 'FocalLength': focal_str,
+            'DateTime': dt_str,
             'Film': display_film,
-            'EdgeCode': edge_code,        # 新增给索引页
-            'ContactColor': contact_color, # 新增给索引页
+            'EdgeCode': edge_code,
+            'ContactColor': contact_color,
             'is_digital': is_digital_mode,
             'layout': layout_params
         }
