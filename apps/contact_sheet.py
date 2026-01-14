@@ -3,11 +3,13 @@ import os
 from core.metadata import MetadataHandler
 from core.renderers.renderer_66 import Renderer66
 from core.renderers.renderer_645 import Renderer645
+from core.renderers.renderer_67 import Renderer67
+from core.renderers.renderer_135 import Renderer135
 
 class ContactSheetPro:
     def __init__(self):
         self.meta = MetadataHandler()
-        self.renderers = {"66": Renderer66(), "645": Renderer645()}
+        self.renderers = {"66": Renderer66(), "645": Renderer645(), "67": Renderer67(), "135": Renderer135()}
 
     def run(self):
         input_dir, output_dir = "photos_in", "photos_out"
@@ -21,7 +23,7 @@ class ContactSheetPro:
             user_input = input("   >>> 请输入关键字 (如 p400): ").strip()
             matched = self.meta.match_film(user_input)
             if matched:
-                self.meta.get_data(img_paths[0], manual_film=matched)
+                sample_data = self.meta.get_data(img_paths[0], manual_film=matched)
 
         # 2. 调度渲染器执行
         layout_key = self.meta.detect_batch_layout(img_paths)
