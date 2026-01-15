@@ -25,11 +25,11 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ## 🗺️ Roadmap | 路线图
 
-- [x] **v1.0 **: Basic layout, Dynamic EXIF, and Auto-rotation. | 完成基础排版、动态 EXIF 及自动旋转功能。
-- [x] **Integrated Toolsets**: Both Border Tool and Contact Sheet are fully operational via CLI. | **已完成：双工具链集成，支持命令行菜单切换。**
-- [ ] **v1.8 (Current)**: Current goal: Improve the aesthetics of border tools for different image sizes. | **当前目标：完善不同画幅边框工具审美。**
-- [ ] **v2.0**: Executable Packaging (EXE). | 完成程序封包 (EXE)，实现开箱即用。
-- [ ] **v2.1**: GUI version for non-technical users. | 开发图形界面版本，彻底告别命令行。
+- [x] **v1.0 - v1.8**: Basic layout, Dynamic EXIF, and Auto-rotation. | 完成基础排版、动态 EXIF 及自动旋转。
+- [x] **135 to 67 Coverage**: Full contact sheet support for all formats. | **已完成：索引工具支持 135 到 67 全画幅覆盖。**
+- [ ] **Border Tool Aesthetic**: Fine-tuning layout for 645/67 (66 is currently optimized). | **进行中：优化 645/67 边框审美（目前 66 画幅已调优）。**
+- [ ] **v1.9 (Next)**: **Executable Packaging (EXE)**. | **下一步：完成程序封包 (EXE)。**
+- [ ] **v2.0**: **GUI Interface**. | 开发图形界面版本。
 
 ---
 
