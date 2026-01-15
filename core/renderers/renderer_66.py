@@ -73,17 +73,17 @@ class Renderer66(BaseFilmRenderer):
                     canvas.paste(img_resized, (int(px), int(curr_y)))
 
                 # 元数据 (焦距单位 mm 小写)
-                dt_raw = frame_data.get('DateTime', '')
-                date_str = dt_raw[:10].replace(":", "/")[2:] if len(dt_raw) >= 10 else "00/00/00"
-                focal = frame_data.get('FocalLength', '')
-                focal_display = focal.replace("MM", "mm") if focal else ""
-                info_str = f"F{frame_data.get('FNumber','')}  {frame_data.get('ExposureTimeStr','')}  {focal_display}".strip()
-
+                data = meta_handler.get_data(img_list[idx])
+                date_str, exif_str = self.get_clean_exif(data)
+                
                 text_y_start = curr_y + new_h + 15
-                draw.text((sx + strip_w//2 - draw.textlength(date_str, font=self.seg_font)//2, text_y_start), 
+                if date_str and str(date_str).strip().upper() != "NONE":
+                    draw.text((sx + strip_w//2 - draw.textlength(date_str, font=self.seg_font)//2, text_y_start), 
                           date_str, font=self.seg_font, fill=cur_color)
-                draw.text((sx + strip_w//2 - draw.textlength(info_str, font=self.seg_font)//2, text_y_start + 45), 
-                          info_str, font=self.seg_font, fill=cur_color)
+                    
+                if exif_str and str(exif_str).strip().upper() != "NONE":
+                    draw.text((sx + strip_w//2 - draw.textlength(exif_str, font=self.seg_font)//2, text_y_start + 45), 
+                          exif_str, font=self.seg_font, fill=cur_color)
 
                 # 右侧标识
                 r_mid = sx + strip_w - black_margin_w // 2

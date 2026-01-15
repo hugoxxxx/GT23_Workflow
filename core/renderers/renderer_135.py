@@ -54,8 +54,8 @@ class Renderer135(BaseFilmRenderer):
                 if idx >= len(img_list): break
                 
                 curr_x, py = m_x + c * (photo_w + gap_w), sy + info_h 
-                if not sample_data:
-                    sample_data = meta_handler.get_data(img_list[0])
+                #if not sample_data:
+                sample_data = meta_handler.get_data(img_list[idx])
             
                 cur_color = sample_data.get("ContactColor", (245, 130, 35, 210))
                 
@@ -78,9 +78,30 @@ class Renderer135(BaseFilmRenderer):
                 # 底部 2mm 缝隙垂直居中
                 draw.text((gap_center_x - fw//2, sy + strip_h - int(1.8 * px_per_mm)), frame_label, font=em_font, fill=cur_color)
                 
-                # 压低的数据后背 (极靠右下角)
-                self._draw_glowing_data_back(canvas, sample_data, curr_x, py, photo_w, photo_h, cur_color, db_font, px_per_mm)
+                # [精准定义] 我们在这里定义两个变量，分别控制日期和 EXIF
+                # CN: date_font 用于照片内左下角，exif_font 用于照片外黑边
+                date_font = self.seg_font.font_variant(size=int(1.5 * px_per_mm)) 
+                exif_font = self.seg_font.font_variant(size=int(1.5 * px_per_mm)) # EXIF 稍微小一点，适合塞进黑边
 
+                # 压低的数据后背 (极靠右下角)
+                self._draw_glowing_data_back(canvas, sample_data, curr_x, py, photo_w, photo_h, cur_color, date_font, exif_font, px_per_mm)                     
+        
+        # --- [最终截断] 全局右侧清理 ---
+        # CN: 135 渲染器尺寸固定，直接在照片右边缘外侧刷一层背景色，切掉所有超出的序号。
+        # EN: Global crop: Overwrite anything beyond the last photo column with background color.
+        
+        # 计算理论上最后一列照片的右边缘 (px)
+        # 135 模式：起始偏移 + 列数 * (照片宽 + 间隙) - 最后一个多算的间隙
+        max_photo_right = m_x + cols * (photo_w + gap_w) - gap_w
+        
+        # 截断点：最后一张照片右边缘 + 1mm 呼吸位
+        final_cutoff_x = max_photo_right + int(1.0 * px_per_mm)
+        
+        # 如果截断点在画布内，直接刷到底
+        if final_cutoff_x < new_w:
+            # draw.rectangle([左, 上, 右, 下], fill=背景色)
+            # y1=0, y2=new_h 代表从画布顶部一直刷到底部
+            draw.rectangle([final_cutoff_x, 0, new_w, new_h], fill=(235, 235, 235))            
         return canvas
 
     def _draw_iso_sprockets(self, draw, x_start, x_end, sy, info_h, strip_h, sw, sh, px_mm):
@@ -106,26 +127,31 @@ class Renderer135(BaseFilmRenderer):
         draw.text((pos[0]+1, pos[1]+1), text, font=font, fill=glow_color)
         draw.text(pos, text, font=font, fill=color)
 
-    def _draw_glowing_data_back(self, canvas, data, px, py, pw, ph, color, font, px_mm):
-        """ 
-        CN: 动态背印逻辑：使用基类清洗数据，有则显示，无则隐藏。
-        EN: Dynamic DataBack: Use base cleaner, show if exists, hide if None.
-        """
-        # --- [精准修改] 调用基类清洗方法 ---
+    def _draw_glowing_data_back(self, canvas, data, px, py, pw, ph, color, d_font, e_font, px_mm):
         date_str, exif_str = self.get_clean_exif(data)
-        
-        # 1. 绘制日期 (只有非 NONE 时)
-        # EN: Only draw Date if it's valid and not the string "NONE"
+    
+        # 1. 绘制日期 (右下角版)
         if date_str and str(date_str).strip().upper() != "NONE":
-            tw_d = ImageDraw.Draw(canvas).textlength(date_str, font=font)
-            # 保持你原来的极低位坐标计算
-            pos_d = (px + pw - tw_d - 5 * px_mm, py + ph - 12 * px_mm)
-            self._draw_single_glowing_text(canvas, date_str, pos_d, font, color)
+            margin = 1.5 * px_mm
+            bbox = d_font.getbbox(date_str) # 使用 d_font
+            text_w, text_h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+            pos_d = (px + pw - margin - text_w, py + ph - margin - text_h)
+            self._draw_single_glowing_text(canvas, date_str, pos_d, d_font, color)
 
-        # 2. 绘制 EXIF (只有非 NONE 时)
-        # EN: Only draw EXIF if it's valid and not the string "NONE"
+        # 2. EXIF (精准对齐下方黑边居中)
         if exif_str and str(exif_str).strip().upper() != "NONE":
-            tw_e = ImageDraw.Draw(canvas).textlength(exif_str, font=font)
-            # 保持你原来的极低位坐标计算
-            pos_e = (px + pw - tw_e - 5 * px_mm, py + ph - 6 * px_mm)
-            self._draw_single_glowing_text(canvas, exif_str, pos_e, font, color)
+            # 计算 y 偏移：
+            # 135 胶卷底部黑边约 5.5mm，齿孔占据了中间 2.8mm。
+            # 齿孔下方的纯黑边宽度约只有 1.5mm - 2mm。
+            # 我们将文字中心定在距离照片底部约 4.6mm 处。
+            offset_y = 4 * px_mm 
+            
+            # 计算 x 居中：
+            # 照片起点 + (照片宽 - 文字宽) / 2
+            tw_e = ImageDraw.Draw(canvas).textlength(exif_str, font=e_font)
+            pos_e_x = px + (pw - tw_e) // 2
+            
+            # y 轴：照片底边 py + ph 再加上偏移
+            pos_e_y = py + ph + offset_y
+            
+            self._draw_single_glowing_text(canvas, exif_str, (pos_e_x, pos_e_y), e_font, color)
