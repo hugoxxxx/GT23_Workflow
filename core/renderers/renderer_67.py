@@ -9,7 +9,7 @@ class Renderer67(BaseFilmRenderer):
     CN: 6x7 画幅渲染器 (645 物理喷码步进 + 左对齐随机抖动版)
     """
     
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
         print("\n" + "="*65)
         print("CN: [67 3.2] 喷码逻辑校准 (步进: 645物理长度, 对齐: 左侧随机抖动)")
         print("="*65)
@@ -28,7 +28,10 @@ class Renderer67(BaseFilmRenderer):
         PHOTO_ASPECT = 70.0 / 56.0 
         scaled_seg_font = self.seg_font.font_variant(size=32)
         
-        sample_data = meta_handler.get_data(img_list[0])
+        # 2. [精准注入] 获取全卷统一信息
+        if not sample_data:
+            sample_data = meta_handler.get_data(img_list[0])
+            
         cur_color = sample_data.get("ContactColor", (245, 130, 35, 210))
         raw_text = self.get_marking_str(sample_data, user_emulsion)
 
@@ -92,8 +95,17 @@ class Renderer67(BaseFilmRenderer):
 
                 # C. 右侧 EXIF (150px 压缩空间)
                 data = meta_handler.get_data(img_list[idx])
-                exif_x_base = last_photo_right_x + 35 
-                self._draw_exif_p_scaled(canvas, data, exif_x_base, py, photo_h, cur_color, scaled_seg_font)
+                date_str, exif_str = self.get_clean_exif(data)
+                    
+                    # 关键物理逻辑：右侧黑边的中轴线
+                right_margin_center_x = curr_x + photo_w + (col_pitch - photo_w) // 2
+                if date_str and str(date_str).strip().upper() != "NONE":
+                    date_layer = self.create_rotated_seg_text(date_str, 90, cur_color)
+                    canvas.paste(date_layer, (int(right_margin_center_x - 45), int(py + photo_h // 2 - date_layer.height // 2)), date_layer)
+
+                if exif_str and str(exif_str).strip().upper() != "NONE":
+                    exif_layer = self.create_rotated_seg_text(exif_str, 90, cur_color)
+                    canvas.paste(exif_layer, (int(right_margin_center_x + 5), int(py + photo_h // 2 - exif_layer.height // 2)), exif_layer)
 
             if last_photo_right_x > 0:
                 crop_line_x = last_photo_right_x + 150
@@ -101,24 +113,6 @@ class Renderer67(BaseFilmRenderer):
                     draw.rectangle([crop_line_x, sy, c_w, sy + strip_h], fill=bg_color)
 
         return canvas
-
-    def _draw_exif_p_scaled(self, canvas, data, start_x, py, photo_h, color, font):
-        dt = data.get("DateTime", "")
-        date_str = dt[2:10].replace(":", "/") if len(dt) >= 10 else "00/00/00"
-        date_layer = self.create_rotated_text_with_font(date_str, font, 90, color)
-        canvas.paste(date_layer, (int(start_x), int(py + photo_h // 2 - date_layer.height // 2)), date_layer)
-        
-        exif_str = f"f/{data.get('FNumber', '--')} {data.get('ExposureTimeStr', '--')}s {str(data.get('FocalLength', '---')).lower()}"
-        exif_layer = self.create_rotated_text_with_font(exif_str, font, 90, color)
-        canvas.paste(exif_layer, (int(start_x + 35), int(py + photo_h // 2 - exif_layer.height // 2)), exif_layer)
-
-    def create_rotated_text_with_font(self, text, font, angle, color):
-        left, top, right, bottom = font.getbbox(text)
-        w, h = right - left, bottom - top
-        txt_img = Image.new('RGBA', (w + 20, h + 10), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(txt_img)
-        draw.text((10, 5), text, font=font, fill=color)
-        return txt_img.rotate(angle, expand=True)
 
     def _paste_photo(self, canvas, path, x, y, w, h, force_landscape=False):
         with Image.open(path) as img:

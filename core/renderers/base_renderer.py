@@ -35,8 +35,13 @@ class BaseFilmRenderer:
         return canvas, user_emulsion
 
     def get_marking_str(self, sample_data, user_emulsion):
-        film_text = sample_data.get("EdgeCode") or "KODAK"
-        return f"{user_emulsion}  {film_text}"
+        # EN: Priority: EdgeCode > Film (User Input) > Default
+        # CN: 优先级：专业喷码 > 匹配到的型号名(或手动输入) > 默认值
+        film_text = sample_data.get("EdgeCode") or sample_data.get("Film") or "又错了"
+        
+        # 只有存在乳剂号时才拼接，体现精准度
+        prefix = f"{user_emulsion.strip()}  " if user_emulsion else ""
+        return f"{prefix}{film_text}"
 
     def create_stretched_triangle(self, color):
         """EN: 16x34 base triangle / CN: 生成基础拉伸三角符号"""
@@ -64,3 +69,26 @@ class BaseFilmRenderer:
         draw = ImageDraw.Draw(img)
         draw.text((10, 0), text, font=self.seg_font, fill=color)
         return img.rotate(angle, expand=True)
+    
+    def get_clean_exif(self, data):
+        """
+        EN: Return sanitized Date and EXIF strings. Returns None if missing.
+        CN: 返回清洗后的日期和 EXIF 字符串。如果缺失则返回 None。
+        """
+        # 1. 处理日期
+        dt = data.get("DateTime", "")
+        date_out = dt[2:10].replace(":", "/") if len(dt) >= 10 else None
+
+        # 2. 处理 EXIF 组合
+        f_num = data.get('FNumber')
+        exp_val = data.get('ExposureTimeStr')
+        foc_val = str(data.get("FocalLength", "")).lower()
+        
+        parts = []
+        if f_num: parts.append(f"f/{f_num}")
+        if exp_val: parts.append(f"{exp_val}s")
+        if foc_val and foc_val not in ["", "---", "--"]: parts.append(foc_val)
+        
+        exif_out = "  ".join(parts) if parts else None
+        
+        return date_out, exif_out

@@ -9,9 +9,9 @@ class Renderer135(BaseFilmRenderer):
     CN: 135 画幅 - 动态喷码修正版：解决写死字符串问题、数据后背极低位压低。
     """
     
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
         print("\n" + "="*65)
-        print("CN: [135 9.2] 动态喷码：修复 EdgeCode 读取逻辑，压低右下角 EXIF")
+        print("CN: [135 9.2] 动态喷码：适配 sample_data 注入与 NONE 过滤")
         print("="*65)
         
         final_cfg = meta_handler.get_contact_layout("135")
@@ -54,15 +54,17 @@ class Renderer135(BaseFilmRenderer):
                 if idx >= len(img_list): break
                 
                 curr_x, py = m_x + c * (photo_w + gap_w), sy + info_h 
-                data = meta_handler.get_data(img_list[idx])
-                cur_color = data['ContactColor']
+                if not sample_data:
+                    sample_data = meta_handler.get_data(img_list[0])
+            
+                cur_color = sample_data.get("ContactColor", (245, 130, 35, 210))
                 
                 self._paste_photo_auto_rotate(canvas, img_list[idx], curr_x, py, photo_w, photo_h)
                 
                 # --- [修正逻辑] 动态 EdgeCode ---
                 # EN: Prioritize EdgeCode, fallback to Film name, then Emulsion
                 # CN: 优先级：EdgeCode > 胶卷名称 > 用户填写的乳剂名
-                display_code = data.get('EdgeCode') or data.get('Film') or user_emulsion
+                display_code = sample_data.get('EdgeCode') or sample_data.get('Film') or user_emulsion
                 top_label = f"{idx + 1}  {display_code}"
                 
                 tw = draw.textlength(top_label, font=em_font)
@@ -77,7 +79,7 @@ class Renderer135(BaseFilmRenderer):
                 draw.text((gap_center_x - fw//2, sy + strip_h - int(1.8 * px_per_mm)), frame_label, font=em_font, fill=cur_color)
                 
                 # 压低的数据后背 (极靠右下角)
-                self._draw_glowing_data_back(canvas, data, curr_x, py, photo_w, photo_h, cur_color, db_font, px_per_mm)
+                self._draw_glowing_data_back(canvas, sample_data, curr_x, py, photo_w, photo_h, cur_color, db_font, px_per_mm)
 
         return canvas
 
@@ -105,17 +107,25 @@ class Renderer135(BaseFilmRenderer):
         draw.text(pos, text, font=font, fill=color)
 
     def _draw_glowing_data_back(self, canvas, data, px, py, pw, ph, color, font, px_mm):
-        """ CN: 极低位对齐：距离照片边缘仅 1mm (约 0.1mm 物理安全距离) """
-        # 1. 日期 (最底层)
-        dt = data.get("DateTime", "")
-        if dt and len(dt) >= 10:
-            date_str = dt[2:10].replace(":", " ")
-            tw_d = ImageDraw.Draw(canvas).textlength(date_str, font=font)
-            # 边距压到 1mm (px_mm * 1.0)
-            self._draw_single_glowing_text(canvas, date_str, (px + pw - tw_d - int(1.0 * px_mm), py + ph - int(2.0 * px_mm)), font, color)
+        """ 
+        CN: 动态背印逻辑：使用基类清洗数据，有则显示，无则隐藏。
+        EN: Dynamic DataBack: Use base cleaner, show if exists, hide if None.
+        """
+        # --- [精准修改] 调用基类清洗方法 ---
+        date_str, exif_str = self.get_clean_exif(data)
         
-        # 2. EXIF (日期上方)
-        if data.get('FNumber') != '--':
-            exif_s = f"f/{data['FNumber']} {data['ExposureTimeStr']}"
-            tw_e = ImageDraw.Draw(canvas).textlength(exif_s, font=font)
-            self._draw_single_glowing_text(canvas, exif_s, (px + pw - tw_e - int(1.0 * px_mm), py + ph - int(4.0 * px_mm)), font, color)
+        # 1. 绘制日期 (只有非 NONE 时)
+        # EN: Only draw Date if it's valid and not the string "NONE"
+        if date_str and str(date_str).strip().upper() != "NONE":
+            tw_d = ImageDraw.Draw(canvas).textlength(date_str, font=font)
+            # 保持你原来的极低位坐标计算
+            pos_d = (px + pw - tw_d - 5 * px_mm, py + ph - 12 * px_mm)
+            self._draw_single_glowing_text(canvas, date_str, pos_d, font, color)
+
+        # 2. 绘制 EXIF (只有非 NONE 时)
+        # EN: Only draw EXIF if it's valid and not the string "NONE"
+        if exif_str and str(exif_str).strip().upper() != "NONE":
+            tw_e = ImageDraw.Draw(canvas).textlength(exif_str, font=font)
+            # 保持你原来的极低位坐标计算
+            pos_e = (px + pw - tw_e - 5 * px_mm, py + ph - 6 * px_mm)
+            self._draw_single_glowing_text(canvas, exif_str, pos_e, font, color)

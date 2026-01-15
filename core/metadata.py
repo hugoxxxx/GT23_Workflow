@@ -25,34 +25,38 @@ class MetadataHandler:
         with open(contact_path, 'r', encoding='utf-8') as f:
             self.contact_layouts = json.load(f)
 
-        # --- [必要修改 1/3] CN: 拍平特征映射表，用于 match_film ---
-        self.edge_code_map = {}
-        self.marking_color_map = {}
-        self.feature_to_std = {} 
+        # --- [精准重构] 扁平化特征映射表：匹配即所得 ---
+        # CN: 将 edge_code 和 color 直接绑定到特征词上，实现一次匹配全属性交付
+        self.feature_db = {} 
 
         for brand, films in self.films_map.items():
             for std_name, info in films.items():
-                self.edge_code_map[std_name] = info.get('edge_code', std_name.upper())
-                self.marking_color_map[std_name] = info.get('visual', {}).get('edge_marking_color', [245, 130, 35, 210])
+                # EN: Create an attribute bundle for each film
+                # CN: 封装属性包：包含标准名、喷码和视觉颜色
+                attr_bundle = {
+                    "std_name": std_name,
+                    "edge_code": info.get('edge_code', std_name.upper()),
+                    "color": info.get('visual', {}).get('edge_marking_color', [245, 130, 35, 210])
+                }
                 
-                # 建立特征关键字搜索 (标准名 + features 列表)
-                self.feature_to_std[std_name.upper()] = std_name
+                # EN: Map std_name and features to the same bundle
+                # CN: 建立特征索引：标准名 + 特征列表 (如 P400) 全指向同一个属性包
+                self.feature_db[std_name.upper()] = attr_bundle
                 for feat in info.get('features', []):
-                    self.feature_to_std[feat.upper()] = std_name
+                    self.feature_db[feat.upper()] = attr_bundle
 
-        self.sorted_features = sorted(self.feature_to_std.keys(), key=len, reverse=True)
+        # EN: Sort by length descending to prevent partial matching (e.g., 'Portra' vs 'Portra 400')
+        # CN: 按长度倒序排列特征词，确保长词（如 PORTRA 400）优先于短词（如 PORTRA）被匹配
+        self.sorted_features = sorted(self.feature_db.keys(), key=len, reverse=True)
 
     def match_film(self, raw_input):
-        """
-        CN: 修正后的匹配逻辑，现在可以搜到 p400 等缩写。
-        """
-        if not raw_input: return ""
+        if not raw_input: return None
         q = str(raw_input).strip().upper()
         for feat in self.sorted_features:
             if feat in q:
-                return self.feature_to_std[feat]
-        return raw_input # 没搜到则返回原样
-
+                return self.feature_db[feat]["std_name"]
+        return None
+    
     def get_data(self, img_path, is_digital_mode=False, manual_film=None):
         """
         CN: 核心数据提取逻辑。
@@ -66,34 +70,59 @@ class MetadataHandler:
         model = str(tags.get('Image Model', 'Unknown'))
         lens = str(tags.get('EXIF LensModel', 'Unknown Lens'))
         f_num = tags.get('EXIF FNumber')
-        aperture_str = str(float(f_num.values[0]) if f_num else "--")
+        aperture_str = str(float(f_num.values[0])) if f_num else None
         expo = tags.get('EXIF ExposureTime')
-        shutter_str = str(expo.values[0]) if expo else "--"
+        shutter_str = str(expo.values[0]) if expo else None
         focal = tags.get('EXIF FocalLength')
         focal_val = float(focal.values[0].num) / float(focal.values[0].den) if focal else 0
-        focal_str = f"{int(focal_val)}mm" if focal_val > 0 else "--mm"
+        focal_str = f"{int(focal_val)}mm" if focal_val > 0 else None
         dt = tags.get('EXIF DateTimeOriginal') or tags.get('Image DateTime')
         dt_str = str(dt.values) if dt else ""
         iso = tags.get('EXIF ISOSpeedRatings')
         iso_str = str(iso.values[0]) if iso else ""
 
-        # --- [必要修改 3/3] CN: 优先逻辑实现 ---
+        # --- [核心逻辑修复] 三级识别引擎 ---
         display_film = ""
-        if not is_digital_mode:
-            # A. 优先尝试自动识别
-            film_raw = (tags.get('Image ImageDescription') or tags.get('EXIF UserComment') or "")
-            raw_desc = str(film_raw.values if hasattr(film_raw, 'values') else film_raw).strip()
-            auto_matched = self.match_film(raw_desc)
-            
-            # B. 自动优先决策
-            if auto_matched:
-                display_film = auto_matched
-            elif manual_film:
-                display_film = manual_film # 自动识别不到时，才用手动传入的
+        edge_code = "ahahahah！"
+        contact_color = (245, 130, 35, 210)
 
-        # 挂载喷码和颜色 (Renderer135/66/67 都会用到这些字段)
-        edge_code = self.edge_code_map.get(display_film, display_film.upper() if display_film else "SAFETY FILM")
-        contact_color = tuple(self.marking_color_map.get(display_film, [245, 130, 35, 210]))
+        if not is_digital_mode:
+            # 1. 自动扫描 (合并多个 Description 字段以体现专业性)
+            d1 = str(tags.get('Image ImageDescription', ''))
+            d2 = str(tags.get('EXIF UserComment', ''))
+            d3 = str(tags.get('EXIF ImageDescription', '')) # 补充扫描位
+            search_pool = f"{d1} {d2} {d3}".upper()
+            
+            # 2. 尝试自动识别
+            auto_bundle = None
+            for feat in self.sorted_features:
+                if feat in search_pool:
+                    auto_bundle = self.feature_db[feat]
+                    break
+            
+            if auto_bundle:
+                display_film = auto_bundle["std_name"]
+                edge_code = auto_bundle["edge_code"]
+                contact_color = tuple(auto_bundle["color"])
+            
+            # 3. 如果自动失败，使用手动输入并撞库
+            elif manual_film:
+                m_q = manual_film.upper().strip()
+                manual_bundle = None
+                for feat in self.sorted_features:
+                    if feat == m_q or feat in m_q:
+                        manual_bundle = self.feature_db[feat]
+                        break
+                
+                if manual_bundle:
+                    display_film = manual_bundle["std_name"]
+                    edge_code = manual_bundle["edge_code"]
+                    contact_color = tuple(manual_bundle["color"])
+                else:
+                    # 4. 彻底兜底：原样输出
+                    display_film = manual_film
+                    edge_code = manual_film.upper()
+                    contact_color = (245, 130, 35, 210)
 
         # --- 布局参数计算 (完全保留) ---
         with Image.open(img_path) as img: w, h = img.size

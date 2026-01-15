@@ -3,12 +3,8 @@ import random
 from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
 
-import random
-from PIL import Image, ImageDraw
-from .base_renderer import BaseFilmRenderer
-
 class Renderer645(BaseFilmRenderer):
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion,sample_data=None):
         print("\nCN: [645 2.0] 执行渲染 ...")
         
         # 1. 重新选择模式并重置画布尺寸
@@ -35,9 +31,11 @@ class Renderer645(BaseFilmRenderer):
         STRIP_RATIO = 61.5 / 41.5 
         PHOTO_ASPECT = 56.0 / 41.5 
         
-        sample_data = meta_handler.get_data(img_list[0])
+        if not sample_data:
+            sample_data = meta_handler.get_data(img_list[0])
+            
         cur_color = sample_data.get("ContactColor", (245, 130, 35, 210))
-        raw_text = self.get_marking_str(sample_data, user_emulsion)
+        raw_text = self.get_marking_str(sample_data, user_emulsion) # 这一卷胶片的喷码名
 
         if mode == "landscape":
             # --- 645_L: 垂直底片条逻辑修正 ---
@@ -46,7 +44,7 @@ class Renderer645(BaseFilmRenderer):
             step_y = (c_h - m_y_t - final_cfg.get('margin_y_bottom', 350) - (rows * rg)) // rows + rg
             
             # 645 比例校准：适当减小照片比例，为底部留出呼吸感
-            photo_h = int((step_y - rg) * 0.82) 
+            photo_h = int((step_y - rg) * 0.9) 
             photo_w = int(photo_h * PHOTO_ASPECT)
             strip_w = int(photo_h * STRIP_RATIO)
             
@@ -97,22 +95,27 @@ class Renderer645(BaseFilmRenderer):
                     # --- 问题 1 修正：EXIF 距离照片更近 ---
                     # EN: Move EXIF closer to the photo bottom
                     # CN: 让 EXIF 紧贴照片底边。不再使用 black_area_center，改为固定偏移
+                    #data = meta_handler.get_data(img_list[idx])
+                    #dt = data.get("DateTime", "")
+                    #date_str = dt[2:10].replace(":", "/") if len(dt) >= 10 else "00/00/00"
+                    #f_val = str(data.get("FocalLength", "---")).lower()
+                    #exif_str = f"f/{data.get('FNumber', '--')}  {data.get('ExposureTimeStr', '--')}s  {f_val}"
+
                     data = meta_handler.get_data(img_list[idx])
-                    dt = data.get("DateTime", "")
-                    date_str = dt[2:10].replace(":", "/") if len(dt) >= 10 else "00/00/00"
-                    f_val = str(data.get("FocalLength", "---")).lower()
-                    exif_str = f"f/{data.get('FNumber', '--')}  {data.get('ExposureTimeStr', '--')}s  {f_val}"
+                    date_str, exif_str = self.get_clean_exif(data)
                     
                     # 设定 EXIF 第一行离照片底部的距离 (例如 60 像素)
                     # EN: Base offset from photo bottom
                     exif_y_start = curr_y + photo_h + 70 
                     
-                    tw_date = draw.textlength(date_str, font=self.seg_font)
-                    draw.text((px + photo_w//2 - tw_date//2, exif_y_start), date_str, font=self.seg_font, fill=cur_color)
+                    if date_str and str(date_str).strip().upper() != "NONE":
+                        tw_date = draw.textlength(date_str, font=self.seg_font)
+                        draw.text((px + photo_w//2 - tw_date//2, exif_y_start), date_str, font=self.seg_font, fill=cur_color)
                     
-                    tw_exif = draw.textlength(exif_str, font=self.seg_font)
-                    # 第二行紧跟第一行，间距 50 像素
-                    draw.text((px + photo_w//2 - tw_exif//2, exif_y_start + 50), exif_str, font=self.seg_font, fill=cur_color)
+                    if exif_str and str(exif_str).strip().upper() != "NONE":
+                        tw_exif = draw.textlength(exif_str, font=self.seg_font)
+                        # 第二行紧跟第一行，间距 50 像素
+                        draw.text((px + photo_w//2 - tw_exif//2, exif_y_start + 50), exif_str, font=self.seg_font, fill=cur_color)
 
                 # D. 裁切 (保持步进逻辑)
                 if num_in_col > 0:
@@ -181,20 +184,22 @@ class Renderer645(BaseFilmRenderer):
                     draw.text((int(ax_start + tri_p.width + 50), int(ay)), num_str, font=self.font, fill=cur_color)
 
                     # D. 右侧信息：双行 EXIF (旋转 90)
+                    #data = meta_handler.get_data(img_list[idx])
+                    #dt = data.get("DateTime", "")
+                    #date_str = dt[2:10].replace(":", "/") if len(dt) >= 10 else "00/00/00"
+                    
                     data = meta_handler.get_data(img_list[idx])
-                    dt = data.get("DateTime", "")
-                    date_str = dt[2:10].replace(":", "/") if len(dt) >= 10 else "00/00/00"
+                    date_str, exif_str = self.get_clean_exif(data)
                     
                     # 关键物理逻辑：右侧黑边的中轴线
                     right_margin_center_x = curr_x + photo_w + (col_pitch - photo_w) // 3
-                    
-                    date_layer = self.create_rotated_seg_text(date_str, 90, cur_color)
-                    canvas.paste(date_layer, (int(right_margin_center_x - 45), int(py + photo_h // 2 - date_layer.height // 2)), date_layer)
+                    if date_str and str(date_str).strip().upper() != "NONE":
+                        date_layer = self.create_rotated_seg_text(date_str, 90, cur_color)
+                        canvas.paste(date_layer, (int(right_margin_center_x - 45), int(py + photo_h // 2 - date_layer.height // 2)), date_layer)
 
-                    f_val = str(data.get("FocalLength", "---")).lower()
-                    exif_str = f"f/{data.get('FNumber', '--')}  {data.get('ExposureTimeStr', '--')}s  {f_val}"
-                    exif_layer = self.create_rotated_seg_text(exif_str, 90, cur_color)
-                    canvas.paste(exif_layer, (int(right_margin_center_x + 5), int(py + photo_h // 2 - exif_layer.height // 2)), exif_layer)
+                    if exif_str and str(exif_str).strip().upper() != "NONE":
+                        exif_layer = self.create_rotated_seg_text(exif_str, 90, cur_color)
+                        canvas.paste(exif_layer, (int(right_margin_center_x + 5), int(py + photo_h // 2 - exif_layer.height // 2)), exif_layer)
 
                 # --- 2. 精准裁切 (校正) ---
                 # EN: Inter-photo gap = col_pitch - photo_w

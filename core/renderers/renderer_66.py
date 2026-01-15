@@ -8,7 +8,7 @@ class Renderer66(BaseFilmRenderer):
     EN: 66 Renderer. Fixed bottom margin to match inter-frame gaps and solved overflow.
     CN: 中英双语：66 渲染器。修正底部黑边高度使其与行间距一致，并解决喷码溢出。
     """
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
         print("CN: [Renderer] 执行 66 渲染 (精准等宽裁切版)...")
         draw = ImageDraw.Draw(canvas)
         c_w, c_h = canvas.size
@@ -29,7 +29,9 @@ class Renderer66(BaseFilmRenderer):
         start_x = (c_w - (cols * strip_w + (cols - 1) * c_gap)) // 2
         black_margin_w = (strip_w - max_photo_w) // 2 
 
-        sample_data = meta_handler.get_data(img_list[0])
+        if not sample_data:
+            sample_data = meta_handler.get_data(img_list[0])
+            
         cur_color = sample_data.get("ContactColor", (245, 130, 35, 210))
         raw_text = self.get_marking_str(sample_data, user_emulsion)
         edge_layer = self.create_rotated_text(raw_text, angle=90, color=cur_color)
