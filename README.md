@@ -37,7 +37,7 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 1.  **Dependencies | 安装依赖**:
     ```bash
-    pip install Pillow
+    pip install Pillow exifread
     ```
 2.  **Run | 运行**:
     ```bash
@@ -61,3 +61,4 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 * `/core/renderers/`: Core rendering logic for various formats.
 * `/assets/fonts/`: Dot-matrix and digital segment fonts.
 * `main.py`: The unified entry point.
+
