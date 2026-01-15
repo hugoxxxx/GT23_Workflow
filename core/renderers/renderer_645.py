@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
 
 class Renderer645(BaseFilmRenderer):
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion,sample_data=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
         print("\nCN: [645 2.0] 执行渲染 ...")
         
         # 1. 重新选择模式并重置画布尺寸
@@ -52,6 +52,12 @@ class Renderer645(BaseFilmRenderer):
             tri_l = self.create_stretched_triangle(color=cur_color).resize((int(15 * 3.5), 15)).rotate(-90, expand=True)
 
             for c in range(cols):
+                # --- [核心修改点 L] 检查当前列是否需要绘制 ---
+                # 如果当前列的第一个照片索引已经超出了图片列表，则跳过此列
+                if c * rows >= len(img_list):
+                    continue # 跳过没有照片的列
+                # --- [END OF MODIFICATION L] ---
+
                 sx = m_x + c * (area_w + cg) + (area_w - strip_w) // 2
                 draw.rectangle([sx, m_y_t - 80, sx + strip_w, c_h], fill=(12, 12, 12))
                 
@@ -122,7 +128,7 @@ class Renderer645(BaseFilmRenderer):
                     crop_line_y = last_frame_y_start + step_y
                     draw.rectangle([sx, crop_line_y, sx + strip_w, c_h], fill=bg_color)
 
-        else:
+        else: # mode == "portrait"
             # --- 645_P: 水平底片条 (修正：右侧黑边宽度 = 照片间隙) ---
             strip_h = (c_h - m_y_t - final_cfg['margin_y_bottom'] - (rows-1)*rg) // rows
             photo_w = int(strip_h / STRIP_RATIO)
@@ -132,6 +138,12 @@ class Renderer645(BaseFilmRenderer):
             tri_p = self.create_stretched_triangle(color=cur_color).resize((int(15 * 3.5), 15))
 
             for r in range(rows):
+                # --- [核心修改点 P] 检查当前行是否需要绘制 ---
+                # 如果当前行的第一个照片索引已经超出了图片列表，则跳过此行
+                if r * cols >= len(img_list):
+                    continue # 跳过没有照片的行
+                # --- [END OF MODIFICATION P] ---
+
                 sy = m_y_t + r * (strip_h + rg)
                 # 1. 铺设连续黑条
                 draw.rectangle([m_x, sy, c_w, sy + strip_h], fill=(12, 12, 12))
