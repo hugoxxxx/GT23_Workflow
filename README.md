@@ -47,6 +47,13 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
+### 🖼️ Canvas Size / 画布尺寸
+
+- **English:** The canvas is set to a 10-inch aspect ratio. This specific proportion is chosen because it most closely matches the dimensions of a full roll of film when printed and stored, ensuring a natural and authentic layout.
+- **中文:** 画布设定为 10 寸比例。选择这一比例的原因，是因为它最接近完整一卷底片冲洗、收纳后的物理尺寸，能够确保排版呈现出自然且真实的视觉效果。
+
+---
+
 ## 🎞️ 135 Layout Details | 135 排版细节
 
 * **Date (日期)**: Placed at **Inner Bottom-Right** of each frame. | 位于每帧照片内部的 **右下角**。
@@ -61,4 +68,37 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 * `/core/renderers/`: Core rendering logic for various formats.
 * `/assets/fonts/`: Dot-matrix and digital segment fonts.
 * `main.py`: The unified entry point.
+
+---
+
+## 📸 Samples | 示例
+### 135format
+<!-- 居中显示并限制宽度 -->
+<p align="center">
+  <img src="https://private-user-images.githubusercontent.com/18653086/536665968-5248b9de-018d-4a4f-91d2-235e8aa0042e.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NDg0OTQsIm5iZiI6MTc2ODU0ODE5NCwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjU5NjgtNTI0OGI5ZGUtMDE4ZC00YTRmLTkxZDItMjM1ZThhYTAwNDJlLmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDA3MjMxNFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTUzNGNiMjcwMjgwMzBjZjI0ZWQwNDQ5OGNkNDU5NGFiMjgyZTY0ZTUyYzNkYTYyYWE0MjhiYTJiZmVhZjZmYTImWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.4lz0WoRKYjXfckxr4T6hnRuAqWfWH7wXPbw3yVwBH7c" width="400" alt="135format">
+</p>
+
+### 66format
+<!-- 居中显示并限制宽度 -->
+<p align="center">
+  <img src="https://private-user-images.githubusercontent.com/18653086/536665969-eb9763e9-897b-4178-b849-d610e587c646.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NDg0OTQsIm5iZiI6MTc2ODU0ODE5NCwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjU5NjktZWI5NzYzZTktODk3Yi00MTc4LWI4NDktZDYxMGU1ODdjNjQ2LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDA3MjMxNFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTY0MzdhNmMyZTNkYTZkMDg3NWQzZTFmY2Q5NWRjMmQ5Y2YxZWYxOGQzNTM0ZTdhNzRmNjMxYTY5NmYzOTc5MDYmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.iR_TttuWY6AmU4Nvn_PusP9KBSsgbL_bVuoBJWJtg-c" width="400" alt="66format">
+</p>
+
+### 645format_landscape
+<!-- 居中显示并限制宽度 -->
+<p align="center">
+  <img src="https://private-user-images.githubusercontent.com/18653086/536666170-30a2bb16-de7d-45da-8514-06d920602ac7.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NDg3NzgsIm5iZiI6MTc2ODU0ODQ3OCwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjYxNzAtMzBhMmJiMTYtZGU3ZC00NWRhLTg1MTQtMDZkOTIwNjAyYWM3LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDA3Mjc1OFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTNmODVkNjNlNmFiMzJkZDI5OWQ4M2UzZWIzZmJkZWQ3ZWE2YWM1YmViYzc2N2FhMjY3MDAzMWJiNzMxNjYyOTcmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.uOsFVnCZm2d72uK9-vhbKHtXIz1qg_ivgI6I6JqrTY4" width="400" alt="645format_L">
+</p>
+
+### 645format_portrait
+<!-- 居中显示并限制宽度 -->
+<p align="center">
+  <img src="https://private-user-images.githubusercontent.com/18653086/536666171-56946997-0736-47ad-a838-2fabf6affcf5.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NDg3NzgsIm5iZiI6MTc2ODU0ODQ3OCwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjYxNzEtNTY5NDY5OTctMDczNi00N2FkLWE4MzgtMmZhYmY2YWZmY2Y1LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDA3Mjc1OFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTAxODM1MDFhYmQ5MWExNDY1MTVlOTA3ZTIyZGJlYWRiYmY3NDlmYjY4ZTZlZTZmZDIxNTQ0Y2IwOTk0MTA4ZTcmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.PdBuh8jtofDObHTRPgdnokg5qQncclIt6KcwhmBM96Y" width="400" alt="645format_P">
+</p>
+
+### 67format
+<!-- 居中显示并限制宽度 -->
+<p align="center">
+  <img src="https://private-user-images.githubusercontent.com/18653086/536665967-c42c4076-21a5-4045-a928-635bf34b4fd4.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NDg3NzgsIm5iZiI6MTc2ODU0ODQ3OCwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjU5NjctYzQyYzQwNzYtMjFhNS00MDQ1LWE5MjgtNjM1YmYzNGI0ZmQ0LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDA3Mjc1OFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWY4MDY4ZjI0MWRjOTI3ODU2ZGY5NTU3NWE0NWVmMWZmYjEzNmE0ZDM3MDYzMWE4YWUwODcyOTQyZDMwYmI1OTQmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.hMmWwMXdgcoFIZ1htPpX5YfhKdwkKixQvCVcrgIKWaA" width="400" alt="67format">
+</p>
 
