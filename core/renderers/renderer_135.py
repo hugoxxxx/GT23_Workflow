@@ -2,6 +2,13 @@
 import os
 from PIL import Image, ImageDraw, ImageFont
 from .base_renderer import BaseFilmRenderer
+# --- [新增] 矢量渲染依赖 ---
+# 我们现在强制要求 cairosvg 可用，不再提供回退选项。
+# 这保证了代码路径的简洁和 ISO 1007 标准的严格执行。
+import svgwrite
+from cairosvg import svg2png
+import io
+# --- [END OF NEW IMPORTS] ---
 
 class Renderer135(BaseFilmRenderer):
     """ EN: 135 Format - Dynamic EdgeCode & Precision Positioning (v9.2)
@@ -48,7 +55,9 @@ class Renderer135(BaseFilmRenderer):
             sy = m_y_t + r * (strip_h + rg)
             strip_start_x, strip_end_x = m_x - gap_w // 2, m_x + (cols * (photo_w + gap_w)) - gap_w // 2
             draw.rectangle([strip_start_x, sy, strip_end_x, sy + strip_h], fill=(12, 12, 12))
-            self._draw_iso_sprockets(draw, strip_start_x, strip_end_x, sy, info_h, strip_h, sp_w, sp_h, px_per_mm)
+            # --- [核心修改] 使用高精度矢量齿孔 ---
+            self._draw_iso_sprockets_vector(canvas, strip_start_x, strip_end_x, sy, info_h, strip_h, sp_w, sp_h, px_per_mm)
+            # --- [END OF MODIFICATION] ---
 
             for c in range(cols):
                 idx = r * cols + c
@@ -110,16 +119,7 @@ class Renderer135(BaseFilmRenderer):
 
         return canvas
 
-    def _draw_iso_sprockets(self, draw, x_start, x_end, sy, info_h, strip_h, sw, sh, px_mm):
-        # 物理对齐：外边 2mm + 齿孔 2.8mm + 内边 0.7mm = 5.5mm
-        y_top = sy + int(2.0 * px_mm)
-        y_bottom = sy + strip_h - int(2.0 * px_mm) - sh
-        step_px = 4.75 * px_mm
-        curr_x = x_start + (step_px / 4)
-        while curr_x < x_end - sw:
-            for base_y in [y_top, y_bottom]:
-                draw.rounded_rectangle([curr_x, base_y, curr_x + sw, base_y + sh], radius=5, fill=(235, 235, 235))
-            curr_x += step_px
+    
 
     def _paste_photo_auto_rotate(self, canvas, path, x, y, w, h):
         with Image.open(path) as img:
@@ -159,3 +159,69 @@ class Renderer135(BaseFilmRenderer):
             # y 轴：照片底边 py + ph 再加上偏移
             pos_e_y = py + ph + offset_y
             self._draw_single_glowing_text(canvas, exif_str, (pos_e_x, pos_e_y), e_font, color)
+
+    def _draw_iso_sprockets_vector(self, canvas, x_start, x_end, sy, info_h, strip_h, sp_w, sp_h, px_per_mm):
+            """
+            使用 SVG + CairoSVG 绘制高精度抗锯齿齿孔。
+            这是绘制 ISO 1007 齿孔的唯一方法，不提供光栅回退。
+            """
+            # 创建一个与胶片条等宽高的透明画布 (RGBA)
+            strip_width = int(x_end - x_start)
+            if strip_width <= 0:
+                return
+
+            # --- 1. 构建 SVG ---
+            dwg = svgwrite.Drawing(size=(strip_width, strip_h), profile='tiny')
+            dwg.viewbox(0, 0, strip_width, strip_h)
+
+            # 定义精确的 KS 齿孔参数 (毫米)，符合 ISO 1007
+            SPROC_H_MM_ACTUAL = 2.8
+            SPROC_W_MM_ACTUAL = 1.94
+            CORNER_RADIUS_MM = 0.4
+            PITCH_MM = 4.75
+
+            # 计算 SVG 中的像素尺寸
+            w_px = SPROC_W_MM_ACTUAL * px_per_mm
+            h_px = SPROC_H_MM_ACTUAL * px_per_mm
+            r_px = CORNER_RADIUS_MM * px_per_mm
+            pitch_px = PITCH_MM * px_per_mm
+
+            # 计算齿孔 Y 坐标 (物理对齐: 外边 2mm)
+            y_top_svg = 2.0 * px_per_mm
+            y_bottom_svg = strip_h - (2.0 * px_per_mm) - h_px
+
+            # 生成齿孔路径
+            def make_rounded_rect_path(x, y, w, h, r):
+                return (
+                    f"M {x+r},{y} "
+                    f"H {x+w-r} "
+                    f"A {r},{r} 0 0 1 {x+w},{y+r} "
+                    f"V {y+h-r} "
+                    f"A {r},{r} 0 0 1 {x+w-r},{y+h} "
+                    f"H {x+r} "
+                    f"A {r},{r} 0 0 1 {x},{y+h-r} "
+                    f"V {y+r} "
+                    f"A {r},{r} 0 0 1 {x+r},{y} Z"
+                )
+
+            # 绘制顶部和底部齿孔
+            current_x = (pitch_px / 4) # 起始偏移，符合标准
+            while current_x < strip_width:
+                if current_x + w_px < strip_width:
+                    # 顶部
+                    path_d = make_rounded_rect_path(current_x, y_top_svg, w_px, h_px, r_px)
+                    dwg.add(dwg.path(d=path_d, fill='white'))
+                    # 底部
+                    path_d = make_rounded_rect_path(current_x, y_bottom_svg, w_px, h_px, r_px)
+                    dwg.add(dwg.path(d=path_d, fill='white'))
+                current_x += pitch_px
+
+            # --- 2. 将 SVG 渲染为 PNG 字节流 ---
+            # 使用高 DPI (600) 保证边缘极度平滑
+            png_bytes = svg2png(bytestring=dwg.tostring(), dpi=1200, output_width=strip_width, output_height=strip_h)
+
+            # --- 3. 转换为 PIL Image ---
+            vector_strip = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
+
+            # 将矢量条贴到主画布上
+            canvas.paste(vector_strip, (int(x_start), int(sy)), mask=vector_strip)    

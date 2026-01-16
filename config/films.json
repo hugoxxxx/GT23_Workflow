@@ -4,7 +4,7 @@
   "Portra 400": {"features": ["P400", "PORTRA400"], "edge_code": "KODAK PORTRA 400", "visual": {"emulsion": "KODAK PORTRA 400 4062", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "Portra 800": {"features": ["P800", "PORTRA800"], "edge_code": "KODAK PORTRA 800", "visual": {"emulsion": "KODAK PORTRA 800 4063", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "Ektar 100": {"features": ["E100", "EKTAR100"], "edge_code": "KODAK EKTAR 100", "visual": {"emulsion": "KODAK EKTAR 100 4060", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
-  "Gold 200": {"features": ["GOLD", "G200"], "edge_code": "KODAK GOLD 200", "visual": {"emulsion": "KODAK GOLD 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Gold 200": {"features": ["GOLD", "G200"], "edge_code": "KODAK 200", "visual": {"emulsion": "KODAK 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "UltraMax 400": {"features": ["UMAX", "ULTRAMAX"], "edge_code": "KODAK ULTRAMAX 400", "visual": {"emulsion": "KODAK ULTRAMAX 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "ColorPlus 200": {"features": ["CP200", "COLORPLUS"], "edge_code": "KODAK CP 200", "visual": {"emulsion": "KODAK CP 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "Ektachrome E100": {"features": ["E100", "E100G"], "edge_code": "KODAK E100", "visual": {"emulsion": "KODAK E100 5085", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
