@@ -1,35 +1,97 @@
 {
-  "KODAK": {
-    "Portra 160": { "features": ["P160", "PORTRA160"], "edge_code": "KODAK PORTRA 160", "visual": { "emulsion": "KODAK  PORTRA  160  4061", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Portra 400": { "features": ["P400", "PORTRA400"], "edge_code": "KODAK PORTRA 400", "visual": { "emulsion": "KODAK  PORTRA  400  4062", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Portra 800": { "features": ["P800", "PORTRA800"], "edge_code": "KODAK PORTRA 800", "visual": { "emulsion": "KODAK  PORTRA  800  4063", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Ektar 100": { "features": ["E100", "EKTAR100"], "edge_code": "KODAK EKTAR 100", "visual": { "emulsion": "KODAK  EKTAR  100  4060", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Gold 200": { "features": ["GOLD", "G200"], "edge_code": "KODAK GOLD 200", "visual": { "emulsion": "KODAK  GOLD  200", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "UltraMax 400": { "features": ["UMAX", "ULTRAMAX"], "edge_code": "KODAK ULTRAMAX 400", "visual": { "emulsion": "KODAK  ULTRAMAX  400", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "ColorPlus 200": { "features": ["CP200", "COLORPLUS"], "edge_code": "KODAK CP 200", "visual": { "emulsion": "KODAK  CP  200", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Ektachrome E100": { "features": ["E100", "E100G"], "edge_code": "KODAK E100", "visual": { "emulsion": "KODAK  E100  5085", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
-    "Ektachrome E100VS": { "features": ["E100VS", "VS"], "edge_code": "KODAK E100VS", "visual": { "emulsion": "KODAK  E100VS", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
-    "Tri-X 400": { "features": ["TX400", "400TX"], "edge_code": "400TX", "visual": { "emulsion": "KODAK  400TX  7064", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } },
-    "T-Max 100": { "features": ["TMX", "TMAX100"], "edge_code": "TMX 100", "visual": { "emulsion": "KODAK  TMX  100", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } },
-    "T-Max 400": { "features": ["TMY", "TMAX400"], "edge_code": "TMY 400", "visual": { "emulsion": "KODAK  TMY  400", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } }
-  },
-  "FUJIFILM": {
-    "Provia 100F": { "features": ["RDP3", "RDPIII", "PROVIA"], "edge_code": "RDPIII", "visual": { "emulsion": "FUJIFILM  RDP III  100F", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
-    "Velvia 50": { "features": ["RVP50", "VELVIA50"], "edge_code": "RVP50", "visual": { "emulsion": "FUJIFILM  RVP  50", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
-    "Velvia 100": { "features": ["RVP100", "VELVIA100"], "edge_code": "RVP100", "visual": { "emulsion": "FUJIFILM  RVP  100", "edge_marking_color": [245, 130, 35, 210], "type": "CR" } },
-    "Superia 400": { "features": ["S400", "SUPERIA400"], "edge_code": "FUJI 400", "visual": { "emulsion": "FUJIFILM  SUPERIA  400", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Fujicolor C200": { "features": ["C200", "FUJICOLOR200"], "edge_code": "FUJI C200", "visual": { "emulsion": "FUJICOLOR  200", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Industrial 100": { "features": ["GY100", "INDUSTRIAL100", "业务卷"], "edge_code": "FUJI 100", "visual": { "emulsion": "FUJIFILM  100", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Industrial 400": { "features": ["GY400", "INDUSTRIAL400", "业务卷"], "edge_code": "FUJI 400", "visual": { "emulsion": "FUJIFILM  400", "edge_marking_color": [245, 130, 35, 210], "type": "CN" } },
-    "Neopan Acros 100 II": { "features": ["ACROS", "ACROS100"], "edge_code": "ACROS", "visual": { "emulsion": "FUJIFILM  ACROS  100  II", "edge_marking_color": [200, 200, 200, 160], "type": "BW" } }
-  },
-  "ILFORD": {
-    "HP5 Plus": { "features": ["HP5", "HP5+"], "edge_code": "ILFORD HP5 PLUS", "visual": { "emulsion": "ILFORD  HP5  PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW" } },
-    "FP4 Plus": { "features": ["FP4", "FP4+"], "edge_code": "ILFORD FP4 PLUS", "visual": { "emulsion": "ILFORD  FP4  PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW" } },
-    "Delta 100": { "features": ["D100", "DELTA100"], "edge_code": "ILFORD DELTA 100", "visual": { "emulsion": "ILFORD  DELTA  100", "edge_marking_color": [220, 220, 220, 180], "type": "BW" } },
-    "Delta 400": { "features": ["D400", "DELTA400"], "edge_code": "ILFORD DELTA 400", "visual": { "emulsion": "ILFORD  DELTA  400", "edge_marking_color": [220, 220, 220, 180], "type": "BW" } },
-    "Delta 3200": { "features": ["D3200", "DELTA3200"], "edge_code": "ILFORD DELTA 3200", "visual": { "emulsion": "ILFORD  DELTA  3200", "edge_marking_color": [220, 220, 220, 180], "type": "BW" } },
-    "XP2 Super": { "features": ["XP2", "XP2400"], "edge_code": "ILFORD XP2", "visual": { "emulsion": "ILFORD  XP2  SUPER", "edge_marking_color": [180, 180, 180, 160], "type": "BW" } },
-    "Pan F Plus 50": { "features": ["PANF", "PANF50"], "edge_code": "ILFORD PAN F PLUS", "visual": { "emulsion": "ILFORD  PAN F  PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW" } }
-  }
+"KODAK": {
+  "Portra 160": {"features": ["P160", "PORTRA160"], "edge_code": "KODAK PORTRA 160", "visual": {"emulsion": "KODAK PORTRA 160 4061", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Portra 400": {"features": ["P400", "PORTRA400"], "edge_code": "KODAK PORTRA 400", "visual": {"emulsion": "KODAK PORTRA 400 4062", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Portra 800": {"features": ["P800", "PORTRA800"], "edge_code": "KODAK PORTRA 800", "visual": {"emulsion": "KODAK PORTRA 800 4063", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Ektar 100": {"features": ["E100", "EKTAR100"], "edge_code": "KODAK EKTAR 100", "visual": {"emulsion": "KODAK EKTAR 100 4060", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Gold 200": {"features": ["GOLD", "G200"], "edge_code": "KODAK GOLD 200", "visual": {"emulsion": "KODAK GOLD 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "UltraMax 400": {"features": ["UMAX", "ULTRAMAX"], "edge_code": "KODAK ULTRAMAX 400", "visual": {"emulsion": "KODAK ULTRAMAX 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "ColorPlus 200": {"features": ["CP200", "COLORPLUS"], "edge_code": "KODAK CP 200", "visual": {"emulsion": "KODAK CP 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Ektachrome E100": {"features": ["E100", "E100G"], "edge_code": "KODAK E100", "visual": {"emulsion": "KODAK E100 5085", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Ektachrome E100VS": {"features": ["E100VS", "VS"], "edge_code": "KODAK E100VS", "visual": {"emulsion": "KODAK E100VS", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Tri-X 400": {"features": ["TX400", "400TX"], "edge_code": "400TX", "visual": {"emulsion": "KODAK 400TX 7064", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "T-Max 100": {"features": ["TMX", "TMAX100"], "edge_code": "TMX 100", "visual": {"emulsion": "KODAK TMX 100", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "T-Max 400": {"features": ["TMY", "TMAX400"], "edge_code": "TMY 400", "visual": {"emulsion": "KODAK TMY 400", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Kodak Portra 400VC": {"features": ["P400VC", "PORTRA400VC"], "edge_code": "KODAK PORTRA 400 VC", "visual": {"emulsion": "KODAK PORTRA 400 VC", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Kodak Portra 160NC": {"features": ["P160NC", "PORTRA160NC"], "edge_code": "KODAK PORTRA 160 NC", "visual": {"emulsion": "KODAK PORTRA 160 NC", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Kodak Portra 800VC": {"features": ["P800VC", "PORTRA800VC"], "edge_code": "KODAK PORTRA 800 VC", "visual": {"emulsion": "KODAK PORTRA 800 VC", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Kodak Ektachrome 100GX": {"features": ["E100GX", "100GX"], "edge_code": "KODAK E100GX", "visual": {"emulsion": "KODAK E100GX", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Kodak Ektachrome 64T": {"features": ["E64T", "64T"], "edge_code": "KODAK E64T", "visual": {"emulsion": "KODAK E64T", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Kodak Technical Pan": {"features": ["TPAN", "TECHNICALPAN"], "edge_code": "KODAK TECHNICAL PAN", "visual": {"emulsion": "KODAK TECHNICAL PAN", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Kodak T-Max RS": {"features": ["TMAXRS", "TMAXRS"], "edge_code": "KODAK T-MAX RS", "visual": {"emulsion": "KODAK T-MAX RS", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Kodak Tri-X Pan": {"features": ["TXP", "TRIXPAN"], "edge_code": "KODAK TRI-X PAN", "visual": {"emulsion": "KODAK TRI-X PAN", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Kodak Plus-X Pan": {"features": ["PX", "PLUSX"], "edge_code": "KODAK PLUS-X PAN", "visual": {"emulsion": "KODAK PLUS-X PAN", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Kodak Vericolor III": {"features": ["VERI3", "VERICOLORIII"], "edge_code": "KODAK VERICOLOR III", "visual": {"emulsion": "KODAK VERICOLOR III", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Kodak Royal Gold 100": {"features": ["RG100", "ROYALGOLD100"], "edge_code": "KODAK ROYAL GOLD 100", "visual": {"emulsion": "KODAK ROYAL GOLD 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}}
+},
+"FUJIFILM": {
+  "Provia 100F": {"features": ["RDP3", "RDPIII", "PROVIA"], "edge_code": "RDPIII", "visual": {"emulsion": "FUJIFILM RDP III 100F", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Velvia 50": {"features": ["RVP50", "VELVIA50"], "edge_code": "RVP50", "visual": {"emulsion": "FUJIFILM RVP 50", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Velvia 100": {"features": ["RVP100", "VELVIA100"], "edge_code": "RVP100", "visual": {"emulsion": "FUJIFILM RVP 100", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Superia 400": {"features": ["S400", "SUPERIA400"], "edge_code": "FUJI 400", "visual": {"emulsion": "FUJIFILM SUPERIA 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Fujicolor C200": {"features": ["C200", "FUJICOLOR200"], "edge_code": "FUJI C200", "visual": {"emulsion": "FUJICOLOR 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Industrial 100": {"features": ["GY100", "INDUSTRIAL100", "业务卷"], "edge_code": "FUJI 100", "visual": {"emulsion": "FUJIFILM 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Industrial 400": {"features": ["GY400", "INDUSTRIAL400", "业务卷"], "edge_code": "FUJI 400", "visual": {"emulsion": "FUJIFILM 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Neopan Acros 100 II": {"features": ["ACROS", "ACROS100"], "edge_code": "ACROS", "visual": {"emulsion": "FUJIFILM ACROS 100 II", "edge_marking_color": [200, 200, 200, 160], "type": "BW"}},
+  "Fujifilm Provia 400X": {"features": ["RDX", "PROVIA400X"], "edge_code": "RDX", "visual": {"emulsion": "FUJIFILM RDX 400X", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Fujifilm Velvia 100F": {"features": ["RVP100F", "VELVIA100F"], "edge_code": "RVP100F", "visual": {"emulsion": "FUJIFILM RVP 100F", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Fujifilm Astia 100F": {"features": ["RDF", "ASTIA100F"], "edge_code": "RDF", "visual": {"emulsion": "FUJIFILM RDF 100F", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Fujifilm Pro Neg Hi": {"features": ["NEOH", "PRONEGHI"], "edge_code": "NEOH", "visual": {"emulsion": "FUJIFILM NEOH 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Fujifilm Superia X-tra 400": {"features": ["SX400", "SUPERIAXTRA400"], "edge_code": "FUJI SX400", "visual": {"emulsion": "FUJIFILM SUPERIA X-TRA 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Fujifilm Superia Premium 400": {"features": ["SP400", "SUPERIAPREMIUM400"], "edge_code": "FUJI SP400", "visual": {"emulsion": "FUJIFILM SUPERIA PREMIUM 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Fujifilm Fujicolor C200 New": {"features": ["C200N", "FUJICOLOR200NEW"], "edge_code": "FUJI C200N", "visual": {"emulsion": "FUJICOLOR 200 NEW", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Fujifilm Neopan 100 Acros": {"features": ["NP100", "NEOPAN100"], "edge_code": "NEOPAN 100", "visual": {"emulsion": "FUJIFILM NEOPAN 100 ACROS", "edge_marking_color": [200, 200, 200, 160], "type": "BW"}},
+  "Fujifilm Neopan 400 RVP": {"features": ["NP400", "NEOPAN400RVP"], "edge_code": "NEOPAN 400", "visual": {"emulsion": "FUJIFILM NEOPAN 400 RVP", "edge_marking_color": [200, 200, 200, 160], "type": "BW"}},
+  "Fujifilm Sensia II 100": {"features": ["SENSIAII100", "SENSIA100"], "edge_code": "FUJI SENSIA II 100", "visual": {"emulsion": "FUJIFILM SENSIA II 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}}
+},
+"ILFORD": {
+  "HP5 Plus": {"features": ["HP5", "HP5+"], "edge_code": "ILFORD HP5 PLUS", "visual": {"emulsion": "ILFORD HP5 PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "FP4 Plus": {"features": ["FP4", "FP4+"], "edge_code": "ILFORD FP4 PLUS", "visual": {"emulsion": "ILFORD FP4 PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Delta 100": {"features": ["D100", "DELTA100"], "edge_code": "ILFORD DELTA 100", "visual": {"emulsion": "ILFORD DELTA 100", "edge_marking_color": [220, 220, 220, 180], "type": "BW"}},
+  "Delta 400": {"features": ["D400", "DELTA400"], "edge_code": "ILFORD DELTA 400", "visual": {"emulsion": "ILFORD DELTA 400", "edge_marking_color": [220, 220, 220, 180], "type": "BW"}},
+  "Delta 3200": {"features": ["D3200", "DELTA3200"], "edge_code": "ILFORD DELTA 3200", "visual": {"emulsion": "ILFORD DELTA 3200", "edge_marking_color": [220, 220, 220, 180], "type": "BW"}},
+  "XP2 Super": {"features": ["XP2", "XP2400"], "edge_code": "ILFORD XP2", "visual": {"emulsion": "ILFORD XP2 SUPER", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Pan F Plus 50": {"features": ["PANF", "PANF50"], "edge_code": "ILFORD PAN F PLUS", "visual": {"emulsion": "ILFORD PAN F PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Ilford FP4": {"features": ["FP4B", "ILFORDFP4"], "edge_code": "ILFORD FP4", "visual": {"emulsion": "ILFORD FP4", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Ilford Panatomic X": {"features": ["PANX", "PANATOMICX"], "edge_code": "ILFORD PANATOMIC X", "visual": {"emulsion": "ILFORD PANATOMIC X", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Ilford Ortho Plus": {"features": ["ORTHO", "ORTHOP"], "edge_code": "ILFORD ORTHO PLUS", "visual": {"emulsion": "ILFORD ORTHO PLUS", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Ilford SFX 200": {"features": ["SFX", "SFX200"], "edge_code": "ILFORD SFX 200", "visual": {"emulsion": "ILFORD SFX 200", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Ilford Delta 1600": {"features": ["D1600", "DELTA1600"], "edge_code": "ILFORD DELTA 1600", "visual": {"emulsion": "ILFORD DELTA 1600", "edge_marking_color": [220, 220, 220, 180], "type": "BW"}},
+  "Ilford Ilfospeed 400": {"features": ["IF400", "ILFOSPEED400"], "edge_code": "ILFORD ILFOSPEED 400", "visual": {"emulsion": "ILFORD ILFOSPEED 400", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}}
+},
+"AGFA": {
+  "Agfa Vista 200": {"features": ["VISTA200", "AV200"], "edge_code": "AGFA VISTA 200", "visual": {"emulsion": "AGFA VISTA 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Agfa Vista Plus 200": {"features": ["VISTA+200", "AVP200"], "edge_code": "AGFA VISTA PLUS 200", "visual": {"emulsion": "AGFA VISTA PLUS 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Agfa CT Precisa 100": {"features": ["PRECISA100", "CTP100"], "edge_code": "AGFA CT PRECISA 100", "visual": {"emulsion": "AGFA CT PRECISA 100", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
+  "Agfa APX 400": {"features": ["APX400", "AGFAAPX400"], "edge_code": "AGFA APX 400", "visual": {"emulsion": "AGFA APX 400", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Agfa Scala 400X": {"features": ["SCALA", "SCALA400X"], "edge_code": "AGFA SCALA 400X", "visual": {"emulsion": "AGFA SCALA 400X", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}}
+},
+"KONICA": {
+  "Konica Color SR-G 400": {"features": ["SRG400", "KCSRG400"], "edge_code": "KONICA SR-G 400", "visual": {"emulsion": "KONICA COLOR SR-G 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Konica SR-G 100": {"features": ["SRG100", "KCSRG100"], "edge_code": "KONICA SR-G 100", "visual": {"emulsion": "KONICA COLOR SR-G 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}}
+},
+"ROCKWELL": {
+  "Rockwell Black & White 100": {"features": ["RW100BW", "ROCKWELLBW100"], "edge_code": "ROCKWELL BW 100", "visual": {"emulsion": "ROCKWELL BLACK & WHITE 100", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}}
+},
+"Lomography": {
+  "LomoChrome Metropolis": {"features": ["METROPOLIS", "LCM"], "edge_code": "Lomography LC-A Metropolis", "visual": {"emulsion": "Lomography LC-A Metropolis 400", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "LomoChrome Purple": {"features": ["PURPLE", "LCP"], "edge_code": "Lomography LC-A Purple", "visual": {"emulsion": "Lomography LC-A Purple 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "LomoChrome Turquoise": {"features": ["TURQUOISE", "LCT"], "edge_code": "Lomography LC-A Turquoise", "visual": {"emulsion": "Lomography LC-A Turquoise 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "LomoChrome Wolf": {"features": ["WOLF", "LCW"], "edge_code": "Lomography LC-A Wolf", "visual": {"emulsion": "Lomography LC-A Wolf 400", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "LomoChrome Negative XS 200": {"features": ["XS200", "LCN200"], "edge_code": "Lomography LC-A Negative XS 200", "visual": {"emulsion": "Lomography LC-A Negative XS 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "LomoChrome Color Film 400": {"features": ["LCC400", "COLOR400"], "edge_code": "Lomography LC-A Color 400", "visual": {"emulsion": "Lomography LC-A Color 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Lomography Berlin Kino B&W 400": {"features": ["BERLIN", "KINO400"], "edge_code": "Lomography Berlin Kino B&W 400", "visual": {"emulsion": "Lomography Berlin Kino B&W 400", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Lomography Babylon Kino B&W 13": {"features": ["BABYLON", "KINO13"], "edge_code": "Lomography Babylon Kino B&W 13", "visual": {"emulsion": "Lomography Babylon Kino B&W 13", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Lomography Orca P3": {"features": ["ORCA", "ORCAP3"], "edge_code": "Lomography Orca P3", "visual": {"emulsion": "Lomography Orca P3", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "Lomography Redscale XR 50-200": {"features": ["REDSCALE", "RS50"], "edge_code": "Lomography Redscale XR 50-200", "visual": {"emulsion": "Lomography Redscale XR 50-200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}}
+},
+"Lucky Film": {
+  "LuckyFilm Color 200": {"features": ["LUCKY200", "LF200"], "edge_code": "LuckyFilm Color 200", "visual": {"emulsion": "LuckyFilm Color 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "LuckyFilm Color 400": {"features": ["LUCKY400", "LF400"], "edge_code": "LuckyFilm Color 400", "visual": {"emulsion": "LuckyFilm Color 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "LuckyFilm Black & White 100": {"features": ["LUCKY100BW", "LFBW100"], "edge_code": "LuckyFilm B&W 100", "visual": {"emulsion": "LuckyFilm Black & White 100", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "LuckyFilm Black & White 400": {"features": ["LUCKY400BW", "LFBW400"], "edge_code": "LuckyFilm B&W 400", "visual": {"emulsion": "LuckyFilm Black & White 400", "edge_marking_color": [210, 210, 210, 180], "type": "BW"}},
+  "LuckyFilm ECO Color 200": {"features": ["ECO200", "LFECO200"], "edge_code": "LuckyFilm ECO Color 200", "visual": {"emulsion": "LuckyFilm ECO Color 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "LuckyFilm CrossPro Color 400": {"features": ["CROSSPRO", "LFCP400"], "edge_code": "LuckyFilm CrossPro 400", "visual": {"emulsion": "LuckyFilm CrossPro 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "LuckyFilm CrossPro Color 200": {"features": ["CROSSPRO200", "LFCP200"], "edge_code": "LuckyFilm CrossPro 200", "visual": {"emulsion": "LuckyFilm CrossPro 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}}
+}
 }
