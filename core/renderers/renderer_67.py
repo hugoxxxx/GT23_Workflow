@@ -120,12 +120,13 @@ class Renderer67(BaseFilmRenderer):
 
                 py = sy + side_margin 
                 
-                # EN: Always draw frame number, even without photo
-                # CN: 总是绘制序号，即使没有照片
+                # EN: Always draw triangle and frame number, even without photo
+                # CN: 总是绘制三角形和序号，即使没有照片
                 num_str = str(idx + 1)
                 num_tw = draw.textlength(num_str, font=self.font)
                 ax_start = (curr_x + photo_w // 2) - (tri_p.width + 50 + num_tw) // 2
                 ay = py + photo_h + 5 
+                canvas.paste(tri_p, (int(ax_start), int(ay + 5)), tri_p)
                 draw.text((int(ax_start + tri_p.width + 50), int(ay)), num_str, font=self.font, fill=cur_color)
                 
                 # EN: If photo exists, render it and related information
@@ -134,14 +135,9 @@ class Renderer67(BaseFilmRenderer):
                     # EN: A. Paste photo (Force Landscape)
                     # CN: A. 粘贴照片 (强制横向)
                     self._paste_photo(canvas, img_list[idx], curr_x, py, photo_w, photo_h, force_landscape=True)
-                    
-                    # EN: B. Bottom frame number triangle (Physical center alignment)
-                    # CN: B. 下侧序号三角 (物理中心对齐)
-                    canvas.paste(tri_p, (int(ax_start), int(ay + 5)), tri_p)
-                    draw.text((int(ax_start + tri_p.width + 50), int(ay)), num_str, font=self.font, fill=cur_color)
 
-                    # EN: C. Right side EXIF (150px compressed space)
-                    # CN: C. 右侧 EXIF (150px 压缩空间)
+                    # EN: B. Right side EXIF (150px compressed space)
+                    # CN: B. 右侧 EXIF (150px 压缩空间)
                     data = meta_handler.get_data(img_list[idx])
                     date_str, exif_str = self.get_clean_exif(data)
                         

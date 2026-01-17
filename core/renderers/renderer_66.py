@@ -79,9 +79,12 @@ class Renderer66(BaseFilmRenderer):
                 # CN: 总是更新最后帧位置，确保裁切线在最底部
                 last_frame_y_start = curr_y 
 
-                # EN: Always draw frame number, even without photo
-                # CN: 总是绘制序号，即使没有照片
+                # EN: Always draw triangle and frame number, even without photo
+                # CN: 总是绘制三角形和序号，即使没有照片
                 r_mid = sx + strip_w - black_margin_w // 2
+                tri_raw = self.create_stretched_triangle(color=cur_color)
+                tri_final = tri_raw.resize((int(tri_raw.size[0] * 3.5), tri_raw.size[1])).rotate(-90, expand=True)
+                canvas.paste(tri_final, (int(r_mid - tri_final.width//2), int(curr_y + frame_box_h//2 - 105)), tri_final)
                 num_layer = self.create_rotated_text(str(idx + 1), 90, color=cur_color)
                 canvas.paste(num_layer, (int(r_mid - num_layer.width//2), int(curr_y + frame_box_h//2)), num_layer)
 
@@ -116,16 +119,6 @@ class Renderer66(BaseFilmRenderer):
                     if exif_str and str(exif_str).strip().upper() != "NONE":
                         draw.text((sx + strip_w//2 - draw.textlength(exif_str, font=self.seg_font)//2, text_y_start + 45), 
                             exif_str, font=self.seg_font, fill=cur_color)
-
-                    # EN: Right side indicator (only display when photo exists)
-                    # CN: 右侧标识（仅在有照片时显示）
-                    tri_raw = self.create_stretched_triangle(color=cur_color)
-                    tri_final = tri_raw.resize((int(tri_raw.size[0] * 3.5), tri_raw.size[1])).rotate(-90, expand=True)
-                    canvas.paste(tri_final, (int(r_mid - tri_final.width//2), int(curr_y + new_h//2 - 105)), tri_final)
-                    # EN: Redraw frame number on top of triangle
-                    # CN: 重新绘制序号，覆盖在三角形上方
-                    num_layer = self.create_rotated_text(str(idx + 1), 90, color=cur_color)
-                    canvas.paste(num_layer, (int(r_mid - num_layer.width//2), int(curr_y + new_h//2 + 25)), num_layer)
 
             # EN: 3. Precise cropping (fixed crop after last preset row)
             # CN: --- 3. 精准裁切 (固定裁切到最后一个预设行之后) ---

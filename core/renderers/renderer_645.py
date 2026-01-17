@@ -93,9 +93,10 @@ class Renderer645(BaseFilmRenderer):
                     idx = c * rows + r
                     curr_y = m_y_t + r * step_y
                     
-                    # EN: Always draw frame number, even without photo
-                    # CN: 总是绘制序号，即使没有照片
+                    # EN: Always draw frame number and triangle, even without photo
+                    # CN: 总是绘制序号和三角形，即使没有照片
                     r_mid_x = sx + strip_w - (strip_w - photo_w) // 4
+                    canvas.paste(tri_l, (int(r_mid_x - tri_l.width//2), int(curr_y + photo_h//2 - 105)), tri_l)
                     num_layer = self.create_rotated_text(str(idx + 1), 90, color=cur_color)
                     canvas.paste(num_layer, (int(r_mid_x - num_layer.width//2), int(curr_y + photo_h//2)), num_layer)
 
@@ -104,14 +105,6 @@ class Renderer645(BaseFilmRenderer):
                     if idx < len(img_list):
                         px = sx + (strip_w - photo_w)//2
                         self._paste_photo(canvas, img_list[idx], px, curr_y, photo_w, photo_h, rotate=True)
-                        
-                        # EN: Right side indicator (only display when photo exists)
-                        # CN: 右侧标识（仅在有照片时显示）
-                        canvas.paste(tri_l, (int(r_mid_x - tri_l.width//2), int(curr_y + photo_h//2 - 105)), tri_l)
-                        # EN: Redraw frame number on top of triangle
-                        # CN: 重新绘制序号，覆盖在三角形上方
-                        num_layer = self.create_rotated_text(str(idx + 1), 90, color=cur_color)
-                        canvas.paste(num_layer, (int(r_mid_x - num_layer.width//2), int(curr_y + photo_h//2 + 25)), num_layer)
                         
                         # EN: --- Issue 1 correction: Move EXIF closer to photo bottom ---
                         # CN: --- 问题 1 修正：EXIF 距离照片更近 ---
@@ -201,9 +194,14 @@ class Renderer645(BaseFilmRenderer):
                     # EN: ---------------------------------------------------------
                     # CN: ---------------------------------------------------------
 
-                    # EN: Draw frame number (even without photo)
-                    # CN: 执行绘制序号（即使没有照片）
+                    # EN: Draw triangle and frame number (even without photo)
+                    # CN: 绘制三角形和序号（即使没有照片）
+                    canvas.paste(tri_p, (int(ax_start), int(tri_p_y)), tri_p)
                     draw.text((int(ax_start + tri_p.width + 50), int(ay)), num_str, font=self.font, fill=cur_color)
+                    
+                    # EN: Top info: Horizontal marking (always display)
+                    # CN: 上侧信息：水平喷码（始终显示）
+                    draw.text((curr_x, sy + 10), raw_text, font=self.led_font, fill=cur_color)
                     
                     # EN: If photo exists, render it and related information
                     # CN: 如果有对应的照片，则绘制照片和相关信息
@@ -211,17 +209,9 @@ class Renderer645(BaseFilmRenderer):
                         # EN: A. Paste photo
                         # CN: A. 粘贴照片
                         self._paste_photo(canvas, img_list[idx], curr_x, py, photo_w, photo_h, rotate=False)
-                        
-                        # EN: B. Top info: Horizontal marking
-                        # CN: B. 上侧信息：水平喷码
-                        draw.text((curr_x, sy + 10), raw_text, font=self.led_font, fill=cur_color)
-                        
-                        # EN: C. Bottom info: Triangle (only display when photo exists)
-                        # CN: C. 下侧信息：三角 (仅在有照片时显示)
-                        canvas.paste(tri_p, (int(ax_start), int(tri_p_y)), tri_p)
 
-                        # EN: D. Right side info: Two-line EXIF (rotated 90 degrees)
-                        # CN: D. 右侧信息：双行 EXIF (旋转 90)
+                        # EN: B. Right side info: Two-line EXIF (rotated 90 degrees)
+                        # CN: B. 右侧信息：双行 EXIF (旋转 90)
                         data = meta_handler.get_data(img_list[idx])
                         date_str, exif_str = self.get_clean_exif(data)
                         
@@ -240,10 +230,6 @@ class Renderer645(BaseFilmRenderer):
                             exif_layer = self.create_rotated_seg_text(exif_str, 90, cur_color)
                             canvas.paste(exif_layer, (int(right_margin_center_x + 5), int(py + photo_h // 2 - exif_layer.height // 2)), exif_layer)
 
-                    else:
-                        # EN: No photo - still draw marking to maintain layout consistency
-                        # CN: 没有照片时，仍然绘制喷码（保持布局一致性）
-                        draw.text((curr_x, sy + 10), raw_text, font=self.led_font, fill=cur_color)
             # EN: --- 2. Unified right area fixed crop (similar to L mode) ---
             # CN: --- 2. 统一右侧区域固定裁切 (类似L模式) ---
             # EN: Fixed crop after last column to ensure complete column layout always
