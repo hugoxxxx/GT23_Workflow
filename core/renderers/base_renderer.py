@@ -1,12 +1,19 @@
 # core/renderers/base_renderer.py
 import os
+import sys
 from PIL import Image, ImageDraw, ImageFont
 
 class BaseFilmRenderer:
     def __init__(self, font_path="consola.ttf", font_size=44):
-        # EN: Get project root / CN: 获取项目根目录以定位 assets
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(os.path.dirname(current_dir))
+        # EN: Get resource base path (works both in dev and PyInstaller exe)
+        # CN: 获取资源基础路径（开发环境和打包后的 exe 都适用）
+        if getattr(sys, 'frozen', False):
+            # EN: Running in PyInstaller bundle / CN: 在打包的 exe 中运行
+            base_path = sys._MEIPASS
+        else:
+            # EN: Running in normal Python environment / CN: 在普通 Python 环境中运行
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            base_path = os.path.dirname(os.path.dirname(current_dir))
         
         # A. EN: Standard Font / CN: 标准字体
         try:
@@ -15,14 +22,14 @@ class BaseFilmRenderer:
             self.font = ImageFont.load_default()
 
         # B. EN: Metadata Font (Seven Segment) / CN: 元数据字体 (数码管)
-        seg_path = os.path.join(project_root, "assets", "fonts", "LiquidCrystal-Bold.otf")
+        seg_path = os.path.join(base_path, "assets", "fonts", "LiquidCrystal-Bold.otf")
         try:
             self.seg_font = ImageFont.truetype(seg_path, 40)
         except:
             self.seg_font = self.font
 
         # C. EN: Edge Marking Font (LED Dot-Matrix) / CN: 侧边喷码字体 (点阵)
-        led_path = os.path.join(project_root, "assets", "fonts", "consola.ttf")
+        led_path = os.path.join(base_path, "assets", "fonts", "consola.ttf")
         try:
             self.led_font = ImageFont.truetype(led_path, 48)
         except:

@@ -1,5 +1,6 @@
 # core/metadata.py
 import os
+import sys
 import json
 import exifread
 from fractions import Fraction
@@ -10,11 +11,19 @@ class MetadataHandler:
         """ EN: Refined MetadataHandler - Strictly preserves structure, fixes keyword matching.
              CN: 核心逻辑修复版：严格保留结构，修复关键字匹配路径。
         """
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(current_dir)
-        layout_path = os.path.join(project_root, 'config', layout_config)
-        films_path = os.path.join(project_root, 'config', films_config)
-        contact_path = os.path.join(project_root, 'config', contact_config)
+        # EN: Get resource base path (works both in dev and PyInstaller exe)
+        # CN: 获取资源基础路径（开发环境和打包后的 exe 都适用）
+        if getattr(sys, 'frozen', False):
+            # EN: Running in PyInstaller bundle / CN: 在打包的 exe 中运行
+            base_path = sys._MEIPASS
+        else:
+            # EN: Running in normal Python environment / CN: 在普通 Python 环境中运行
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            base_path = os.path.dirname(current_dir)
+        
+        layout_path = os.path.join(base_path, 'config', layout_config)
+        films_path = os.path.join(base_path, 'config', films_config)
+        contact_path = os.path.join(base_path, 'config', contact_config)
 
         with open(layout_path, 'r', encoding='utf-8') as f:
             self.layout_db = json.load(f)
