@@ -232,9 +232,13 @@ class Renderer645(BaseFilmRenderer):
 
             # EN: --- 2. Unified right area fixed crop (similar to L mode) ---
             # CN: --- 2. 统一右侧区域固定裁切 (类似L模式) ---
-            # EN: Fixed crop after last column to ensure complete column layout always
-            # CN: 固定裁切到最后一列之后，确保总是有完整的列数布局
-            crop_line_x = m_x + cols * col_pitch
+            # EN: Right margin should equal the gap between photos (col_pitch - photo_w)
+            # CN: 右侧黑边应该等于照片间隙（col_pitch - photo_w）
+            # EN: Last photo right edge + full gap width
+            # CN: 最后照片右边缘 + 完整间隙宽度
+            last_photo_right = m_x + (cols - 1) * col_pitch + (col_pitch + photo_w) // 2
+            gap_width = col_pitch - photo_w
+            crop_line_x = last_photo_right + gap_width
             if crop_line_x < c_w:
                 draw.rectangle([crop_line_x, 0, c_w, c_h], fill=bg_color)
 
