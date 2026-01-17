@@ -179,30 +179,57 @@ GT23_Workflow/
 
 ## 📸 Sample Outputs | 示例输出
 
-### 135 Format (36 frames per roll)
-<p align="center">
-  <img src="https://private-user-images.githubusercontent.com/18653086/536665968-5248b9de-018d-4a4f-91d2-235e8aa0042e.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NjA3NTYsIm5iZiI6MTc2ODU2MDQ1NiwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjU5NjgtNTI0OGI5ZGUtMDE4ZC00YTRmLTkxZDItMjM1ZThhYTAwNDJlLmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDEwNDczNlomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTU5OTE2MTZhZWZiNGE1YjQ0MWM2NDY3NWM4MzY4ZWY1N2Q4N2JhMGU2YmQwOGJlZWFiYjM1MTA4MzQxOWY1ODEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.xttdj3aZ2jkRJ_ClbJousnW2lS2s5O6HtFvOqtzOClg" width="400" alt="135format">
-</p>
+### 🎞️ Contact Sheet Examples | 底片索引示例
 
-### 66 Format (12 frames per roll)
-<p align="center">
-  <img src="https://private-user-images.githubusercontent.com/18653086/536665969-eb9763e9-897b-4178-b849-d610e587c646.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NjA3NTYsIm5iZiI6MTc2ODU2MDQ1NiwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjU5NjktZWI5NzYzZTktODk3Yi00MTc4LWI4NDktZDYxMGU1ODdjNjQ2LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDEwNDczNlomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTEwYWMwYTgyYzEzMjlhZTEwMGYxNTM5MGMwZTFmMGJlYWI3MWUyOWRiMDI3Y2ZiNTU5NGMyNzc5YTFmMWY5ZTAmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.wTUND4PG7YpWg2mOMKOf5zBfhbIyfK5w8SUiT2wbEcI" width="400" alt="66format">
-</p>
+<table>
+<tr>
+<td width="50%" align="center">
+<b>135 Format</b> (36 frames)<br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_135.jpg" width="100%" alt="135format">
+</td>
+<td width="50%" align="center">
+<b>66 Format</b> (12 frames)<br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_66.jpg" width="100%" alt="66format">
+</td>
+</tr>
+<tr>
+<td width="50%" align="center">
+<b>645 Landscape</b> (16 frames)<br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_645-L.jpg" width="100%" alt="645format_L">
+</td>
+<td width="50%" align="center">
+<b>645 Portrait</b> (16 frames)<br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_645-P.jpg" width="100%" alt="645format_P">
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
+<b>67 Format</b> (10 frames)<br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_67.jpg" width="50%" alt="67format">
+</td>
+</tr>
+</table>
 
-### 645 Format Landscape (16 frames per roll)
-<p align="center">
-  <img src="https://private-user-images.githubusercontent.com/18653086/536666170-30a2bb16-de7d-45da-8514-06d920602ac7.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NjA3NTYsIm5iZiI6MTc2ODU2MDQ1NiwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjYxNzAtMzBhMmJiMTYtZGU3ZC00NWRhLTg1MTQtMDZkOTIwNjAyYWM3LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDEwNDczNlomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWY2MzZiYTVmZjkwOTJmMTVlZTAzZGMzNmI3MTVkOGU2YzNiZDUzMDY5N2E2ZTEwNjc0NjhkMGIwY2M5ZGQ3YmYmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.c3jTVffoZ21aPJyOhGKa0bkeKI7vwxZGGFIcjwheHdI" width="400" alt="645format_L">
-</p>
+### 🔍 Detail Examples | 细节示例
 
-### 645 Format Portrait (16 frames per roll)
-<p align="center">
-  <img src="https://private-user-images.githubusercontent.com/18653086/536666171-56946997-0736-47ad-a838-2fabf6affcf5.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NjA3NTYsIm5iZiI6MTc2ODU2MDQ1NiwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjYxNzEtNTY5NDY5OTctMDczNi00N2FkLWE4MzgtMmZhYmY2YWZmY2Y1LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDEwNDczNlomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWExNWEyZDU2OGYxM2YxM2JhNmRkNDJhNWUyZTNmYmU5NThmZTkxNzllMWU3ZTMzZjVmOTIxODc3ODk1NjYwMjQmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.faqRnHn8Wv47Y73KL3ZJ40opxRKrt_tJ7pnhOLYUI_w" width="400" alt="645format_P">
-</p>
-
-### 67 Format (10 frames per roll)
-<p align="center">
-  <img src="https://private-user-images.githubusercontent.com/18653086/536665967-c42c4076-21a5-4045-a928-635bf34b4fd4.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg1NjA3NTYsIm5iZiI6MTc2ODU2MDQ1NiwicGF0aCI6Ii8xODY1MzA4Ni81MzY2NjU5NjctYzQyYzQwNzYtMjFhNS00MDQ1LWE5MjgtNjM1YmYzNGI0ZmQ0LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAxMTYlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMTE2VDEwNDczNlomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTg3YmRjMDk3Y2U3MDk1ZWMzODgyZjQxZGM5NGI5ZjQyOTZlNmExMWZlNzVhOTQ2ZTZmM2FiYmVlOTAzZWE4YWQmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.meTZORQ-sChjm5YOgjoAy6_Ow-BSTY_tTe65WnDTdGQ" width="400" alt="67format">
-</p>
+<table>
+<tr>
+<td width="50%" align="center">
+<b>135 Movie Perforation | 电影卷齿孔</b><br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260117185247_87_68.png" width="100%" alt="135_movie_perforation">
+</td>
+<td width="50%" align="center">
+<b>135 Standard Perforation | 标准齿孔</b><br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260117185339_88_68.png" width="100%" alt="135_standard_perforation">
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
+<b>66 Border Example | 66 边框示例</b><br/>
+<img src="https://github.com/hugoxxxx/photos/blob/858c3dbadff82bcf6ece7de72a15c25d25f93746/GT23samples/GT23_66.png" width="50%" alt="66_border">
+</td>
+</tr>
+</table>
 
 ---
 
