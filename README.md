@@ -8,6 +8,14 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
+## 📷 About the Name | 项目名称由来
+
+**EN**: The name "GT23" pays homage to two legendary Contax compact cameras that shaped my film photography journey: the **G2** and **T3**. Both were once part of my collection, but circumstances led me to part with them. Since then, their prices have soared far beyond reach, closing the door on any chance of reunion. The memories of shooting with these exceptional cameras remain vivid, and when it came time to name a tool dedicated to film photography, honoring them felt like the only fitting tribute.
+
+**CN**: 项目名称 "GT23" 致敬了影响我胶片摄影之路的两部 Contax 传奇紧凑型相机：**G2** 和 **T3**。它们曾是我的珍藏，但因缘际会最终出手。此后价格飙升，再也难以企及，重逢无望。用这两部杰出相机拍摄的记忆依然鲜活，当我着手开发一款胶片摄影工具时，用它们的名字致敬，是唯一合适的选择。
+
+---
+
 ## 🚀 Key Features | 核心功能
 
 * **Dual Toolsets | 双重工具集**: 
@@ -114,8 +122,7 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 - [x] **v1.0 - v1.8**: Basic layout, Dynamic EXIF, and Auto-rotation. | 完成基础排版、动态 EXIF 及自动旋转。
 - [x] **v1.9 - v2.0**: Full multi-format support (66, 645, 67, 135), expanded film library, optimized sprocket rendering, and EXE packaging. | **已完成：多画幅支持、扩展胶片库、齿孔优化、EXE 封包。**
-- [ ] **v2.1 (Next)**: Advanced batch editing, custom layout templates. | **即将推出：高级批量编辑、自定义版式模板。**
-- [ ] **v3.0**: **GUI Interface**. | **长期规划：开发图形界面。**
+- [ ] **v2.0**: **GUI Interface**. | **长期规划：开发图形界面。**
 
 ---
 
