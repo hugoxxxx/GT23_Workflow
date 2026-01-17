@@ -1,7 +1,36 @@
 # .gitignore
+# Python
 venv/
+env/
+ENV/
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# PyInstaller / Build artifacts
+build/
+dist/
+*.spec
+*.exe
+*.pkg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+photos_in/
+photos_out/
 output/
 *.jpg
+*.jpeg
 *.png
-.DS_Store
+*.tiff
