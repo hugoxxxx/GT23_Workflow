@@ -31,8 +31,8 @@ class ContactSheetPro:
             user_keyword = None # 用于接力的关键字
 
             if not sample_data.get('Film'):
-                print("CN: [?] 无法识别胶卷，启动手动匹配...")
-                user_keyword = input("   >>> 请输入关键字 (如 p400): ").strip()
+                print("EN: [?] Film not recognized, starting manual matching... | CN: [?] 无法识别胶卷，启动手动匹配...")
+                user_keyword = input("EN: Enter keyword (e.g. p400) | CN: 请输入关键字 (如 p400) >>> ").strip()
                 # EN: Re-extract using manual_film to get full bundle (EdgeCode/Color)
                 # CN: 使用手动关键字重新提取，确保拿到匹配库后的 EdgeCode 和颜色
                 sample_data = self.meta.get_data(img_paths[0], manual_film=user_keyword)
@@ -51,7 +51,7 @@ class ContactSheetPro:
             if not os.path.exists(output_dir): os.makedirs(output_dir)
             save_path = os.path.join(output_dir, f"ContactSheet_{layout_key}.jpg")
             canvas.save(save_path, quality=95)
-            print(f"CN: [✔] 索引页已保存至: {save_path}")
+            print(f"EN: [✔] Contact sheet saved to: {save_path} | CN: [✔] 索引页已保存至: {save_path}")
             
         except Exception as e:
             print("\n" + "="*60)

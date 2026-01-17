@@ -22,23 +22,24 @@ def main():
     """
     while True:
         print("\n" + "="*45)
+        print("EN: >>> GT23 Film Workflow Automation <<<")
         print("CN: >>> GT23 胶片自动化工作流 <<<")
         print("="*45)
-        print("CN: [1] 边框美化工具 (Border Tool)")
-        print("CN: [2] 底片索引工具 (Contact Sheet)")
-        print("CN: [Q] 退出程序")
+        print("EN: [1] Border Tool | CN: [1] 边框美化工具")
+        print("EN: [2] Contact Sheet | CN: [2] 底片索引工具")
+        print("EN: [Q] Exit | CN: [Q] 退出程序")
         print("-" * 45)
 
-        choice = input(">>> 请选择功能数字: ").strip().lower()
+        choice = input("EN: Select function number | CN: 请选择功能数字 >>> ").strip().lower()
 
         if choice == '1':
             try:
                 from apps.border_tool import run_border_tool
                 run_border_tool()
-                input("\nCN: [OK] 处理完成，按回车键返回主菜单...")
+                input("\nEN: [OK] Processing complete, press Enter to return... | CN: [OK] 处理完成，按回车键返回主菜单...")
             except Exception as e:
-                print(f"CN: [!] 启动边框工具失败: {e}")
-                input("\nCN: 按回车键返回主菜单...")
+                print(f"EN: [!] Failed to start Border Tool: {e} | CN: [!] 启动边框工具失败: {e}")
+                input("\nEN: Press Enter to return... | CN: 按回车键返回主菜单...")
 
         elif choice == '2':
             try:
@@ -47,19 +48,19 @@ def main():
                 from apps.contact_sheet import ContactSheetPro
                 app = ContactSheetPro()
                 app.run()
-                input("\nCN: [OK] 底片索引生成完成，按回车键返回主菜单...")
+                input("\nEN: [OK] Contact sheet generated, press Enter to return... | CN: [OK] 底片索引生成完成，按回车键返回主菜单...")
             except Exception as e:
-                print(f"CN: [!] 启动底片索引工具失败: {e}")
+                print(f"EN: [!] Failed to start Contact Sheet: {e} | CN: [!] 启动底片索引工具失败: {e}")
                 import traceback
                 traceback.print_exc()
-                input("\nCN: 按回车键返回主菜单...")
+                input("\nEN: Press Enter to return... | CN: 按回车键返回主菜单...")
 
         elif choice == 'q':
-            print("CN: >>> 感谢使用，程序已退出。")
+            print("EN: >>> Thank you, program exited. | CN: >>> 感谢使用，程序已退出。")
             break
             
         else:
-            print("CN: [!] 无效输入，请重新选择 1, 2 或 Q。")
+            print("EN: [!] Invalid input, please select 1, 2 or Q. | CN: [!] 无效输入，请重新选择 1, 2 或 Q。")
 
 if __name__ == "__main__":
     main()

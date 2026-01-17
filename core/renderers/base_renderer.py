@@ -37,7 +37,7 @@ class BaseFilmRenderer:
             self.led_font = self.font
 
     def prepare_canvas(self, w, h):
-        user_emulsion = input("CN: 请输入乳剂号 (如 049): ").strip()
+        user_emulsion = input("EN: Enter emulsion number (e.g. 049) | CN: 请输入乳剂号 (如 049) >>> ").strip()
         canvas = Image.new("RGB", (w, h), (235, 235, 235))
         return canvas, user_emulsion
 

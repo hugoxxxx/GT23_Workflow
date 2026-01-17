@@ -26,12 +26,13 @@ def run_border_tool():
     """
     try:
         print("\n" + "="*40)
-        print("CN: >>> 正在运行: 边框美化工具 (Border Tool)")
+        print("EN: >>> Running: Border Tool | CN: >>> 正在运行: 边框美化工具")
         print("="*40)
         
-        # 1. EN: Mode selection / CN: 模式选择
+        # EN: Mode selection / CN: 模式选择
+        print("EN: [SELECT] 1.Film Project (FILM)  2.Digital Project (DIGITAL)")
         print("CN: [SELECT] 1.胶片项目 (FILM)  2.数码项目 (DIGITAL)")
-        mode_choice = input(">>> 输入数字 (默认1): ").strip()
+        mode_choice = input("EN: Enter number (default 1) | CN: 输入数字 (默认1) >>> ").strip()
         is_digital = (mode_choice == "2")
 
         # 2. EN: Initialization / CN: 初始化
@@ -50,10 +51,10 @@ def run_border_tool():
         # 3. EN: File scanning / CN: 扫描文件
         images = [f for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
         if not images:
-            print(f"CN: [!] 文件夹 {input_dir} 中没有图片。")
+            print(f"EN: [!] No images in folder {input_dir} | CN: [!] 文件夹 {input_dir} 中没有图片。")
             return
 
-        print(f"CN: >>> 准备处理 {len(images)} 张照片...")
+        print(f"EN: >>> Preparing to process {len(images)} photos... | CN: >>> 准备处理 {len(images)} 张照片...")
 
         # 4. EN: Batch processing / CN: 批量处理
         for img_name in images:
@@ -64,28 +65,28 @@ def run_border_tool():
             
             # EN: Handle interactive input for Film / CN: 胶片模式下的手动输入
             if not is_digital and not data['Film']:
-                print(f"CN: [?] {img_name} 无法识别胶卷")
-                user_input = input("   >>> 请手动输入胶卷名称: ").strip()
+                print(f"EN: [?] {img_name} film not recognized | CN: [?] {img_name} 无法识别胶卷")
+                user_input = input("EN: Enter film name | CN: 请手动输入胶卷名称 >>> ").strip()
                 
                 # --- EN: CORE FIX / CN: 核心修复处 ---
                 # EN: Use match_film to standardize user input
                 # CN: 使用 match_film 标准化用户输入
                 if user_input:
                     data['Film'] = meta.match_film(user_input)
-                    print(f"CN: [✔] 已校对标准名: {data['Film']}")
+                    print(f"EN: [✔] Matched standard name: {data['Film']} | CN: [✔] 已校对标准名: {data['Film']}")
                 else:
                     data['Film'] = "UNKNOWN FILM"
             
             # EN: Final Rendering / CN: 最终渲染
             try:
                 renderer.process_image(img_path, data, output_dir)
-                print(f"CN: [DONE] 已生成: {img_name}")
+                print(f"EN: [DONE] Generated: {img_name} | CN: [DONE] 已生成: {img_name}")
             except Exception as e:
-                print(f"CN: [ERROR] {img_name} 失败: {e}")
+                print(f"EN: [ERROR] {img_name} failed: {e} | CN: [ERROR] {img_name} 失败: {e}")
                 import traceback
                 traceback.print_exc()
 
-        print("\nCN: [FINISH] 边框处理全部完成！")
+        print("\nEN: [FINISH] All border processing complete! | CN: [FINISH] 边框处理全部完成！")
         
     except Exception as e:
         print("\n" + "="*60)

@@ -32,21 +32,10 @@ class FilmRenderer:
             side_ratio = layout.get('side', 0.04)
             bottom_ratio = layout.get('bottom', 0.13)
             font_base_scale = layout.get('font_scale', 0.032)
-
-            # --- 添加调试输出 ---
-            print(f"DEBUG - Layout: {layout_name}")
-            print(f"DEBUG - Is Portrait: {layout.get('is_portrait', 'N/A')}")
-            print(f"DEBUG - Side Ratio: {side_ratio}")
-            print(f"DEBUG - Bottom Ratio: {bottom_ratio}")
-            print(f"DEBUG - Original image size: {w} x {h}")
             
             # --- EN: CALCULATE SPACING / CN: 计算物理间距 ---
             side_pad = int(w * side_ratio)
             bottom_splice = int(h * bottom_ratio)
-
-            # --- 添加调试输出 ---
-            print(f"DEBUG - Calculated side_pad: {side_pad}")
-            print(f"DEBUG - Calculated bottom_splice: {bottom_splice}")
             
             new_w, new_h = w + (side_pad * 2), h + (side_pad * 2) + bottom_splice
             
