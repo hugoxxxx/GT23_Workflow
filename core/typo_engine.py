@@ -40,5 +40,6 @@ class TypoEngine:
         
         for i, char in enumerate(chars):
             curr_x += offsets[i]
-            draw.text((curr_x + widths[i]/2, pos[1]), char, font=pil_font, fill=fill, anchor="mm")
+            y_offset = font_size * 0.02
+            draw.text((curr_x + widths[i]/2, pos[1]+y_offset), char, font=pil_font, fill=fill, anchor="mm")
             curr_x += widths[i]

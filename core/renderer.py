@@ -32,10 +32,21 @@ class FilmRenderer:
             side_ratio = layout.get('side', 0.04)
             bottom_ratio = layout.get('bottom', 0.13)
             font_base_scale = layout.get('font_scale', 0.032)
+
+            # --- 添加调试输出 ---
+            print(f"DEBUG - Layout: {layout_name}")
+            print(f"DEBUG - Is Portrait: {layout.get('is_portrait', 'N/A')}")
+            print(f"DEBUG - Side Ratio: {side_ratio}")
+            print(f"DEBUG - Bottom Ratio: {bottom_ratio}")
+            print(f"DEBUG - Original image size: {w} x {h}")
             
             # --- EN: CALCULATE SPACING / CN: 计算物理间距 ---
             side_pad = int(w * side_ratio)
             bottom_splice = int(h * bottom_ratio)
+
+            # --- 添加调试输出 ---
+            print(f"DEBUG - Calculated side_pad: {side_pad}")
+            print(f"DEBUG - Calculated bottom_splice: {bottom_splice}")
             
             new_w, new_h = w + (side_pad * 2), h + (side_pad * 2) + bottom_splice
             
@@ -52,10 +63,21 @@ class FilmRenderer:
             
             # EN: Link sub_size to main_size (0.78 ratio)
             # CN: 将副标题字号关联至主标题 (0.78 黄金比例)
-            main_font_size = int(new_w * font_base_scale)
-            sub_font_size = int(main_font_size * 0.78)
+            long_edge = max(new_w, new_h)
+            base_main_font_size = int(long_edge * font_base_scale)
+            base_sub_font_size = int(base_main_font_size * 0.78)
+
+            # EN: Ensure text fits within the available space
+            # CN: 确保文本适应可用空间
+            available_width = new_w - (side_pad * 2) - 40  # 减去左右边距
+            actual_main_size, actual_sub_size = self._adjust_font_sizes_to_fit(
+                draw, main_text, sub_text, available_width, 
+                base_main_font_size, base_sub_font_size
+            )
+
+            self._draw_pro_text(draw, new_w, h, side_pad, bottom_splice, 
+                            main_text, sub_text, actual_main_size, actual_sub_size)
             
-            self._draw_pro_text(draw, new_w, h, side_pad, bottom_splice, main_text, sub_text, main_font_size, sub_font_size)
             
             final_output = self._apply_pro_shadow(canvas)
             return self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name)
@@ -139,3 +161,45 @@ class FilmRenderer:
         # EN: Log the identified format clearly / CN: 明确记录识别出的画幅
         print(f"CN: [✔] 渲染完成: {out_name} | 画幅: {layout_name}")
         return True
+    
+    def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
+        """
+        调整字体大小使其适应可用宽度
+        """
+        # 创建临时绘图对象来测量文本宽度
+        temp_img = Image.new("RGB", (1, 1))
+        temp_draw = ImageDraw.Draw(temp_img)
+        
+        # 检查主文本宽度
+        main_font = self._get_font(self.font_main, base_main_size)
+        main_bbox = temp_draw.textbbox((0, 0), main_text, font=main_font)
+        main_text_width = main_bbox[2] - main_bbox[0]
+        
+        main_scale_factor = min(1.0, available_width / main_text_width) if main_text_width > 0 else 1.0
+        
+        # 检查副文本宽度  
+        sub_font = self._get_font(self.font_sub, base_sub_size)
+        sub_bbox = temp_draw.textbbox((0, 0), sub_text, font=sub_font)
+        sub_text_width = sub_bbox[2] - sub_bbox[0]
+        
+        sub_scale_factor = min(1.0, available_width / sub_text_width) if sub_text_width > 0 else 1.0
+        
+        # 使用最小缩放因子确保两个文本都不会超出边界
+        final_scale_factor = min(main_scale_factor, sub_scale_factor)
+        
+        final_main_size = max(10, int(base_main_size * final_scale_factor))  # 最小字体大小为10
+        final_sub_size = max(8, int(base_sub_size * final_scale_factor))   # 最小字体大小为8
+        
+        return final_main_size, final_sub_size
+
+    def _get_font(self, font_path, font_size):
+        """
+        获取字体对象，如果指定字体不存在则使用默认字体
+        """
+        try:
+            if os.path.exists(font_path):
+                return ImageFont.truetype(font_path, font_size)
+            else:
+                return ImageFont.load_default()
+        except:
+            return ImageFont.load_default()

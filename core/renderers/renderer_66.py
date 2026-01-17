@@ -39,8 +39,7 @@ class Renderer66(BaseFilmRenderer):
         for c in range(cols):
             sx = start_x + c * (strip_w + c_gap)
             
-            # --- 1. 铺设黑条与喷码 (645均布逻辑) ---
-            # 先画到底部
+            # --- 1. 总是铺设完整的黑条与喷码 (645均布逻辑) ---
             draw.rectangle([sx, m_y_t - v_padding_top, sx + strip_w, c_h], fill=(12, 12, 12))
             
             marking_y = m_y_t - v_padding_top + 40
@@ -49,61 +48,58 @@ class Renderer66(BaseFilmRenderer):
                 canvas.paste(edge_layer, (int(lx), int(marking_y + random.randint(-30, 30))), edge_layer)
                 marking_y += step_645
 
-            last_frame_y_start = 0
-            num_in_col = 0
-
-            # --- 2. 渲染照片与元数据 ---
+            # --- 2. 渲染照片与元数据 (对所有位置进行处理) ---
             for r in range(rows):
                 idx = c * rows + r 
-                if idx >= len(img_list): break
-                num_in_col += 1
                 curr_y = m_y_t + r * step_y
+                
+                # 总是更新最后帧位置，确保裁切线在最底部
                 last_frame_y_start = curr_y 
-                
-                frame_data = meta_handler.get_data(img_list[idx])
-                with Image.open(img_list[idx]) as img:
-                    img_w, img_h = img.size
-                    scale = frame_box_h / img_h
-                    new_w, new_h = int(img_w * scale), int(img_h * scale)
-                    if new_w > max_photo_w:
-                        scale = max_photo_w / new_w
-                        new_w, new_h = int(new_w * scale), int(new_h * scale)
-                    img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-                    px = sx + (strip_w - new_w) // 2
-                    canvas.paste(img_resized, (int(px), int(curr_y)))
 
-                # 元数据 (焦距单位 mm 小写)
-                data = meta_handler.get_data(img_list[idx])
-                date_str, exif_str = self.get_clean_exif(data)
-                
-                text_y_start = curr_y + new_h + 15
-                if date_str and str(date_str).strip().upper() != "NONE":
-                    draw.text((sx + strip_w//2 - draw.textlength(date_str, font=self.seg_font)//2, text_y_start), 
-                          date_str, font=self.seg_font, fill=cur_color)
-                    
-                if exif_str and str(exif_str).strip().upper() != "NONE":
-                    draw.text((sx + strip_w//2 - draw.textlength(exif_str, font=self.seg_font)//2, text_y_start + 45), 
-                          exif_str, font=self.seg_font, fill=cur_color)
-
-                # 右侧标识
+                # 总是绘制序号，即使没有照片
                 r_mid = sx + strip_w - black_margin_w // 2
-                tri_raw = self.create_stretched_triangle(color=cur_color)
-                tri_final = tri_raw.resize((int(tri_raw.size[0] * 3.5), tri_raw.size[1])).rotate(-90, expand=True)
-                canvas.paste(tri_final, (int(r_mid - tri_final.width//2), int(curr_y + new_h//2 - 105)), tri_final)
                 num_layer = self.create_rotated_text(str(idx + 1), 90, color=cur_color)
-                canvas.paste(num_layer, (int(r_mid - num_layer.width//2), int(curr_y + new_h//2 + 25)), num_layer)
+                canvas.paste(num_layer, (int(r_mid - num_layer.width//2), int(curr_y + frame_box_h//2)), num_layer)
 
-            # --- 3. 精准裁切 (确保最后一行下方黑边高度 = 行间黑边高度) ---
-            if num_in_col > 0:
-                # EN: The visual gap between photos is created by the step_y.
-                # CN: 照片间的视觉间隔是由 step_y 定义的。
-                # EN: Cutting exactly at (last_start + step_y) ensures the final black tail 
-                #     is identical to the black area between frame 1 and 2.
-                # CN: 裁切线 = 最后一帧起点 + 一个完整步进长度。
-                # 这保证了最后一帧下面的黑边厚度不多不少，刚好等于中间行的厚度。
-                crop_line_y = last_frame_y_start + step_y
-                
-                # 用背景色遮盖该线以下的所有内容
-                draw.rectangle([sx, crop_line_y, sx + strip_w, c_h], fill=bg_color)
+                # 如果有对应的照片，则绘制照片和相关信息
+                if idx < len(img_list):
+                    with Image.open(img_list[idx]) as img:
+                        img_w, img_h = img.size
+                        scale = frame_box_h / img_h
+                        new_w, new_h = int(img_w * scale), int(img_h * scale)
+                        if new_w > max_photo_w:
+                            scale = max_photo_w / new_w
+                            new_w, new_h = int(new_w * scale), int(new_h * scale)
+                        img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                        px = sx + (strip_w - new_w) // 2
+                        canvas.paste(img_resized, (int(px), int(curr_y)))
+
+                    # 元数据 (焦距单位 mm 小写)
+                    data = meta_handler.get_data(img_list[idx])
+                    date_str, exif_str = self.get_clean_exif(data)
+                    
+                    text_y_start = curr_y + new_h + 15
+                    if date_str and str(date_str).strip().upper() != "NONE":
+                        draw.text((sx + strip_w//2 - draw.textlength(date_str, font=self.seg_font)//2, text_y_start), 
+                            date_str, font=self.seg_font, fill=cur_color)
+                        
+                    if exif_str and str(exif_str).strip().upper() != "NONE":
+                        draw.text((sx + strip_w//2 - draw.textlength(exif_str, font=self.seg_font)//2, text_y_start + 45), 
+                            exif_str, font=self.seg_font, fill=cur_color)
+
+                    # 右侧标识（仅在有照片时显示）
+                    tri_raw = self.create_stretched_triangle(color=cur_color)
+                    tri_final = tri_raw.resize((int(tri_raw.size[0] * 3.5), tri_raw.size[1])).rotate(-90, expand=True)
+                    canvas.paste(tri_final, (int(r_mid - tri_final.width//2), int(curr_y + new_h//2 - 105)), tri_final)
+                    # 重新绘制序号，覆盖在三角形上方
+                    num_layer = self.create_rotated_text(str(idx + 1), 90, color=cur_color)
+                    canvas.paste(num_layer, (int(r_mid - num_layer.width//2), int(curr_y + new_h//2 + 25)), num_layer)
+
+            # --- 3. 精准裁切 (固定裁切到最后一个预设行之后) ---
+            # 固定裁切到最后一行的下一个位置，确保总是有4行的布局
+            crop_line_y = m_y_t + rows * step_y
+            
+            # 用背景色遮盖该线以下的所有内容
+            draw.rectangle([sx, crop_line_y, sx + strip_w, c_h], fill=bg_color)
 
         return canvas
