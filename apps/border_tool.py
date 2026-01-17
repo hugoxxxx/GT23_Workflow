@@ -2,13 +2,22 @@
 import os
 import sys
 
-# EN: Get project root / CN: 获取项目根目录
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-
 # EN: Import from core / CN: 从 core 导入核心模块
 from core.metadata import MetadataHandler
-from core.renderer import FilmRenderer 
+from core.renderer import FilmRenderer
+
+# EN: Get working directory (where photos_in/out should be)
+# CN: 获取工作目录（photos_in/out 应该所在的位置）
+def get_working_dir():
+    """EN: Returns the directory where exe runs or script is located.
+       CN: 返回 exe 运行的目录或脚本所在目录。"""
+    if getattr(sys, 'frozen', False):
+        # Running as exe: use executable's directory
+        return os.path.dirname(sys.executable)
+    else:
+        # Running as script: use project root
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.dirname(current_dir) 
 
 def run_border_tool():
     """
@@ -30,8 +39,9 @@ def run_border_tool():
     meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
     renderer = FilmRenderer()
     
-    input_dir = os.path.join(project_root, "photos_in")
-    output_dir = os.path.join(project_root, "photos_out")
+    working_dir = get_working_dir()
+    input_dir = os.path.join(working_dir, "photos_in")
+    output_dir = os.path.join(working_dir, "photos_out")
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)

@@ -2,10 +2,18 @@
 import os
 import sys
 
-# EN: Ensure project root is in sys.path / CN: 中英双语：确保项目根目录在系统路径中
-root_path = os.path.dirname(os.path.abspath(__file__))
-if root_path not in sys.path:
-    sys.path.insert(0, root_path)
+# EN: Get the correct base path for both dev and PyInstaller exe
+# CN: 获取开发环境和打包 exe 环境下的正确基础路径
+if getattr(sys, 'frozen', False):
+    # EN: Running as PyInstaller exe, use executable's directory
+    # CN: 以 exe 运行时，使用可执行文件所在目录
+    root_path = os.path.dirname(sys.executable)
+else:
+    # EN: Running as Python script, use script's directory
+    # CN: 以脚本运行时，使用脚本所在目录
+    root_path = os.path.dirname(os.path.abspath(__file__))
+    if root_path not in sys.path:
+        sys.path.insert(0, root_path)
 
 def main():
     """

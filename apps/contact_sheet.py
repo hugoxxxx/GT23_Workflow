@@ -1,5 +1,6 @@
 # contact_sheet.py
 import os
+import sys
 from core.metadata import MetadataHandler
 from core.renderers.renderer_66 import Renderer66
 from core.renderers.renderer_645 import Renderer645
@@ -12,7 +13,15 @@ class ContactSheetPro:
         self.renderers = {"66": Renderer66(), "645": Renderer645(), "67": Renderer67(), "135": Renderer135()}
 
     def run(self):
-        input_dir, output_dir = "photos_in", "photos_out"
+        # EN: Get working directory for photos_in/out
+        # CN: 获取 photos_in/out 的工作目录
+        if getattr(sys, 'frozen', False):
+            working_dir = os.path.dirname(sys.executable)
+        else:
+            working_dir = os.getcwd()
+        
+        input_dir = os.path.join(working_dir, "photos_in")
+        output_dir = os.path.join(working_dir, "photos_out")
         img_paths = sorted([os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
         if not img_paths: return
 
