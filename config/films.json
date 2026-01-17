@@ -4,7 +4,7 @@
   "Portra 400": {"features": ["P400", "PORTRA400"], "edge_code": "KODAK PORTRA 400", "visual": {"emulsion": "KODAK PORTRA 400 4062", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "Portra 800": {"features": ["P800", "PORTRA800"], "edge_code": "KODAK PORTRA 800", "visual": {"emulsion": "KODAK PORTRA 800 4063", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "Ektar 100": {"features": ["E100", "EKTAR100"], "edge_code": "KODAK EKTAR 100", "visual": {"emulsion": "KODAK EKTAR 100 4060", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
-  "Gold 200": {"features": ["GOLD", "G200"], "edge_code": "KODAK GOLD 200", "visual": {"emulsion": "KODAK GOLD 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Gold 200": {"features": ["GOLD", "G200"], "edge_code": "KODAK 200", "visual": {"emulsion": "KODAK 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "UltraMax 400": {"features": ["UMAX", "ULTRAMAX"], "edge_code": "KODAK ULTRAMAX 400", "visual": {"emulsion": "KODAK ULTRAMAX 400", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "ColorPlus 200": {"features": ["CP200", "COLORPLUS"], "edge_code": "KODAK CP 200", "visual": {"emulsion": "KODAK CP 200", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
   "Ektachrome E100": {"features": ["E100", "E100G"], "edge_code": "KODAK E100", "visual": {"emulsion": "KODAK E100 5085", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},
@@ -22,7 +22,14 @@
   "Kodak Tri-X Pan": {"features": ["TXP", "TRIXPAN"], "edge_code": "KODAK TRI-X PAN", "visual": {"emulsion": "KODAK TRI-X PAN", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
   "Kodak Plus-X Pan": {"features": ["PX", "PLUSX"], "edge_code": "KODAK PLUS-X PAN", "visual": {"emulsion": "KODAK PLUS-X PAN", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
   "Kodak Vericolor III": {"features": ["VERI3", "VERICOLORIII"], "edge_code": "KODAK VERICOLOR III", "visual": {"emulsion": "KODAK VERICOLOR III", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
-  "Kodak Royal Gold 100": {"features": ["RG100", "ROYALGOLD100"], "edge_code": "KODAK ROYAL GOLD 100", "visual": {"emulsion": "KODAK ROYAL GOLD 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}}
+  "Kodak Royal Gold 100": {"features": ["RG100", "ROYALGOLD100"], "edge_code": "KODAK ROYAL GOLD 100", "visual": {"emulsion": "KODAK ROYAL GOLD 100", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Vision3 250D": {"features": ["5207", "V3250D", "VISION3250D"], "edge_code": "KODAK VISION3 250D", "visual": {"emulsion": "KODAK VISION3 250D 5207", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Vision3 500T": {"features": ["5203", "V3500T", "VISION3500T"], "edge_code": "KODAK VISION3 500T", "visual": {"emulsion": "KODAK VISION3 500T 5203", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Vision3 200T": {"features": ["5219", "V3200T", "VISION3200T"], "edge_code": "KODAK VISION3 200T", "visual": {"emulsion": "KODAK VISION3 200T 5219", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Vision3 1000T": {"features": ["5213", "V31000T", "VISION31000T"], "edge_code": "KODAK VISION3 1000T", "visual": {"emulsion": "KODAK VISION3 1000T 5213", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Vision3 50D": {"features": ["5222", "V350D", "VISION350D"], "edge_code": "KODAK VISION3 50D", "visual": {"emulsion": "KODAK VISION3 50D 5222", "edge_marking_color": [245, 130, 35, 210], "type": "CN"}},
+  "Double-X 240": {"features": ["7219", "DOUBLEX", "DX240"], "edge_code": "KODAK DOUBLE-X 240", "visual": {"emulsion": "KODAK DOUBLE-X 240 7219", "edge_marking_color": [180, 180, 180, 160], "type": "BW"}},
+  "Ektachrome 100IR": {"features": ["5313", "E100IR", "EKTA100IR"], "edge_code": "KODAK EKTACHROME 100 IR", "visual": {"emulsion": "KODAK EKTACHROME 100 IR 5313", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}}
 },
 "FUJIFILM": {
   "Provia 100F": {"features": ["RDP3", "RDPIII", "PROVIA"], "edge_code": "RDPIII", "visual": {"emulsion": "FUJIFILM RDP III 100F", "edge_marking_color": [245, 130, 35, 210], "type": "CR"}},

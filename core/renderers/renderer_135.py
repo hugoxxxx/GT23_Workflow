@@ -2,6 +2,13 @@
 import os
 from PIL import Image, ImageDraw, ImageFont
 from .base_renderer import BaseFilmRenderer
+# --- [新增] 矢量渲染依赖 ---
+# 我们现在强制要求 cairosvg 可用，不再提供回退选项。
+# 这保证了代码路径的简洁和 ISO 1007 标准的严格执行。
+import svgwrite
+from cairosvg import svg2png
+import io
+# --- [END OF NEW IMPORTS] ---
 
 class Renderer135(BaseFilmRenderer):
     """ EN: 135 Format - Dynamic EdgeCode & Precision Positioning (v9.2)
@@ -48,7 +55,9 @@ class Renderer135(BaseFilmRenderer):
             sy = m_y_t + r * (strip_h + rg)
             strip_start_x, strip_end_x = m_x - gap_w // 2, m_x + (cols * (photo_w + gap_w)) - gap_w // 2
             draw.rectangle([strip_start_x, sy, strip_end_x, sy + strip_h], fill=(12, 12, 12))
-            self._draw_iso_sprockets(draw, strip_start_x, strip_end_x, sy, info_h, strip_h, sp_w, sp_h, px_per_mm)
+            # --- [核心修改] 使用高精度矢量齿孔 ---
+            self._draw_iso_sprockets_vector(canvas, strip_start_x, strip_end_x, sy, info_h, strip_h, sp_w, sp_h, px_per_mm, display_code_from_standard)
+            # --- [END OF MODIFICATION] ---
 
             for c in range(cols):
                 idx = r * cols + c
@@ -110,16 +119,7 @@ class Renderer135(BaseFilmRenderer):
 
         return canvas
 
-    def _draw_iso_sprockets(self, draw, x_start, x_end, sy, info_h, strip_h, sw, sh, px_mm):
-        # 物理对齐：外边 2mm + 齿孔 2.8mm + 内边 0.7mm = 5.5mm
-        y_top = sy + int(2.0 * px_mm)
-        y_bottom = sy + strip_h - int(2.0 * px_mm) - sh
-        step_px = 4.75 * px_mm
-        curr_x = x_start + (step_px / 4)
-        while curr_x < x_end - sw:
-            for base_y in [y_top, y_bottom]:
-                draw.rounded_rectangle([curr_x, base_y, curr_x + sw, base_y + sh], radius=5, fill=(235, 235, 235))
-            curr_x += step_px
+    
 
     def _paste_photo_auto_rotate(self, canvas, path, x, y, w, h):
         with Image.open(path) as img:
@@ -159,3 +159,169 @@ class Renderer135(BaseFilmRenderer):
             # y 轴：照片底边 py + ph 再加上偏移
             pos_e_y = py + ph + offset_y
             self._draw_single_glowing_text(canvas, exif_str, (pos_e_x, pos_e_y), e_font, color)
+
+     
+    def _draw_iso_sprockets_vector(self, canvas, x_start, x_end, sy, info_h, strip_h, sp_w, sp_h, px_per_mm, film_name=""):
+        """
+        使用 SVG + CairoSVG 绘制高精度抗锯齿齿孔。
+        根据胶片名称判断使用哪种齿孔形状：电影胶卷使用自定义形状，其他使用圆角矩形
+        """
+        # 创建一个与胶片条等宽高的透明画布 (RGBA)
+        strip_width = int(x_end - x_start)
+        if strip_width <= 0:
+            return
+
+        # --- 1. 构建 SVG ---
+        dwg = svgwrite.Drawing(size=(strip_width, strip_h), profile='tiny')
+        dwg.viewbox(0, 0, strip_width, strip_h)
+
+        # 定义精确的 KS 齿孔参数 (毫米)，符合 ISO 1007
+        SPROC_H_MM_ACTUAL = 2.8
+        SPROC_W_MM_ACTUAL = 1.98
+        CORNER_RADIUS_MM = 0.5
+        PITCH_MM = 4.75
+
+        # 计算 SVG 中的像素尺寸
+        w_px = SPROC_W_MM_ACTUAL * px_per_mm
+        h_px = SPROC_H_MM_ACTUAL * px_per_mm
+        r_px = CORNER_RADIUS_MM * px_per_mm
+        pitch_px = PITCH_MM * px_per_mm
+
+        # 计算齿孔 Y 坐标 (物理对齐: 外边 2mm)
+        # 上下齿孔到黑边的距离都为 2mm
+        margin_top = 2.0 * px_per_mm
+        margin_bottom = 2.0 * px_per_mm
+        
+        # 上部齿孔Y坐标
+        y_top_svg = margin_top
+        
+        # 下部齿孔Y坐标
+        y_bottom_svg = strip_h - margin_bottom - h_px
+
+        # 生成齿孔路径
+        def make_rounded_rect_path(x, y, w, h, r):
+            return (
+                f"M {x+r},{y} "
+                f"H {x+w-r} "
+                f"A {r},{r} 0 0 1 {x+w},{y+r} "
+                f"V {y+h-r} "
+                f"A {r},{r} 0 0 1 {x+w-r},{y+h} "
+                f"H {x+r} "
+                f"A {r},{r} 0 0 1 {x},{y+h-r} "
+                f"V {y+r} "
+                f"A {r},{r} 0 0 1 {x+r},{y} Z"
+            )
+
+        def make_custom_sprocket_path(x, y, w, h):
+            """
+            创建基于PS测量数据的自定义齿孔路径
+            PS测量数据：上下圆弧半径160px，总高度310px，矢高40px，宽度230px
+            但需要按照当前的实际像素尺寸进行缩放
+            """
+            # 根据实际的w和h计算各部分尺寸
+            # 保持PS测量的比例关系
+            actual_width = w
+            actual_height = h
+            
+            # 根据PS数据的比例计算实际尺寸参数
+            # PS: 半径160px，总高310px，矢高40px，宽度230px
+            radius_ratio = 160 / 310  # 半径与总高度的比例
+            sagitta_ratio = 40 / 310  # 矢高与总高度的比例
+            width_ratio = 230 / 310   # 宽度与总高度的比例
+            
+            # 计算实际尺寸下的参数
+            actual_radius = actual_height * radius_ratio
+            actual_sagitta = actual_height * sagitta_ratio
+            expected_width = actual_height * width_ratio
+            
+            # 如果实际宽度与预期不符，则使用较小值以适应宽度限制
+            use_width = min(actual_width, expected_width)
+            x_offset = (actual_width - use_width) / 2  # 在给定宽度内居中
+            
+            # 调整半径以适应实际宽度
+            if use_width < expected_width:
+                actual_radius = use_width * radius_ratio / width_ratio
+                
+            # 确保矢高不超过半径
+            actual_sagitta = min(actual_sagitta, actual_radius)
+            
+            # 中间矩形的高度
+            middle_height = actual_height - 2 * actual_sagitta
+            
+            # 起始X坐标
+            start_x = x + x_offset
+            
+            # 路径构建
+            path_parts = []
+            
+            # 顶部半圆 (下半部分的圆弧)
+            top_arc_cy = y + actual_radius  # 圆心Y坐标
+            top_arc_cx = start_x + use_width / 2  # 圆心X坐标
+            top_arc_y = y + actual_sagitta  # 弧形底部Y坐标
+            
+            # 圆弧：从左侧点到右侧点 (下半圆)
+            path_parts.append(f"M {start_x},{top_arc_y}")
+            path_parts.append(f"A {actual_radius},{actual_radius} 0 0 1 {start_x + use_width},{top_arc_y}")
+            
+            # 右侧竖线
+            path_parts.append(f"L {start_x + use_width},{y + actual_sagitta + middle_height}")
+            
+            # 底部半圆 (上半部分的圆弧)
+            bottom_arc_y = y + actual_height - actual_sagitta  # 弧形顶部Y坐标
+            path_parts.append(f"A {actual_radius},{actual_radius} 0 0 1 {start_x},{bottom_arc_y}")
+            
+            # 左侧竖线回到起点
+            path_parts.append(f"L {start_x},{top_arc_y}")
+            
+            # 闭合路径
+            path_parts.append("Z")
+            
+            return "".join(path_parts)
+
+        # 更精确地判断是否为电影胶卷
+        # 检查是否包含电影胶卷的关键字
+        film_name_lower = film_name.lower()
+        is_movie_film = any(keyword in film_name_lower for keyword in [
+            'vision', 'tungsten', 'daylight', '52', '72', '53', 'double-x', 
+            'technical pan', 'infrared', '50d', '250d', '500t', '200t', '1000t',
+            'motion picture', 'movie', 'cinema', 'film'
+        ])
+        
+        # 绘制顶部和底部齿孔
+        current_x = (pitch_px / 4) # 起始偏移，符合标准
+        while current_x < strip_width:
+            if current_x + w_px < strip_width:
+                # 顶部 - 根据胶片类型选择形状
+                if is_movie_film:
+                    # 电影胶卷使用自定义形状
+                    path_d = make_custom_sprocket_path(
+                        current_x, y_top_svg, w_px, h_px
+                    )
+                else:
+                    # 普通胶卷使用圆角矩形
+                    path_d = make_rounded_rect_path(current_x, y_top_svg, w_px, h_px, r_px)
+                
+                dwg.add(dwg.path(d=path_d, fill='white'))
+                
+                # 底部 - 根据胶片类型选择形状
+                if is_movie_film:
+                    # 电影胶卷使用自定义形状
+                    path_d = make_custom_sprocket_path(
+                        current_x, y_bottom_svg, w_px, h_px
+                    )
+                else:
+                    # 普通胶卷使用圆角矩形
+                    path_d = make_rounded_rect_path(current_x, y_bottom_svg, w_px, h_px, r_px)
+                
+                dwg.add(dwg.path(d=path_d, fill='white'))
+            current_x += pitch_px
+
+        # --- 2. 将 SVG 渲染为 PNG 字节流 ---
+        # 使用高 DPI (600) 保证边缘极度平滑
+        png_bytes = svg2png(bytestring=dwg.tostring(), dpi=1200, output_width=strip_width, output_height=strip_h)
+
+        # --- 3. 转换为 PIL Image ---
+        vector_strip = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
+
+        # 将矢量条贴到主画布上
+        canvas.paste(vector_strip, (int(x_start), int(sy)), mask=vector_strip)
