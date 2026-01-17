@@ -13,17 +13,18 @@ class ContactSheetPro:
         self.renderers = {"66": Renderer66(), "645": Renderer645(), "67": Renderer67(), "135": Renderer135()}
 
     def run(self):
-        # EN: Get working directory for photos_in/out
-        # CN: 获取 photos_in/out 的工作目录
-        if getattr(sys, 'frozen', False):
-            working_dir = os.path.dirname(sys.executable)
-        else:
-            working_dir = os.getcwd()
-        
-        input_dir = os.path.join(working_dir, "photos_in")
-        output_dir = os.path.join(working_dir, "photos_out")
-        img_paths = sorted([os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
-        if not img_paths: return
+        try:
+            # EN: Get working directory for photos_in/out
+            # CN: 获取 photos_in/out 的工作目录
+            if getattr(sys, 'frozen', False):
+                working_dir = os.path.dirname(sys.executable)
+            else:
+                working_dir = os.getcwd()
+            
+            input_dir = os.path.join(working_dir, "photos_in")
+            output_dir = os.path.join(working_dir, "photos_out")
+            img_paths = sorted([os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+            if not img_paths: return
 
         # 1. 胶片手动匹配与元数据预提取
         sample_data = self.meta.get_data(img_paths[0])
@@ -44,13 +45,28 @@ class ContactSheetPro:
         canvas, user_emulsion = renderer.prepare_canvas(cfg.get("canvas_w", 4800), cfg.get("canvas_h", 6000))
         # EN: Inject sample_data directly to the renderer
         # CN: 将已经确定好的 sample_data 直接注入渲染器，实现整卷信息统一
-        canvas = renderer.render(canvas, img_paths, cfg, self.meta, user_emulsion, sample_data=sample_data)
+            canvas = renderer.render(canvas, img_paths, cfg, self.meta, user_emulsion, sample_data=sample_data)
 
-        # 3. 保存 (无页脚)
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
-        save_path = os.path.join(output_dir, f"ContactSheet_{layout_key}.jpg")
-        canvas.save(save_path, quality=95)
-        print(f"CN: [✔] 索引页已保存至: {save_path}")
+            # 3. 保存 (无页脚)
+            if not os.path.exists(output_dir): os.makedirs(output_dir)
+            save_path = os.path.join(output_dir, f"ContactSheet_{layout_key}.jpg")
+            canvas.save(save_path, quality=95)
+            print(f"CN: [✔] 索引页已保存至: {save_path}")
+            
+        except Exception as e:
+            print("\n" + "="*60)
+            print("CN: [!] 程序运行出错 / EN: Program Error")
+            print("="*60)
+            print(f"错误信息 / Error: {e}")
+            print("\n详细错误信息 / Detailed Error:")
+            import traceback
+            traceback.print_exc()
+            print("\n" + "-"*60)
+            print("CN: 如果问题持续存在，请联系开发者：")
+            print("EN: If the problem persists, please contact:")
+            print("📧 Email: xjames007@gmail.com")
+            print("-"*60)
+            input("\n按回车键退出 / Press Enter to exit...")
 
 if __name__ == "__main__":
     ContactSheetPro().run()

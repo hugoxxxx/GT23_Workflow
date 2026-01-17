@@ -24,20 +24,21 @@ def run_border_tool():
     EN: Main logic for the Border Tool (Standardized with manual matching).
     CN: 中英双语：边框工具主逻辑（支持手动输入标准化）。
     """
-    print("\n" + "="*40)
-    print("CN: >>> 正在运行: 边框美化工具 (Border Tool)")
-    print("="*40)
-    
-    # 1. EN: Mode selection / CN: 模式选择
-    print("CN: [SELECT] 1.胶片项目 (FILM)  2.数码项目 (DIGITAL)")
-    mode_choice = input(">>> 输入数字 (默认1): ").strip()
-    is_digital = (mode_choice == "2")
+    try:
+        print("\n" + "="*40)
+        print("CN: >>> 正在运行: 边框美化工具 (Border Tool)")
+        print("="*40)
+        
+        # 1. EN: Mode selection / CN: 模式选择
+        print("CN: [SELECT] 1.胶片项目 (FILM)  2.数码项目 (DIGITAL)")
+        mode_choice = input(">>> 输入数字 (默认1): ").strip()
+        is_digital = (mode_choice == "2")
 
-    # 2. EN: Initialization / CN: 初始化
-    # EN: MetadataHandler now handles all film library logic
-    # CN: MetadataHandler 现在负责所有的胶片库逻辑
-    meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
-    renderer = FilmRenderer()
+        # 2. EN: Initialization / CN: 初始化
+        # EN: MetadataHandler now handles all film library logic
+        # CN: MetadataHandler 现在负责所有的胶片库逻辑
+        meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
+        renderer = FilmRenderer()
     
     working_dir = get_working_dir()
     input_dir = os.path.join(working_dir, "photos_in")
@@ -81,8 +82,25 @@ def run_border_tool():
             print(f"CN: [DONE] 已生成: {img_name}")
         except Exception as e:
             print(f"CN: [ERROR] {img_name} 失败: {e}")
+            import traceback
+            traceback.print_exc()
 
-    print("\nCN: [FINISH] 边框处理全部完成！")
+        print("\nCN: [FINISH] 边框处理全部完成！")
+        
+    except Exception as e:
+        print("\n" + "="*60)
+        print("CN: [!] 程序运行出错 / EN: Program Error")
+        print("="*60)
+        print(f"错误信息 / Error: {e}")
+        print("\n详细错误信息 / Detailed Error:")
+        import traceback
+        traceback.print_exc()
+        print("\n" + "-"*60)
+        print("CN: 如果问题持续存在，请联系开发者：")
+        print("EN: If the problem persists, please contact:")
+        print("📧 Email: xjames007@gmail.com")
+        print("-"*60)
+        input("\n按回车键退出 / Press Enter to exit...")
 
 if __name__ == "__main__":
     run_border_tool()
