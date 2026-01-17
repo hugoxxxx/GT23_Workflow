@@ -12,9 +12,11 @@ __pycache__/
 # PyInstaller / Build artifacts
 build/
 dist/
-*.spec
 *.exe
 *.pkg
+
+# Keep build.spec (packaging config)
+!build.spec
 
 # IDE
 .vscode/
