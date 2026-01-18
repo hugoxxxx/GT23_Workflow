@@ -10,6 +10,10 @@ Pillow>=12.0.0
 ExifRead>=3.5.0
 fonttools>=4.60.0
 
+# SVG rendering for sprocket holes (135 format) / SVG渲染用于齿孔（135画幅）
+svgwrite>=1.4.0
+cairosvg>=2.7.0
+
 # Optional but recommended / 可选但推荐
 numpy>=2.0.0
 aggdraw>=1.3.0
