@@ -17,7 +17,7 @@ def main():
     """
     # EN: Create application window / CN: 创建应用窗口
     app = ttk.Window(
-        title="GT23 胶片工作流 Film Workflow v2.0.0-alpha.1",
+        title="GT23 胶片工作流 Film Workflow v2.0.0",
         themename="cosmo",  # Modern theme (others: darkly, superhero, solar, cyborg, vapor, journal)
         size=(1000, 850),
         resizable=(True, True)
