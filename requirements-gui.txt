@@ -1,0 +1,6 @@
+# Requirements for GT23 Film Workflow GUI
+# EN: Python 3.11 recommended for best compatibility
+# CN: 推荐使用 Python 3.11 以获得最佳兼容性
+
+PySide6==6.10.1
+Pillow>=10.0.0
