@@ -1,0 +1,98 @@
+/* GT23 Film Workflow - Qt Style Sheet */
+/* EN: Modern style inspired by film photography aesthetics */
+/* CN: 受胶片摄影美学启发的现代样式 */
+
+QMainWindow {
+    background-color: #F5F5F5;
+}
+
+QPushButton {
+    background-color: #F58223;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #E67414;
+}
+
+QPushButton:pressed {
+    background-color: #D66505;
+}
+
+QPushButton:disabled {
+    background-color: #CCCCCC;
+    color: #888888;
+}
+
+QLineEdit, QTextEdit, QComboBox {
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    padding: 6px;
+    background-color: white;
+    font-size: 12px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
+    border: 2px solid #F58223;
+}
+
+QLabel {
+    color: #2C2C2C;
+    font-size: 12px;
+}
+
+QGroupBox {
+    border: 1px solid #DDDDDD;
+    border-radius: 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+    font-weight: bold;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+    color: #F58223;
+}
+
+QTabWidget::pane {
+    border: 1px solid #DDDDDD;
+    background-color: white;
+}
+
+QTabBar::tab {
+    background-color: #E0E0E0;
+    color: #2C2C2C;
+    padding: 10px 20px;
+    margin-right: 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+QTabBar::tab:selected {
+    background-color: white;
+    color: #F58223;
+    font-weight: bold;
+}
+
+QTabBar::tab:hover {
+    background-color: #F0F0F0;
+}
+
+QProgressBar {
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    text-align: center;
+    background-color: white;
+}
+
+QProgressBar::chunk {
+    background-color: #F58223;
+    border-radius: 3px;
+}

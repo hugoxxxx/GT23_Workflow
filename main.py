@@ -1,66 +1,52 @@
 # main.py
-import os
-import sys
+"""
+EN: GT23 Film Workflow - GUI Entry Point
+CN: GT23 胶片工作流 - GUI 入口
+"""
 
-# EN: Get the correct base path for both dev and PyInstaller exe
-# CN: 获取开发环境和打包 exe 环境下的正确基础路径
+import sys
+import os
+
+# EN: Setup paths for both dev and PyInstaller / CN: 为开发和打包环境设置路径
 if getattr(sys, 'frozen', False):
-    # EN: Running as PyInstaller exe, use executable's directory
-    # CN: 以 exe 运行时，使用可执行文件所在目录
+    # EN: Running as PyInstaller exe / CN: 以打包exe运行
     root_path = os.path.dirname(sys.executable)
+    sys.path.insert(0, os.path.join(sys._MEIPASS))
 else:
-    # EN: Running as Python script, use script's directory
-    # CN: 以脚本运行时，使用脚本所在目录
+    # EN: Running as Python script / CN: 以脚本运行
     root_path = os.path.dirname(os.path.abspath(__file__))
     if root_path not in sys.path:
         sys.path.insert(0, root_path)
 
+from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from gui.main_window import MainWindow
+
+
 def main():
     """
-    EN: Main loop for GT23 Workflow.
-    CN: GT23 工作流主循环。
+    EN: Main entry point for GT23 GUI application
+    CN: GT23 GUI 应用主入口
     """
-    while True:
-        print("\n" + "="*45)
-        print("EN: >>> GT23 Film Workflow Automation <<<")
-        print("CN: >>> GT23 胶片自动化工作流 <<<")
-        print("="*45)
-        print("EN: [1] Border Tool | CN: [1] 边框美化工具")
-        print("EN: [2] Contact Sheet | CN: [2] 底片索引工具")
-        print("EN: [Q] Exit | CN: [Q] 退出程序")
-        print("-" * 45)
+    # EN: Enable high DPI scaling / CN: 启用高DPI缩放
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    
+    # EN: Create application / CN: 创建应用
+    app = QApplication(sys.argv)
+    app.setApplicationName("GT23 Film Workflow")
+    app.setApplicationVersion("2.0.0-alpha.1")
+    app.setOrganizationName("GT23")
+    
+    # EN: Set application style / CN: 设置应用样式
+    app.setStyle("Fusion")
+    
+    # EN: Create and show main window / CN: 创建并显示主窗口
+    window = MainWindow()
+    window.show()
+    
+    # EN: Run event loop / CN: 运行事件循环
+    sys.exit(app.exec())
 
-        choice = input("EN: Select function number | CN: 请选择功能数字 >>> ").strip().lower()
-
-        if choice == '1':
-            try:
-                from apps.border_tool import run_border_tool
-                run_border_tool()
-                input("\nEN: [OK] Processing complete, press Enter to return... | CN: [OK] 处理完成，按回车键返回主菜单...")
-            except Exception as e:
-                print(f"EN: [!] Failed to start Border Tool: {e} | CN: [!] 启动边框工具失败: {e}")
-                input("\nEN: Press Enter to return... | CN: 按回车键返回主菜单...")
-
-        elif choice == '2':
-            try:
-                # EN: Import the class directly to avoid 'run_contact_sheet' function error
-                # CN: 直接导入类，避免“找不到 run_contact_sheet 函数”的错误
-                from apps.contact_sheet import ContactSheetPro
-                app = ContactSheetPro()
-                app.run()
-                input("\nEN: [OK] Contact sheet generated, press Enter to return... | CN: [OK] 底片索引生成完成，按回车键返回主菜单...")
-            except Exception as e:
-                print(f"EN: [!] Failed to start Contact Sheet: {e} | CN: [!] 启动底片索引工具失败: {e}")
-                import traceback
-                traceback.print_exc()
-                input("\nEN: Press Enter to return... | CN: 按回车键返回主菜单...")
-
-        elif choice == 'q':
-            print("EN: >>> Thank you, program exited. | CN: >>> 感谢使用，程序已退出。")
-            break
-            
-        else:
-            print("EN: [!] Invalid input, please select 1, 2 or Q. | CN: [!] 无效输入，请重新选择 1, 2 或 Q。")
 
 if __name__ == "__main__":
     main()
