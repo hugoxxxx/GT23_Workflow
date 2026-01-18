@@ -89,48 +89,50 @@ class MetadataHandler:
 
         # --- [核心逻辑修复] 三级识别引擎 ---
         display_film = ""
-        edge_code = "aaaa" # 修改：初始值设为 "aaaa"
+        edge_code = "FILM" # EN: Default value when film not detected / CN: 无法识别胶片时的默认值
         contact_color = (245, 130, 35, 210)
 
         if not is_digital_mode:
-            # 1. 自动扫描 (合并多个 Description 字段以体现专业性)
-            d1 = str(tags.get('Image ImageDescription', ''))
-            d2 = str(tags.get('EXIF UserComment', ''))
-            d3 = str(tags.get('EXIF ImageDescription', ''))
-            # 补充扫描位
-            search_pool = f"{d1} {d2} {d3}".upper()
+            # EN: If manual film is specified, use it directly (priority over auto-detection)
+            # CN: 如果指定了手动胶片，直接使用（优先于自动识别）
+            if manual_film:
+                m_q = manual_film.upper().strip()
+                manual_bundle = None
+                for feat in self.sorted_features:
+                    if feat == m_q or feat in m_q:
+                        manual_bundle = self.feature_db[feat]
+                        break
 
-            # 2. 尝试自动识别
-            auto_bundle = None
-            for feat in self.sorted_features:
-                if feat in search_pool:
-                    auto_bundle = self.feature_db[feat]
-                    break
-
-            if auto_bundle:
-                display_film = auto_bundle["std_name"]
-                edge_code = auto_bundle["edge_code"]
-                contact_color = tuple(auto_bundle["color"])
+                if manual_bundle:
+                    display_film = manual_bundle["std_name"]
+                    edge_code = manual_bundle["edge_code"]
+                    contact_color = tuple(manual_bundle["color"])
+                else:
+                    # EN: If not found in database, use as-is
+                    # CN: 如果数据库中找不到，原样使用
+                    display_film = manual_film
+                    edge_code = manual_film.upper()
             else:
-                # 3. 如果自动失败，使用手动输入并撞库
-                if manual_film: # 注意：这里加了 if，确保 manual_film 不为空
-                    m_q = manual_film.upper().strip()
-                    manual_bundle = None
-                    for feat in self.sorted_features:
-                        if feat == m_q or feat in m_q:
-                            manual_bundle = self.feature_db[feat]
-                            break
+                # EN: Auto-detection from EXIF (only when manual_film is not specified)
+                # CN: 从EXIF自动识别（仅在未指定手动胶片时）
+                # 1. 自动扫描 (合并多个 Description 字段以体现专业性)
+                d1 = str(tags.get('Image ImageDescription', ''))
+                d2 = str(tags.get('EXIF UserComment', ''))
+                d3 = str(tags.get('EXIF ImageDescription', ''))
+                # 补充扫描位
+                search_pool = f"{d1} {d2} {d3}".upper()
 
-                    if manual_bundle:
-                        display_film = manual_bundle["std_name"]
-                        edge_code = manual_bundle["edge_code"]
-                        contact_color = tuple(manual_bundle["color"])
-                    else:
-                        # 4. 彻底兜底：原样输出
-                        display_film = manual_film
-                        edge_code = manual_film.upper()
-                        contact_color = (245, 130, 35, 210)
-                # 如果 manual_film 也为空，则保持默认值
+                # 2. 尝试自动识别
+                auto_bundle = None
+                for feat in self.sorted_features:
+                    if feat in search_pool:
+                        auto_bundle = self.feature_db[feat]
+                        break
+
+                if auto_bundle:
+                    display_film = auto_bundle["std_name"]
+                    edge_code = auto_bundle["edge_code"]
+                    contact_color = tuple(auto_bundle["color"])
 
         # --- 布局参数计算 (完全保留) ---
         with Image.open(img_path) as img:

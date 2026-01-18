@@ -1,110 +1,128 @@
 # gui/main_window.py
 """
-EN: Main window for GT23 Film Workflow GUI
-CN: GT23 胶片工作流主窗口
+EN: Main window for GT23 Film Workflow GUI (tkinter version)
+CN: GT23 胶片工作流主窗口（tkinter版本）
 """
 
 import os
 import sys
-from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout, QMenuBar, QMessageBox
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+import webbrowser
+import tkinter as tk
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
 
 from gui.panels.border_panel import BorderPanel
 from gui.panels.contact_panel import ContactPanel
 
 
-class MainWindow(QMainWindow):
+class MainWindow:
     """
     EN: Main application window with tabbed interface
     CN: 主应用窗口，包含标签页界面
     """
     
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("GT23 胶片工作流 | Film Workflow")
-        self.setMinimumSize(1000, 700)
-        
-        # EN: Load stylesheet / CN: 加载样式表
-        self.load_stylesheet()
+    def __init__(self, root):
+        self.root = root
+        self.lang = "zh"  # EN: Language mode: "zh" or "en" / CN: 语言模式："zh" 或 "en"
         
         # EN: Setup menu bar / CN: 设置菜单栏
         self.setup_menu()
         
-        # EN: Create central widget with tabs / CN: 创建带标签页的中央组件
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        # EN: Configure tab style / CN: 配置标签样式
+        style = ttk.Style()
+        style.configure("TNotebook.Tab", padding=[10, 5])
+        style.map("TNotebook.Tab",
+                 background=[("selected", "#2780e3")],
+                 foreground=[("selected", "white")])
         
-        layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        
-        # EN: Create tab widget / CN: 创建标签页组件
-        tabs = QTabWidget()
-        tabs.setTabPosition(QTabWidget.North)
+        # EN: Create notebook (tabbed interface) / CN: 创建标签页界面
+        self.notebook = ttk.Notebook(root)
+        self.notebook.pack(fill=BOTH, expand=YES, padx=10, pady=10)
         
         # EN: Add tool panels / CN: 添加工具面板
-        self.border_panel = BorderPanel(self)
-        self.contact_panel = ContactPanel(self)
+        self.border_frame = ttk.Frame(self.notebook, padding=10)
+        self.contact_frame = ttk.Frame(self.notebook, padding=10)
         
-        tabs.addTab(self.border_panel, "🖼️ 边框工具 Border Tool")
-        tabs.addTab(self.contact_panel, "📄 底片索引 Contact Sheet")
+        self.notebook.add(self.border_frame, text="边框工具")
+        self.notebook.add(self.contact_frame, text="底片索引")
         
-        layout.addWidget(tabs)
-        
-        # EN: Center window on screen / CN: 窗口居中显示
-        self.center_on_screen()
-    
-    def load_stylesheet(self):
-        """
-        EN: Load and apply Qt stylesheet
-        CN: 加载并应用 Qt 样式表
-        """
-        try:
-            # EN: Get resources directory / CN: 获取资源目录
-            if getattr(sys, 'frozen', False):
-                base_path = sys._MEIPASS
-            else:
-                base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            
-            style_path = os.path.join(base_path, 'gui', 'resources', 'styles.qss')
-            
-            if os.path.exists(style_path):
-                with open(style_path, 'r', encoding='utf-8') as f:
-                    self.setStyleSheet(f.read())
-        except Exception as e:
-            print(f"EN: Failed to load stylesheet: {e} | CN: 样式表加载失败: {e}")
+        # EN: Initialize panels / CN: 初始化面板
+        self.border_panel = BorderPanel(self.border_frame)
+        self.contact_panel = ContactPanel(self.contact_frame)
     
     def setup_menu(self):
         """
         EN: Create menu bar
         CN: 创建菜单栏
         """
-        menubar = self.menuBar()
+        self.menubar = tk.Menu(self.root)
+        self.root.config(menu=self.menubar)
         
         # EN: File menu / CN: 文件菜单
-        file_menu = menubar.addMenu("文件 File")
+        self.file_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="文件", menu=self.file_menu)
         
-        open_folder_action = QAction("打开工作目录 Open Folder", self)
-        open_folder_action.triggered.connect(self.open_working_folder)
-        file_menu.addAction(open_folder_action)
+        self.file_menu.add_command(label="打开工作目录", command=self.open_working_folder)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="退出", command=self.root.quit)
         
-        file_menu.addSeparator()
+        # EN: Language menu (always in English for accessibility) / CN: 语言菜单（始终显示英文以便查找）
+        self.lang_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="Language", menu=self.lang_menu)
         
-        exit_action = QAction("退出 Exit", self)
-        exit_action.setShortcut("Ctrl+Q")
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        self.lang_menu.add_command(label="中文", command=lambda: self.switch_language("zh"))
+        self.lang_menu.add_command(label="English", command=lambda: self.switch_language("en"))
         
         # EN: Help menu / CN: 帮助菜单
-        help_menu = menubar.addMenu("帮助 Help")
+        self.help_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="帮助", menu=self.help_menu)
         
-        about_action = QAction("关于 About", self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
+        self.help_menu.add_command(label="关于", command=self.show_about)
+        self.help_menu.add_command(label="GitHub 仓库", command=self.open_github)
+    
+    def switch_language(self, lang):
+        """
+        EN: Switch UI language
+        CN: 切换界面语言
+        """
+        self.lang = lang
         
-        github_action = QAction("GitHub 仓库", self)
-        github_action.triggered.connect(self.open_github)
-        help_menu.addAction(github_action)
+        # EN: Update menu labels / CN: 更新菜单标签
+        if lang == "zh":
+            self.root.title("GT23 胶片工作流 v2.0.0-alpha.1")
+            self.menubar.entryconfig(0, label="文件")
+            # Language menu always stays as "Language" for accessibility
+            self.menubar.entryconfig(2, label="帮助")
+            
+            self.file_menu.entryconfig(0, label="打开工作目录")
+            self.file_menu.entryconfig(2, label="退出")
+            
+            self.help_menu.entryconfig(0, label="关于")
+            self.help_menu.entryconfig(1, label="GitHub 仓库")
+            
+            self.notebook.tab(0, text="边框工具")
+            self.notebook.tab(1, text="底片索引")
+        else:
+            self.root.title("GT23 Film Workflow v2.0.0-alpha.1")
+            self.menubar.entryconfig(0, label="File")
+            # Language menu always stays as "Language" for accessibility
+            self.menubar.entryconfig(2, label="Help")
+            
+            self.file_menu.entryconfig(0, label="Open Folder")
+            self.file_menu.entryconfig(2, label="Exit")
+            
+            self.help_menu.entryconfig(0, label="About")
+            self.help_menu.entryconfig(1, label="GitHub Repository")
+            
+            self.notebook.tab(0, text="Border Tool")
+            self.notebook.tab(1, text="Contact Sheet")
+        
+        # EN: Update panel languages / CN: 更新面板语言
+        self.border_panel.update_language(lang)
+        self.contact_panel.update_language(lang)
+    
+    def open_working_folder(self):
+        self.help_menu.add_command(label="GitHub 仓库", command=self.open_github)
     
     def open_working_folder(self):
         """
@@ -119,41 +137,42 @@ class MainWindow(QMainWindow):
             
             os.startfile(working_dir)
         except Exception as e:
-            QMessageBox.warning(self, "错误 Error", f"无法打开目录 Failed to open folder: {e}")
+            tk.messagebox.showerror("错误 Error", f"无法打开目录 Failed to open folder:\n{e}")
     
     def show_about(self):
         """
         EN: Show about dialog
         CN: 显示关于对话框
         """
-        about_text = """
-<h2>GT23 胶片工作流 Film Workflow</h2>
-<p><b>版本 Version:</b> 2.0.0-alpha.1</p>
-<p><b>作者 Author:</b> Hugo</p>
-<p><b>邮箱 Email:</b> xjames007@gmail.com</p>
-<br>
-<p>EN: A dedicated tool for film photographers to generate digital contact sheets and professionally processed film borders.</p>
-<p>CN: 专为胶片摄影师设计的数字接触印样与底片边框处理工具。</p>
-<br>
-<p>Inspired by Contax G2 & T3 📷</p>
-        """
-        QMessageBox.about(self, "关于 About GT23", about_text)
+        if self.lang == "zh":
+            title = "关于 GT23"
+            about_text = """GT23 胶片工作流
+
+版本: 2.0.0-alpha.1
+作者: Hugo
+邮箱: xjames007@gmail.com
+
+专为胶片摄影师设计的数字接触印样与底片边框处理工具。
+
+灵感来自 Contax G2 & T3 📷"""
+        else:
+            title = "About GT23"
+            about_text = """GT23 Film Workflow
+
+Version: 2.0.0-alpha.1
+Author: Hugo
+Email: xjames007@gmail.com
+
+A dedicated tool for film photographers to generate
+digital contact sheets and professionally processed film borders.
+
+Inspired by Contax G2 & T3 📷"""
+        
+        tk.messagebox.showinfo(title, about_text)
     
     def open_github(self):
         """
         EN: Open GitHub repository in browser
         CN: 在浏览器中打开 GitHub 仓库
         """
-        import webbrowser
         webbrowser.open("https://github.com/hugoxxxx/GT23_Workflow")
-    
-    def center_on_screen(self):
-        """
-        EN: Center the window on the screen
-        CN: 将窗口在屏幕上居中
-        """
-        from PySide6.QtGui import QScreen
-        screen = QScreen.availableGeometry(self.screen())
-        x = (screen.width() - self.width()) // 2
-        y = (screen.height() - self.height()) // 2
-        self.move(x, y)

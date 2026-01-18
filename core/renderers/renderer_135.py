@@ -20,7 +20,7 @@ import io
 class Renderer135(BaseFilmRenderer):
     """EN: 135 Format - Dynamic EdgeCode & Precision Positioning (v9.2)
        CN: 135 画幅 - 动态喷码修正版：解决写死字符串问题、数据后背极低位压低、手动输入复用问题。"""
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None):
         # EN: Execute 135 rendering with fixed manual input reuse
         # CN: 执行 135 渲染，修复复用手动输入的 sample_data
         print("\n" + "="*65)

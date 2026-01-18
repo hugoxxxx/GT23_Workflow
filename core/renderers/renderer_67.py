@@ -12,7 +12,7 @@ class Renderer67(BaseFilmRenderer):
     CN: 6x7 画幅渲染器 (645 物理喷码步进 + 左对齐随机抖动版)
     """
     
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None):
         # EN: Execute 6x7 rendering with calibrated marking logic
         # CN: 执行 6x7 渲染，喷码逻辑校准
         print("\n" + "="*65)

@@ -36,8 +36,20 @@ class BaseFilmRenderer:
             print(f"CN: [!] 未找到喷码字体: {led_path}, 将回退。")
             self.led_font = self.font
 
-    def prepare_canvas(self, w, h):
-        user_emulsion = input("EN: Enter emulsion number (e.g. 049) | CN: 请输入乳剂号 (如 049) >>> ").strip()
+    def prepare_canvas(self, w, h, emulsion_number=None):
+        """
+        EN: Prepare canvas and get emulsion number
+        CN: 准备画布并获取乳剂号
+        
+        Args:
+            emulsion_number: Optional emulsion number for GUI mode
+        """
+        if emulsion_number is None:
+            # EN: CLI mode - ask for input / CN: 命令行模式 - 请求输入
+            user_emulsion = input("EN: Enter emulsion number (e.g. 049) | CN: 请输入乳剂号 (如 049) >>> ").strip()
+        else:
+            # EN: GUI mode - use provided value / CN: GUI模式 - 使用提供的值
+            user_emulsion = emulsion_number
         canvas = Image.new("RGB", (w, h), (235, 235, 235))
         return canvas, user_emulsion
 

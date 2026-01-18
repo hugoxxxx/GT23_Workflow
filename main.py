@@ -1,51 +1,49 @@
 # main.py
 """
-EN: GT23 Film Workflow - GUI Entry Point
-CN: GT23 胶片工作流 - GUI 入口
+EN: GUI entry point for GT23 Film Workflow (tkinter version)
+CN: GT23 胶片工作流 GUI 入口（tkinter版本）
 """
 
 import sys
 import os
-
-# EN: Setup paths for both dev and PyInstaller / CN: 为开发和打包环境设置路径
-if getattr(sys, 'frozen', False):
-    # EN: Running as PyInstaller exe / CN: 以打包exe运行
-    root_path = os.path.dirname(sys.executable)
-    sys.path.insert(0, os.path.join(sys._MEIPASS))
-else:
-    # EN: Running as Python script / CN: 以脚本运行
-    root_path = os.path.dirname(os.path.abspath(__file__))
-    if root_path not in sys.path:
-        sys.path.insert(0, root_path)
-
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
+import ttkbootstrap as ttk
 from gui.main_window import MainWindow
 
 
 def main():
     """
-    EN: Main entry point for GT23 GUI application
-    CN: GT23 GUI 应用主入口
+    EN: Main function - initialize and run GUI application
+    CN: 主函数 - 初始化并运行 GUI 应用程序
     """
-    # EN: Enable high DPI scaling / CN: 启用高DPI缩放
-    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    # EN: Create application window / CN: 创建应用窗口
+    app = ttk.Window(
+        title="GT23 胶片工作流 Film Workflow v2.0.0-alpha.1",
+        themename="cosmo",  # Modern theme (others: darkly, superhero, solar, cyborg, vapor, journal)
+        size=(1000, 850),
+        resizable=(True, True)
+    )
     
-    # EN: Create application / CN: 创建应用
-    app = QApplication(sys.argv)
-    app.setApplicationName("GT23 Film Workflow")
-    app.setApplicationVersion("2.0.0-alpha.1")
-    app.setOrganizationName("GT23")
+    # EN: Set window icon (if exists) / CN: 设置窗口图标（如果存在）
+    try:
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        
+        icon_path = os.path.join(base_path, 'assets', 'icon.ico')
+        if os.path.exists(icon_path):
+            app.iconbitmap(icon_path)
+    except Exception:
+        pass
     
-    # EN: Set application style / CN: 设置应用样式
-    app.setStyle("Fusion")
+    # EN: Center window on screen / CN: 窗口居中显示
+    app.place_window_center()
     
-    # EN: Create and show main window / CN: 创建并显示主窗口
-    window = MainWindow()
-    window.show()
+    # EN: Initialize main window / CN: 初始化主窗口
+    MainWindow(app)
     
-    # EN: Run event loop / CN: 运行事件循环
-    sys.exit(app.exec())
+    # EN: Start event loop / CN: 启动事件循环
+    app.mainloop()
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ class ContactSheetPro:
             print("-"*60)
             input("\n按回车键退出 / Press Enter to exit...")
     
-    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, progress_callback=None):
+    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, progress_callback=None):
         """
         EN: Pure logic function for contact sheet generation (GUI-friendly).
         CN: 底片索引生成纯逻辑函数（GUI友好）。
@@ -79,6 +79,7 @@ class ContactSheetPro:
             format: Format type ("66", "645", "67", "135" or None for auto-detect)
             manual_film: Manual film keyword
             emulsion_number: User-provided emulsion number
+            orientation: For 645 format: "L" (landscape/vertical strip) or "P" (portrait/horizontal strip)
             progress_callback: Function(message) for progress updates
         
         Returns:
@@ -109,12 +110,15 @@ class ContactSheetPro:
                 progress_callback(f"EN: Found {len(img_paths)} images | CN: 找到 {len(img_paths)} 张图片")
             
             # EN: 1. Film matching and metadata extraction / CN: 1. 胶片匹配与元数据提取
-            sample_data = self.meta.get_data(img_paths[0])
-            
-            if not sample_data.get('Film') and manual_film:
+            # EN: If manual_film is specified, use it directly (priority over auto-detection)
+            # CN: 如果指定了手动胶片，直接使用（优先于自动识别）
+            if manual_film:
                 if progress_callback:
                     progress_callback(f"EN: Using manual film: {manual_film} | CN: 使用手动胶片: {manual_film}")
                 sample_data = self.meta.get_data(img_paths[0], manual_film=manual_film)
+            else:
+                # EN: Auto-detect from EXIF / CN: 从EXIF自动识别
+                sample_data = self.meta.get_data(img_paths[0])
             
             # EN: 2. Layout detection / CN: 2. 画幅检测
             if format:
@@ -133,13 +137,15 @@ class ContactSheetPro:
             if progress_callback:
                 progress_callback("EN: Rendering contact sheet... | CN: 渲染索引页...")
             
-            canvas, user_emulsion = renderer.prepare_canvas(cfg.get("canvas_w", 4800), cfg.get("canvas_h", 6000))
+            # EN: Pass emulsion_number to prepare_canvas to avoid input() in GUI mode / CN: 传递乳剂号到prepare_canvas避免GUI模式下的input()
+            canvas, user_emulsion = renderer.prepare_canvas(
+                cfg.get("canvas_w", 4800), 
+                cfg.get("canvas_h", 6000),
+                emulsion_number=emulsion_number
+            )
             
-            # EN: Override emulsion if provided / CN: 如果提供了乳剂号则覆盖
-            if emulsion_number:
-                user_emulsion = emulsion_number
-            
-            canvas = renderer.render(canvas, img_paths, cfg, self.meta, user_emulsion, sample_data=sample_data)
+            # EN: Pass orientation to render for 645 format to avoid input() in GUI mode / CN: 传递方向参数给645画幅渲染器避免GUI模式下的input()
+            canvas = renderer.render(canvas, img_paths, cfg, self.meta, user_emulsion, sample_data=sample_data, orientation=orientation)
             
             # EN: 4. Save output / CN: 4. 保存输出
             if not os.path.exists(output_dir):

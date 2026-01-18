@@ -1,74 +1,31 @@
 # gui/panels/border_panel.py
 """
-EN: Border Tool panel for GUI
-CN: 边框工具 GUI 面板
+EN: Border Tool panel for GUI (tkinter version)
+CN: 边框工具 GUI 面板（tkinter版本）
 """
 
 import os
 import sys
 import json
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, 
-                               QRadioButton, QLabel, QLineEdit, QPushButton, 
-                               QComboBox, QTextEdit, QFileDialog, QProgressBar,
-                               QCheckBox, QMessageBox)
-from PySide6.QtCore import Qt, QThread, Signal
+import threading
+import tkinter as tk
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+from tkinter import filedialog, messagebox
+from tkinter import scrolledtext
 
 
-class BorderWorker(QThread):
-    """
-    EN: Worker thread for border processing to avoid UI freezing
-    CN: 边框处理工作线程，避免界面冻结
-    """
-    progress = Signal(int, int, str)  # current, total, filename
-    finished = Signal(dict)  # result dictionary
-    error = Signal(str)  # error message
-    
-    def __init__(self, input_dir, output_dir, is_digital, manual_film=None):
-        super().__init__()
-        self.input_dir = input_dir
-        self.output_dir = output_dir
-        self.is_digital = is_digital
-        self.manual_film = manual_film
-    
-    def run(self):
-        """
-        EN: Execute border processing in background thread
-        CN: 在后台线程中执行边框处理
-        """
-        try:
-            from apps.border_tool import process_border_batch
-            
-            result = process_border_batch(
-                self.input_dir,
-                self.output_dir,
-                self.is_digital,
-                self.manual_film,
-                progress_callback=self.report_progress
-            )
-            self.finished.emit(result)
-        except Exception as e:
-            import traceback
-            error_msg = f"{str(e)}\n\n{traceback.format_exc()}"
-            self.error.emit(error_msg)
-    
-    def report_progress(self, current, total, filename):
-        """
-        EN: Report progress to main thread
-        CN: 向主线程报告进度
-        """
-        self.progress.emit(current, total, filename)
-
-
-class BorderPanel(QWidget):
+class BorderPanel:
     """
     EN: Border Tool GUI panel
     CN: 边框工具图形界面面板
     """
     
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.worker = None
+    def __init__(self, parent):
+        self.parent = parent
+        self.worker_thread = None
         self.film_list = []
+        self.lang = "zh"  # EN: Default language / CN: 默认语言
         self.setup_ui()
         self.load_film_library()
     
@@ -77,94 +34,126 @@ class BorderPanel(QWidget):
         EN: Setup user interface
         CN: 设置用户界面
         """
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        # EN: Mode selection / CN: 模式选择
+        self.mode_frame = ttk.Labelframe(self.parent, text="工作模式", padding=10)
+        self.mode_frame.pack(fill=X, pady=(0, 10))
         
-        # EN: Mode selection group / CN: 模式选择组
-        mode_group = QGroupBox("工作模式 Working Mode")
-        mode_layout = QHBoxLayout()
+        self.mode_var = ttk.StringVar(value="film")
+        self.film_radio = ttk.Radiobutton(self.mode_frame, text="胶片项目", variable=self.mode_var, 
+                       value="film", command=self.on_mode_changed, bootstyle="primary")
+        self.film_radio.pack(side=LEFT, padx=10)
+        self.digital_radio = ttk.Radiobutton(self.mode_frame, text="数码项目", variable=self.mode_var, 
+                       value="digital", command=self.on_mode_changed, bootstyle="primary")
+        self.digital_radio.pack(side=LEFT)
         
-        self.radio_film = QRadioButton("胶片项目 Film")
-        self.radio_digital = QRadioButton("数码项目 Digital")
-        self.radio_film.setChecked(True)
-        self.radio_film.toggled.connect(self.on_mode_changed)
+        # EN: Input folder / CN: 输入文件夹
+        self.folder_frame = ttk.Labelframe(self.parent, text="输入文件夹", padding=10)
+        self.folder_frame.pack(fill=X, pady=(0, 10))
         
-        mode_layout.addWidget(self.radio_film)
-        mode_layout.addWidget(self.radio_digital)
-        mode_layout.addStretch()
-        mode_group.setLayout(mode_layout)
-        layout.addWidget(mode_group)
+        input_row = ttk.Frame(self.folder_frame)
+        input_row.pack(fill=X, pady=(0, 5))
         
-        # EN: Input folder selection / CN: 输入文件夹选择
-        folder_group = QGroupBox("输入文件夹 Input Folder")
-        folder_layout = QVBoxLayout()
+        self.input_folder_var = ttk.StringVar()
+        ttk.Entry(input_row, textvariable=self.input_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES, padx=(0, 5))
+        self.browse_button = ttk.Button(input_row, text="浏览", command=self.select_input_folder, bootstyle="info-outline")
+        self.browse_button.pack(side=RIGHT)
         
-        folder_select_layout = QHBoxLayout()
-        self.input_folder_edit = QLineEdit()
-        self.input_folder_edit.setPlaceholderText("选择包含照片的文件夹 Select folder with photos")
-        self.input_folder_edit.setReadOnly(True)
+        self.file_count_label = ttk.Label(self.folder_frame, text="未选择文件夹", foreground="gray")
+        self.file_count_label.pack(anchor=W)
         
-        self.browse_button = QPushButton("浏览 Browse")
-        self.browse_button.clicked.connect(self.select_input_folder)
+        # EN: Film selection / CN: 胶片选择
+        self.film_selection_frame = ttk.Labelframe(self.parent, text="胶片选择", padding=10)
+        self.film_selection_frame.pack(fill=X, pady=(0, 10))
         
-        folder_select_layout.addWidget(self.input_folder_edit)
-        folder_select_layout.addWidget(self.browse_button)
+        self.auto_detect_var = ttk.BooleanVar(value=True)
+        self.auto_detect_check = ttk.Checkbutton(self.film_selection_frame, text="自动识别胶片（从EXIF）", 
+                       variable=self.auto_detect_var, command=self.on_auto_detect_changed, 
+                       bootstyle="round-toggle")
+        self.auto_detect_check.pack(anchor=W, pady=(0, 5))
         
-        self.file_count_label = QLabel("未选择文件夹 No folder selected")
-        self.file_count_label.setStyleSheet("color: #888888;")
+        film_row = ttk.Frame(self.film_selection_frame)
+        film_row.pack(fill=X)
+        self.manual_label = ttk.Label(film_row, text="手动选择:")
+        self.manual_label.pack(side=LEFT, padx=(0, 10))
         
-        folder_layout.addLayout(folder_select_layout)
-        folder_layout.addWidget(self.file_count_label)
-        folder_group.setLayout(folder_layout)
-        layout.addWidget(folder_group)
+        self.film_combo = ttk.Combobox(film_row, state="disabled")
+        self.film_combo.pack(side=LEFT, fill=X, expand=YES)
         
-        # EN: Film selection group (only for film mode) / CN: 胶片选择组（仅胶片模式）
-        self.film_group = QGroupBox("胶片选择 Film Selection")
-        film_layout = QVBoxLayout()
+        # EN: Process button / CN: 处理按钮
+        self.process_button = ttk.Button(self.parent, text="开始处理", 
+                                         command=self.start_processing, bootstyle="success", width=20)
+        self.process_button.pack(pady=10)
         
-        self.auto_detect_check = QCheckBox("自动识别胶片（从EXIF）Auto Detect from EXIF")
-        self.auto_detect_check.setChecked(True)
-        self.auto_detect_check.toggled.connect(self.on_auto_detect_changed)
-        
-        film_select_layout = QHBoxLayout()
-        film_select_layout.addWidget(QLabel("手动选择 Manual Select:"))
-        self.film_combo = QComboBox()
-        self.film_combo.setEnabled(False)
-        film_select_layout.addWidget(self.film_combo, 1)
-        
-        film_layout.addWidget(self.auto_detect_check)
-        film_layout.addLayout(film_select_layout)
-        self.film_group.setLayout(film_layout)
-        layout.addWidget(self.film_group)
-        
-        # EN: Process button and progress / CN: 处理按钮和进度
-        self.process_button = QPushButton("开始处理 Start Processing")
-        self.process_button.clicked.connect(self.start_processing)
-        self.process_button.setMinimumHeight(40)
-        layout.addWidget(self.process_button)
-        
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
+        self.progress = ttk.Progressbar(self.parent, mode="determinate", bootstyle="success-striped")
+        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress.pack_forget()  # Hide initially
         
         # EN: Log output / CN: 日志输出
-        log_group = QGroupBox("处理日志 Processing Log")
-        log_layout = QVBoxLayout()
+        self.log_frame = ttk.Labelframe(self.parent, text="处理日志", padding=5)
+        self.log_frame.pack(fill=BOTH, expand=YES)
         
-        self.log_text = QTextEdit()
-        self.log_text.setReadOnly(True)
-        self.log_text.setMaximumHeight(200)
-        self.log_text.setPlaceholderText("处理日志将显示在这里 Processing logs will appear here")
+        self.log_text = scrolledtext.ScrolledText(self.log_frame, height=15, wrap=tk.WORD, state="disabled")
+        self.log_text.pack(fill=BOTH, expand=YES)
         
-        log_layout.addWidget(self.log_text)
-        log_group.setLayout(log_layout)
-        layout.addWidget(log_group)
-        
-        layout.addStretch()
-        
-        # EN: Auto-detect photos_in folder / CN: 自动检测 photos_in 文件夹
+        # EN: Auto-detect photos_in / CN: 自动检测 photos_in
         self.auto_detect_photos_in()
+    
+    def update_language(self, lang):
+        """
+        EN: Update UI language
+        CN: 更新界面语言
+        """
+        self.lang = lang
+        
+        if lang == "zh":
+            self.mode_frame.config(text="工作模式")
+            self.film_radio.config(text="胶片项目")
+            self.digital_radio.config(text="数码项目")
+            self.folder_frame.config(text="输入文件夹")
+            self.browse_button.config(text="浏览")
+            self.film_selection_frame.config(text="胶片选择")
+            self.auto_detect_check.config(text="自动识别胶片（从EXIF）")
+            self.manual_label.config(text="手动选择:")
+            self.process_button.config(text="开始处理")
+            self.log_frame.config(text="处理日志")
+            self.update_film_combo_values()
+        else:
+            self.mode_frame.config(text="Working Mode")
+            self.film_radio.config(text="Film Project")
+            self.digital_radio.config(text="Digital Project")
+            self.folder_frame.config(text="Input Folder")
+            self.browse_button.config(text="Browse")
+            self.film_selection_frame.config(text="Film Selection")
+            self.auto_detect_check.config(text="Auto Detect from EXIF")
+            self.manual_label.config(text="Manual Select:")
+            self.process_button.config(text="Start Processing")
+            self.log_frame.config(text="Processing Log")
+            self.update_film_combo_values()
+        
+        # EN: Update file count label / CN: 更新文件计数标签
+        self.update_file_count()
+        
+        # EN: Refresh log with current language / CN: 使用当前语言刷新日志
+        if self.film_list:
+            self.log_text.config(state="normal")
+            self.log_text.delete(1.0, tk.END)
+            self.log_text.config(state="disabled")
+            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
+            self.log(msg)
+    
+    def update_film_combo_values(self):
+        """
+        EN: Update film combo box values with current language
+        CN: 使用当前语言更新胶片下拉框选项
+        """
+        if not self.film_list:
+            return
+        
+        placeholder = "-- 请选择胶片 --" if self.lang == "zh" else "-- Select Film --"
+        film_names = [placeholder] + [name for name, _ in self.film_list]
+        current = self.film_combo.current()
+        self.film_combo['values'] = film_names
+        self.film_combo.current(current if current >= 0 else 0)
     
     def load_film_library(self):
         """
@@ -175,29 +164,27 @@ class BorderPanel(QWidget):
             if getattr(sys, 'frozen', False):
                 base_path = os.path.dirname(sys.executable)
             else:
-                base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                base_path = os.getcwd()
             
             config_path = os.path.join(base_path, 'config', 'films.json')
             
             with open(config_path, 'r', encoding='utf-8') as f:
                 films_data = json.load(f)
             
-            # EN: Extract all film names / CN: 提取所有胶片名称
             self.film_list = []
             for brand, films in films_data.items():
                 for film_name in films.keys():
                     display_name = f"{brand} {film_name}"
                     self.film_list.append((display_name, film_name))
             
-            # EN: Sort and populate combo box / CN: 排序并填充下拉框
             self.film_list.sort()
-            self.film_combo.addItem("-- 请选择胶片 Select Film --", None)
-            for display_name, film_name in self.film_list:
-                self.film_combo.addItem(display_name, film_name)
+            self.update_film_combo_values()
             
-            self.log(f"EN: Loaded {len(self.film_list)} films | CN: 已加载 {len(self.film_list)} 种胶片")
+            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if self.lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
+            self.log(msg)
         except Exception as e:
-            self.log(f"EN: Failed to load film library: {e} | CN: 胶片库加载失败: {e}")
+            msg = f"✗ 胶片库加载失败: {e}" if self.lang == "zh" else f"✗ Film library load failed: {e}"
+            self.log(msg)
     
     def auto_detect_photos_in(self):
         """
@@ -212,7 +199,7 @@ class BorderPanel(QWidget):
             
             photos_in = os.path.join(working_dir, "photos_in")
             if os.path.exists(photos_in):
-                self.input_folder_edit.setText(photos_in)
+                self.input_folder_var.set(photos_in)
                 self.update_file_count()
         except Exception:
             pass
@@ -222,13 +209,12 @@ class BorderPanel(QWidget):
         EN: Open folder selection dialog
         CN: 打开文件夹选择对话框
         """
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            "选择输入文件夹 Select Input Folder",
-            self.input_folder_edit.text() or os.path.expanduser("~")
+        folder = filedialog.askdirectory(
+            title="选择输入文件夹 Select Input Folder",
+            initialdir=self.input_folder_var.get() or os.path.expanduser("~")
         )
         if folder:
-            self.input_folder_edit.setText(folder)
+            self.input_folder_var.set(folder)
             self.update_file_count()
     
     def update_file_count(self):
@@ -236,40 +222,45 @@ class BorderPanel(QWidget):
         EN: Update file count display
         CN: 更新文件数量显示
         """
-        folder = self.input_folder_edit.text()
+        folder = self.input_folder_var.get()
         if not folder or not os.path.exists(folder):
-            self.file_count_label.setText("未选择文件夹 No folder selected")
-            self.file_count_label.setStyleSheet("color: #888888;")
+            text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
+            self.file_count_label.config(text=text, foreground="gray")
             return
         
         try:
             files = [f for f in os.listdir(folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
             count = len(files)
             if count > 0:
-                self.file_count_label.setText(f"✓ 找到 {count} 张照片 Found {count} photos")
-                self.file_count_label.setStyleSheet("color: #27AE60;")
+                text = f"✓ 找到 {count} 张照片" if self.lang == "zh" else f"✓ Found {count} photos"
+                self.file_count_label.config(text=text, foreground="green")
             else:
-                self.file_count_label.setText("⚠ 文件夹中没有图片 No images in folder")
-                self.file_count_label.setStyleSheet("color: #E74C3C;")
+                text = "⚠ 文件夹中没有图片" if self.lang == "zh" else "⚠ No images in folder"
+                self.file_count_label.config(text=text, foreground="red")
         except Exception as e:
-            self.file_count_label.setText(f"错误 Error: {e}")
-            self.file_count_label.setStyleSheet("color: #E74C3C;")
+            text = f"错误: {e}" if self.lang == "zh" else f"Error: {e}"
+            self.file_count_label.config(text=text, foreground="red")
     
     def on_mode_changed(self):
         """
         EN: Handle mode change
         CN: 处理模式切换
         """
-        is_film = self.radio_film.isChecked()
-        self.film_group.setVisible(is_film)
+        is_film = self.mode_var.get() == "film"
+        if is_film:
+            self.film_selection_frame.pack(before=self.process_button, fill=X, pady=(0, 10))
+        else:
+            self.film_selection_frame.pack_forget()
     
     def on_auto_detect_changed(self):
         """
         EN: Handle auto-detect toggle
         CN: 处理自动检测切换
         """
-        auto = self.auto_detect_check.isChecked()
-        self.film_combo.setEnabled(not auto)
+        if self.auto_detect_var.get():
+            self.film_combo.config(state="disabled")
+        else:
+            self.film_combo.config(state="normal")  # EN: Allow user input / CN: 允许用户输入
     
     def start_processing(self):
         """
@@ -277,26 +268,34 @@ class BorderPanel(QWidget):
         CN: 开始边框处理
         """
         # EN: Validate inputs / CN: 验证输入
-        input_folder = self.input_folder_edit.text()
+        input_folder = self.input_folder_var.get()
         if not input_folder or not os.path.exists(input_folder):
-            QMessageBox.warning(self, "警告 Warning", "请先选择输入文件夹 Please select input folder")
+            messagebox.showwarning("警告 Warning", "请先选择输入文件夹\nPlease select input folder")
             return
         
-        # EN: Check if files exist / CN: 检查是否有文件
         files = [f for f in os.listdir(input_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
         if not files:
-            QMessageBox.warning(self, "警告 Warning", "输入文件夹中没有图片 No images in input folder")
+            messagebox.showwarning("警告 Warning", "输入文件夹中没有图片\nNo images in input folder")
             return
         
-        # EN: Get manual film selection if not auto-detect / CN: 如果不自动检测则获取手动选择
+        # EN: Get manual film / CN: 获取手动胶片
         manual_film = None
-        if self.radio_film.isChecked() and not self.auto_detect_check.isChecked():
-            if self.film_combo.currentIndex() == 0:
-                QMessageBox.warning(self, "警告 Warning", "请选择胶片类型 Please select film type")
+        if self.mode_var.get() == "film" and not self.auto_detect_var.get():
+            # EN: Get either selected or manually typed film name / CN: 获取选中或手动输入的胶片名
+            film_input = self.film_combo.get().strip()
+            if not film_input or film_input.startswith("--"):
+                title = "警告" if self.lang == "zh" else "Warning"
+                msg = "请选择或输入胶片类型" if self.lang == "zh" else "Please select or enter film type"
+                messagebox.showwarning(title, msg)
                 return
-            manual_film = self.film_combo.currentData()
+            # EN: If it's from the list, extract the keyword / CN: 如果是列表中的，提取关键字
+            manual_film = film_input
+            for display_name, keyword in self.film_list:
+                if film_input == display_name:
+                    manual_film = keyword
+                    break
         
-        # EN: Setup output folder / CN: 设置输出文件夹
+        # EN: Setup output / CN: 设置输出
         if getattr(sys, 'frozen', False):
             working_dir = os.path.dirname(sys.executable)
         else:
@@ -304,77 +303,103 @@ class BorderPanel(QWidget):
         output_folder = os.path.join(working_dir, "photos_out")
         os.makedirs(output_folder, exist_ok=True)
         
-        # EN: Clear log and show progress / CN: 清空日志并显示进度
-        self.log_text.clear()
-        self.log("EN: Starting processing... | CN: 开始处理...")
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
-        self.process_button.setEnabled(False)
+        # EN: UI state / CN: UI状态
+        self.log_text.config(state="normal")
+        self.log_text.delete(1.0, tk.END)
+        msg = "开始处理..." if self.lang == "zh" else "Starting processing..."
+        self.log(msg)
+        self.log_text.config(state="disabled")
+        
+        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress['value'] = 0
+        self.process_button.config(state="disabled")
         
         # EN: Start worker thread / CN: 启动工作线程
-        is_digital = self.radio_digital.isChecked()
-        self.worker = BorderWorker(input_folder, output_folder, is_digital, manual_film)
-        self.worker.progress.connect(self.on_progress)
-        self.worker.finished.connect(self.on_finished)
-        self.worker.error.connect(self.on_error)
-        self.worker.start()
+        is_digital = self.mode_var.get() == "digital"
+        self.worker_thread = threading.Thread(
+            target=self.process_worker,
+            args=(input_folder, output_folder, is_digital, manual_film),
+            daemon=True
+        )
+        self.worker_thread.start()
     
-    def on_progress(self, current, total, filename):
+    def process_worker(self, input_dir, output_dir, is_digital, manual_film):
         """
-        EN: Handle progress update
-        CN: 处理进度更新
+        EN: Worker thread for processing
+        CN: 处理工作线程
         """
-        percent = int((current / total) * 100) if total > 0 else 0
-        self.progress_bar.setValue(percent)
-        self.log(f"[{current}/{total}] {filename}")
+        try:
+            from apps.border_tool import process_border_batch
+            
+            def progress_callback(current, total, filename):
+                percent = int((current / total) * 100)
+                self.parent.after(0, lambda p=percent: self.progress.config(value=p))
+                self.parent.after(0, lambda c=current, t=total, f=filename: self.log(f"[{c}/{t}] {f}"))
+            
+            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback)
+            self.parent.after(0, lambda r=result: self.on_processing_complete(r))
+        except Exception as e:
+            import traceback
+            error_msg = f"{str(e)}\n\n{traceback.format_exc()}"
+            self.parent.after(0, lambda msg=error_msg: self.on_processing_error(msg))
     
-    def on_finished(self, result):
+    def on_processing_complete(self, result):
         """
         EN: Handle processing completion
         CN: 处理完成回调
         """
-        self.progress_bar.setVisible(False)
-        self.process_button.setEnabled(True)
+        self.progress.pack_forget()
+        self.process_button.config(state="normal")
         
         if result.get('success'):
             self.log("\n✓ " + "="*50)
-            self.log(f"✓ EN: Processing complete! | CN: 处理完成！")
-            self.log(f"✓ EN: Processed {result.get('processed', 0)} photos | CN: 已处理 {result.get('processed', 0)} 张照片")
+            msg1 = "✓ 处理完成！" if self.lang == "zh" else "✓ Processing complete!"
+            msg2 = f"✓ 已处理 {result.get('processed', 0)} 张照片" if self.lang == "zh" else f"✓ Processed {result.get('processed', 0)} photos"
+            self.log(msg1)
+            self.log(msg2)
             self.log("✓ " + "="*50)
             
-            QMessageBox.information(
-                self,
-                "完成 Complete",
-                f"处理完成！\nProcessing complete!\n\n已处理 {result.get('processed', 0)} 张照片\nProcessed {result.get('processed', 0)} photos"
-            )
+            # EN: Show result dialog and ask to open folder / CN: 显示结果对话框并询问是否打开文件夹
+            title = "完成" if self.lang == "zh" else "Complete"
+            msg = f"处理完成！\n\n已处理 {result.get('processed', 0)} 张照片\n\n是否打开输出文件夹？" if self.lang == "zh" else f"Processing complete!\n\nProcessed {result.get('processed', 0)} photos\n\nOpen output folder?"
+            response = messagebox.askyesno(title, msg)
+            if response:
+                try:
+                    if getattr(sys, 'frozen', False):
+                        working_dir = os.path.dirname(sys.executable)
+                    else:
+                        working_dir = os.getcwd()
+                    output_folder = os.path.join(working_dir, "photos_out")
+                    os.startfile(output_folder)
+                except Exception as e:
+                    error_title = "错误" if self.lang == "zh" else "Error"
+                    error_msg = f"无法打开文件夹:\n{e}" if self.lang == "zh" else f"Failed to open folder:\n{e}"
+                    messagebox.showerror(error_title, error_msg)
         else:
-            self.log(f"\n✗ EN: Processing failed | CN: 处理失败")
+            msg = "\n✗ 处理失败" if self.lang == "zh" else "\n✗ Processing failed"
+            self.log(msg)
             self.log(f"✗ {result.get('message', 'Unknown error')}")
-            
-            QMessageBox.critical(self, "错误 Error", result.get('message', 'Unknown error'))
+            messagebox.showerror("错误 Error", result.get('message', 'Unknown error'))
     
-    def on_error(self, error_msg):
+    def on_processing_error(self, error_msg):
         """
         EN: Handle processing error
         CN: 处理错误回调
         """
-        self.progress_bar.setVisible(False)
-        self.process_button.setEnabled(True)
+        self.progress.pack_forget()
+        self.process_button.config(state="normal")
         
-        self.log(f"\n✗ EN: Error occurred | CN: 发生错误\n{error_msg}")
-        
-        QMessageBox.critical(
-            self,
-            "错误 Error",
-            f"处理过程中发生错误 Error during processing:\n\n{error_msg}\n\n如需帮助请联系 For help contact: xjames007@gmail.com"
-        )
+        msg = f"\n✗ 发生错误\n{error_msg}" if self.lang == "zh" else f"\n✗ Error occurred\n{error_msg}"
+        self.log(msg)
+        messagebox.showerror("错误 Error", 
+                           f"处理过程中发生错误 Error during processing:\n\n{error_msg[:200]}...\n\n如需帮助请联系\nFor help contact: xjames007@gmail.com")
     
     def log(self, message):
         """
         EN: Append message to log
         CN: 添加消息到日志
         """
-        self.log_text.append(message)
-        self.log_text.verticalScrollBar().setValue(
-            self.log_text.verticalScrollBar().maximum()
-        )
+        self.log_text.config(state="normal")
+        self.log_text.insert(tk.END, message + "\n")
+        self.log_text.see(tk.END)
+        self.log_text.config(state="disabled")
