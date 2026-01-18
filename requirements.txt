@@ -1,0 +1,15 @@
+# Requirements for GT23 Film Workflow - CLI Version
+# EN: Core dependencies for command-line interface
+# CN: 命令行界面核心依赖
+
+# Core dependencies / 核心依赖
+Pillow>=12.0.0          # Image processing / 图像处理
+ExifRead>=3.5.0         # EXIF metadata reading / EXIF元数据读取
+fonttools>=4.60.0       # Font file handling / 字体文件处理
+
+# Optional but recommended / 可选但推荐
+numpy>=2.0.0            # Image array operations / 图像数组操作
+aggdraw>=1.3.0          # Anti-aliased drawing / 抗锯齿绘图（可选）
+
+# Build tools / 打包工具
+pyinstaller>=6.0.0      # For building EXE / 用于构建EXE文件
