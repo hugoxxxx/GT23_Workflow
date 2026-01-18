@@ -3,7 +3,6 @@
 # CN: 645 胶片渲染器 (横纵向模式)
 
 import random
-import sys
 from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
 
@@ -14,24 +13,12 @@ class Renderer645(BaseFilmRenderer):
         
         # EN: 1. Re-select mode and reset canvas size
         # CN: 1. 重新选择模式并重置画布尺寸
-        # EN: Use provided orientation; only prompt in interactive CLI. Never block in GUI.
-        # CN: 优先使用传入方向；仅在可交互命令行提示选择，GUI 下绝不阻塞。
-        suffix = None
+        # EN: Use provided orientation or ask user in CLI mode / CN: 使用提供的方向或在CLI模式下询问用户
         if orientation is None:
-            if getattr(sys.stdin, "isatty", lambda: False)():
-                choice = input(
-                    "\nEN: 1. Vertical strip (L) - horizontal photo  2. Horizontal strip (P) - vertical photo [Default 1]"
-                    "\nCN: 1.垂直条(L)照片横向 2.水平条(P)照片竖向 [默认 1]: "
-                ).strip()
-                suffix = "L" if choice != "2" else "P"
-            else:
-                suffix = "L"
+            choice = input("\nEN: 1. Vertical strip (L) - horizontal photo  2. Horizontal strip (P) - vertical photo [Default 1]\nCN: 1.垂直条(L)照片横向 2.水平条(P)照片竖向 [默认 1]: ").strip()
+            suffix = "L" if choice != "2" else "P"
         else:
-            suffix = str(orientation).strip().upper()  # EN: Normalize / CN: 归一化
-
-        # EN: Validate suffix / CN: 校验
-        if suffix not in ("L", "P"):
-            suffix = "L"
+            suffix = orientation  # EN: Use provided orientation directly / CN: 直接使用提供的方向
         final_cfg = meta_handler.get_contact_layout(f"645_{suffix}")
         
         # EN: Key step! Regenerate canvas based on JSON-defined dimensions for correct PL mode aspect ratio
