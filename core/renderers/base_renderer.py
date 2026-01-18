@@ -45,11 +45,17 @@ class BaseFilmRenderer:
             emulsion_number: Optional emulsion number for GUI mode
         """
         if emulsion_number is None:
-            # EN: CLI mode - ask for input / CN: 命令行模式 - 请求输入
-            user_emulsion = input("EN: Enter emulsion number (e.g. 049) | CN: 请输入乳剂号 (如 049) >>> ").strip()
+            # EN: If interactive (CLI), ask user; otherwise default to empty to avoid GUI blocking.
+            # CN: 若为可交互命令行则询问用户；否则默认空字符串，避免 GUI 阻塞。
+            if getattr(sys.stdin, "isatty", lambda: False)():
+                user_emulsion = input(
+                    "EN: Enter emulsion number (e.g. 049) | CN: 请输入乳剂号 (如 049) >>> "
+                ).strip()
+            else:
+                user_emulsion = ""
         else:
             # EN: GUI mode - use provided value / CN: GUI模式 - 使用提供的值
-            user_emulsion = emulsion_number
+            user_emulsion = (emulsion_number or "").strip() if isinstance(emulsion_number, str) else str(emulsion_number)
         canvas = Image.new("RGB", (w, h), (235, 235, 235))
         return canvas, user_emulsion
 

@@ -336,7 +336,7 @@ class BorderPanel:
                 self.parent.after(0, lambda p=percent: self.progress.config(value=p))
                 self.parent.after(0, lambda c=current, t=total, f=filename: self.log(f"[{c}/{t}] {f}"))
             
-            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback)
+            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback, lang=self.lang)
             self.parent.after(0, lambda r=result: self.on_processing_complete(r))
         except Exception as e:
             import traceback

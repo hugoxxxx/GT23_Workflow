@@ -104,7 +104,7 @@ def run_border_tool():
         input("\n按回车键退出 / Press Enter to exit...")
 
 
-def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None):
+def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh"):
     """
     EN: Pure logic function for batch border processing (GUI-friendly).
     CN: 批量边框处理纯逻辑函数（GUI友好）。
@@ -125,6 +125,10 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
         }
     """
     try:
+        # EN: Localized message helper / CN: 本地化消息助手
+        def _t(zh_text, en_text):
+            return zh_text if lang == "zh" else en_text
+
         # EN: Initialization / CN: 初始化
         meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
         renderer = FilmRenderer()
@@ -139,7 +143,7 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
                 'success': False,
                 'processed': 0,
                 'failed': [],
-                'message': f"EN: No images in folder | CN: 文件夹中没有图片"
+                'message': _t("文件夹中没有图片", "No images in folder")
             }
         
         total = len(images)
@@ -170,14 +174,14 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
             except Exception as e:
                 failed.append((img_name, str(e)))
                 if progress_callback:
-                    progress_callback(idx, total, f"{img_name} (Failed: {e})")
+                    progress_callback(idx, total, _t(f"{img_name}（失败: {e}）", f"{img_name} (Failed: {e})"))
         
         # EN: Return result / CN: 返回结果
         return {
             'success': len(failed) < total,  # Success if at least one processed
             'processed': processed,
             'failed': failed,
-            'message': f"EN: Processed {processed}/{total} photos | CN: 已处理 {processed}/{total} 张照片"
+            'message': _t(f"已处理 {processed}/{total} 张照片", f"Processed {processed}/{total} photos")
         }
         
     except Exception as e:
@@ -186,7 +190,7 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
             'success': False,
             'processed': 0,
             'failed': [],
-            'message': f"EN: Error: {e} | CN: 错误: {e}\n{traceback.format_exc()}"
+            'message': f"{_t('错误', 'Error')}: {e}\n{traceback.format_exc()}"
         }
 
 

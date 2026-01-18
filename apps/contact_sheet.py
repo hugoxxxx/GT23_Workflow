@@ -68,7 +68,7 @@ class ContactSheetPro:
             print("-"*60)
             input("\n按回车键退出 / Press Enter to exit...")
     
-    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, progress_callback=None):
+    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None):
         """
         EN: Pure logic function for contact sheet generation (GUI-friendly).
         CN: 底片索引生成纯逻辑函数（GUI友好）。
@@ -92,8 +92,12 @@ class ContactSheetPro:
             }
         """
         try:
+            # EN: Localized message helper / CN: 本地化消息助手
+            def _t(zh_text, en_text):
+                return zh_text if lang == "zh" else en_text
+
             if progress_callback:
-                progress_callback("EN: Scanning files... | CN: 扫描文件...")
+                progress_callback(_t("正在扫描文件...", "Scanning files..."))
             
             # EN: Get image paths / CN: 获取图片路径
             img_paths = sorted([os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
@@ -103,18 +107,18 @@ class ContactSheetPro:
                     'output_path': '',
                     'layout_detected': '',
                     'frames_count': 0,
-                    'message': "EN: No images found | CN: 未找到图片"
+                    'message': _t("未找到图片", "No images found")
                 }
             
             if progress_callback:
-                progress_callback(f"EN: Found {len(img_paths)} images | CN: 找到 {len(img_paths)} 张图片")
+                progress_callback(_t(f"找到 {len(img_paths)} 张图片", f"Found {len(img_paths)} images"))
             
             # EN: 1. Film matching and metadata extraction / CN: 1. 胶片匹配与元数据提取
             # EN: If manual_film is specified, use it directly (priority over auto-detection)
             # CN: 如果指定了手动胶片，直接使用（优先于自动识别）
             if manual_film:
                 if progress_callback:
-                    progress_callback(f"EN: Using manual film: {manual_film} | CN: 使用手动胶片: {manual_film}")
+                    progress_callback(_t(f"使用手动胶片: {manual_film}", f"Using manual film: {manual_film}"))
                 sample_data = self.meta.get_data(img_paths[0], manual_film=manual_film)
             else:
                 # EN: Auto-detect from EXIF / CN: 从EXIF自动识别
@@ -124,18 +128,28 @@ class ContactSheetPro:
             if format:
                 layout_key = format
                 if progress_callback:
-                    progress_callback(f"EN: Using specified format: {layout_key} | CN: 使用指定画幅: {layout_key}")
+                    progress_callback(_t(f"使用指定画幅: {layout_key}", f"Using specified format: {layout_key}"))
             else:
                 layout_key = self.meta.detect_batch_layout(img_paths)
                 if progress_callback:
-                    progress_callback(f"EN: Auto-detected format: {layout_key} | CN: 自动检测画幅: {layout_key}")
+                    progress_callback(_t(f"自动检测画幅: {layout_key}", f"Auto-detected format: {layout_key}"))
+
+            # EN: Fallback if detection failed / CN: 检测失败回退
+            if not layout_key:
+                layout_key = "66"
+                if progress_callback:
+                    progress_callback(_t("画幅检测失败，回退为 66", "Format detection failed, fallback to 66"))
+
+            # EN: Ensure 645 never blocks: default orientation when missing / CN: 确保 645 不阻塞：缺省方向默认 L
+            if layout_key == "645" and not orientation:
+                orientation = "L"
             
             cfg = self.meta.get_contact_layout(layout_key)
             renderer = self.renderers.get(layout_key, self.renderers["66"])
             
             # EN: 3. Render canvas / CN: 3. 渲染画布
             if progress_callback:
-                progress_callback("EN: Rendering contact sheet... | CN: 渲染索引页...")
+                progress_callback(_t("正在渲染索引页...", "Rendering contact sheet..."))
             
             # EN: Pass emulsion_number to prepare_canvas to avoid input() in GUI mode / CN: 传递乳剂号到prepare_canvas避免GUI模式下的input()
             canvas, user_emulsion = renderer.prepare_canvas(
@@ -154,14 +168,14 @@ class ContactSheetPro:
             canvas.save(save_path, quality=95)
             
             if progress_callback:
-                progress_callback(f"EN: Saved to: {save_path} | CN: 已保存至: {save_path}")
+                progress_callback(_t(f"已保存至: {save_path}", f"Saved to: {save_path}"))
             
             return {
                 'success': True,
                 'output_path': save_path,
                 'layout_detected': layout_key,
                 'frames_count': len(img_paths),
-                'message': "EN: Success | CN: 成功"
+                'message': _t("成功", "Success")
             }
             
         except Exception as e:
@@ -171,7 +185,7 @@ class ContactSheetPro:
                 'output_path': '',
                 'layout_detected': '',
                 'frames_count': 0,
-                'message': f"EN: Error: {e} | CN: 错误: {e}\n{traceback.format_exc()}"
+                'message': f"{_t('错误', 'Error')}: {e}\n{traceback.format_exc()}"
             }
 
 if __name__ == "__main__":

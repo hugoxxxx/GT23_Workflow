@@ -437,10 +437,6 @@ class ContactPanel:
             def progress_update(message):
                 self.parent.after(0, lambda msg=message: self.log(msg))
             
-            # EN: Log parameters for debugging / CN: 记录参数用于调试
-            self.log(f"EN: Format: {params['format']} | CN: 画幅: {params['format']}")
-            self.log(f"EN: Orientation: {params['orientation']} | CN: 方向: {params['orientation']}")
-            
             # EN: Create contact sheet instance / CN: 创建接触印样实例
             contact = ContactSheetPro()
             
@@ -452,6 +448,7 @@ class ContactPanel:
                 format=params['format'],
                 manual_film=params['manual_film'],
                 emulsion_number=params['emulsion_number'],
+                lang=self.lang,  # EN: Localize messages / CN: 按当前语言输出
                 progress_callback=progress_update
             )
             
@@ -482,13 +479,27 @@ class ContactPanel:
         self.log("✓ " + "="*50)
         
         # EN: Show result dialog / CN: 显示结果对话框
-        response = messagebox.askyesno("完成 Complete", 
-                                       f"接触印样生成完成！\nContact sheet generated!\n\n{os.path.basename(result_path)}\n\n是否打开输出文件夹？\nOpen output folder?")
+        title = "完成" if self.lang == "zh" else "Complete"
+        if self.lang == "zh":
+            dialog_msg = (
+                "接触印样生成完成！\n\n"
+                f"{os.path.basename(result_path)}\n\n"
+                "是否打开输出文件夹？"
+            )
+        else:
+            dialog_msg = (
+                "Contact sheet generated!\n\n"
+                f"{os.path.basename(result_path)}\n\n"
+                "Open output folder?"
+            )
+        response = messagebox.askyesno(title, dialog_msg)
         if response:
             try:
                 os.startfile(os.path.dirname(result_path))
             except Exception as e:
-                messagebox.showerror("错误 Error", f"无法打开文件夹\nFailed to open folder:\n{e}")
+                err_title = "错误" if self.lang == "zh" else "Error"
+                err_msg = f"无法打开文件夹:\n{e}" if self.lang == "zh" else f"Failed to open folder:\n{e}"
+                messagebox.showerror(err_title, err_msg)
     
     def on_generation_error(self, error_msg):
         """
@@ -501,8 +512,20 @@ class ContactPanel:
         
         msg = f"\n✗ 发生错误\n{error_msg}" if self.lang == "zh" else f"\n✗ Error occurred\n{error_msg}"
         self.log(msg)
-        messagebox.showerror("错误 Error", 
-                           f"生成过程中发生错误 Error during generation:\n\n{error_msg[:200]}...\n\n如需帮助请联系\nFor help contact: xjames007@gmail.com")
+        err_title = "错误" if self.lang == "zh" else "Error"
+        if self.lang == "zh":
+            dialog_msg = (
+                "生成过程中发生错误：\n\n"
+                f"{error_msg[:200]}...\n\n"
+                "如需帮助请联系：xjames007@gmail.com"
+            )
+        else:
+            dialog_msg = (
+                "Error during generation:\n\n"
+                f"{error_msg[:200]}...\n\n"
+                "For help contact: xjames007@gmail.com"
+            )
+        messagebox.showerror(err_title, dialog_msg)
     
     def log(self, message):
         """
