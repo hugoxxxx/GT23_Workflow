@@ -40,9 +40,18 @@ Notes | 说明:
 
 ## 🖼️ GUI Preview | 界面预览
 
-<p align="center">
-  <img src="https://github.com/hugoxxxx/photos/blob/3e3ca307d3aa83c3039f6f851c67ba3e26c295e3/GT23samples/GUI.png" width="80%" alt="GT23 GUI">
-</p>
+<table>
+  <tr>
+    <td align="center">
+      <strong>Border Tool | 边框工具</strong><br>
+      <img src="https://github.com/hugoxxxx/photos/blob/9bddc22fa9f3dc0b66f95a9e98f5d20c265c3b06/GT23samples/GUI.png" width="100%" alt="GT23 Border Tool">
+    </td>
+    <td align="center">
+      <strong>Contact Sheet | 底片索引</strong><br>
+      <img src="https://github.com/hugoxxxx/photos/blob/9bddc22fa9f3dc0b66f95a9e98f5d20c265c3b06/GT23samples/GUI-2.png" width="100%" alt="GT23 Contact Sheet">
+    </td>
+  </tr>
+</table>
 
 ---
 
