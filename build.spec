@@ -1,6 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 # EN: PyInstaller spec file for GT23_Workflow
 # CN: GT23_Workflow 的 PyInstaller 打包配置文件
+import os
+import sys
+import glob
 
 block_cipher = None
 
@@ -9,6 +12,7 @@ block_cipher = None
 datas = [
     ('config', 'config'),      # Config files (layouts, films)
     ('assets/libs', 'assets/libs'),  # Keep libs intact
+    ('assets/GT23_Icon.ico', 'assets'),  # Include ICO for runtime window icon
     ('assets/GT23_Icon.png', 'assets'),  # Window icon
     # Fonts in use
     ('assets/fonts/consola.ttf', 'assets/fonts'),
@@ -25,10 +29,30 @@ datas = [
 # CN: 隐式导入（如果需要）
 hiddenimports = []
 
+
+def _find_mkl_binaries():
+    """
+    EN: Collect Intel MKL/OpenMP runtime DLLs from the conda env so numpy can unpack safely.
+    CN: 从 conda 环境收集 MKL/OpenMP 运行时 DLL，避免 numpy 解包时报缺失。
+    """
+    root = os.getenv("CONDA_PREFIX", sys.base_prefix)
+    bin_dir = os.path.join(root, "Library", "bin")
+    patterns = ["mkl_*.dll", "mkl_rt*.dll", "libiomp5md.dll"]
+    dlls = []
+    for pat in patterns:
+        dlls.extend(glob.glob(os.path.join(bin_dir, pat)))
+    # Dedup and map to (src, dest)
+    return list({dll: (dll, ".") for dll in dlls}.values())
+
+
+# EN: Bundle MKL/OpenMP binaries to fix "Failed to extract entry: mkl_avx2.2.dll"
+# CN: 打包 MKL/OpenMP 运行库，修复 "Failed to extract entry: mkl_avx2.2.dll" 问题
+binary_overrides = _find_mkl_binaries()
+
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=binary_overrides,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

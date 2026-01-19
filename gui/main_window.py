@@ -16,6 +16,7 @@ from ttkbootstrap.constants import *
 
 from gui.panels.border_panel import BorderPanel
 from gui.panels.contact_panel import ContactPanel
+from version import get_version_string
 
 
 def detect_system_language():
@@ -136,7 +137,7 @@ class MainWindow:
         
         # EN: Update menu labels / CN: 更新菜单标签
         if lang == "zh":
-            self.root.title("GT23 胶片工作流 v2.0.0")
+            self.root.title(f"GT23 胶片工作流 {get_version_string()}")
             self.menubar.entryconfig(0, label="文件")
             # Language menu always stays as "Language" for accessibility
             self.menubar.entryconfig(2, label="帮助")
@@ -150,7 +151,7 @@ class MainWindow:
             self.notebook.tab(0, text="边框工具")
             self.notebook.tab(1, text="底片索引")
         else:
-            self.root.title("GT23 Film Workflow v2.0.0")
+            self.root.title(f"GT23 Film Workflow {get_version_string()}")
             self.menubar.entryconfig(0, label="File")
             # Language menu always stays as "Language" for accessibility
             self.menubar.entryconfig(2, label="Help")
