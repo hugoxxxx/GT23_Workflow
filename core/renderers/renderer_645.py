@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
 
 class Renderer645(BaseFilmRenderer):
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
         # EN: Execute 645 rendering | CN: 执行 645 渲染
         print("EN: [645 2.0] Executing render ... | CN: [645 2.0] 执行渲染 ...")
         
@@ -116,6 +116,10 @@ class Renderer645(BaseFilmRenderer):
                         # CN: 让 EXIF 紧贴照片底边。不再使用 black_area_center，改为固定偏移
                         data = meta_handler.get_data(img_list[idx])
                         date_str, exif_str = self.get_clean_exif(data)
+                        if not show_date:
+                            date_str = None
+                        if not show_exif:
+                            exif_str = None
                         
                         # EN: Base offset from photo bottom (e.g., 60 pixels)
                         # CN: 设定 EXIF 第一行离照片底部的距离 (例如 60 像素)
@@ -218,6 +222,10 @@ class Renderer645(BaseFilmRenderer):
                         # CN: B. 右侧信息：双行 EXIF (旋转 90)
                         data = meta_handler.get_data(img_list[idx])
                         date_str, exif_str = self.get_clean_exif(data)
+                        if not show_date:
+                            date_str = None
+                        if not show_exif:
+                            exif_str = None
                         
                         # EN: Key physical logic: Center line of right-side black margin
                         # CN: 关键物理逻辑：右侧黑边的中轴线

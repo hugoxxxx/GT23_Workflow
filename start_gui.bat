@@ -34,7 +34,7 @@ if errorlevel 1 (
 REM Activate environment and run
 echo [*] Starting GUI... / 正在启动 GUI...
 call conda activate gt23gui
-python main.py
+pythonw main.py
 
 if errorlevel 1 (
     echo.

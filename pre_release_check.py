@@ -60,20 +60,29 @@ def check_imports():
     print("\n=== 检查依赖包 / Checking Dependencies ===")
     
     required_packages = [
-        ("PIL", "Pillow"),
-        ("exifread", "ExifRead"),
-        ("fonttools", "fonttools"),
-        ("numpy", "numpy"),
-        ("ttkbootstrap", "ttkbootstrap"),
-        ("svgwrite", "svgwrite"),
+        (("PIL",), "Pillow"),
+        (("exifread",), "ExifRead"),
+        (("fontTools", "fonttools"), "fonttools"),
+        (("numpy",), "numpy"),
+        (("ttkbootstrap",), "ttkbootstrap"),
+        (("svgwrite",), "svgwrite"),
     ]
     
     all_ok = True
-    for module_name, package_name in required_packages:
-        try:
-            __import__(module_name)
+    for module_names, package_name in required_packages:
+        # EN: Try all candidate module names (case variants) before failing.
+        # CN: 在失败前尝试所有候选模块名（大小写变体）。
+        loaded = False
+        for module_name in module_names:
+            try:
+                __import__(module_name)
+                loaded = True
+                break
+            except ImportError:
+                continue
+        if loaded:
             print(f"  ✓ {package_name}")
-        except ImportError:
+        else:
             print(f"  ✗ {package_name} - 未安装!")
             all_ok = False
     
@@ -90,10 +99,12 @@ def check_imports():
 def check_assets():
     """Check if asset files exist"""
     print("\n=== 检查资源文件 / Checking Assets ===")
-    
-    asset_dirs = ["assets/fonts", "assets/samples"]
+
+    # EN: Only fonts are required; samples are optional for this check.
+    # CN: 仅字体目录为必需；样例文件夹此处不作强制检查。
+    asset_dirs = ["assets/fonts"]
     all_exist = True
-    
+
     for dir_path in asset_dirs:
         if os.path.exists(dir_path):
             files = os.listdir(dir_path)
@@ -101,7 +112,7 @@ def check_assets():
         else:
             print(f"  ✗ {dir_path} - 目录不存在!")
             all_exist = False
-    
+
     return all_exist
 
 def check_version_consistency():

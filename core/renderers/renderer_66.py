@@ -11,7 +11,7 @@ class Renderer66(BaseFilmRenderer):
     EN: 66 Renderer. Fixed bottom margin to match inter-frame gaps and solved overflow.
     CN: 6x6 渲染器。修正底部黑边高度使其与行间距一致，并解决喷码溢出。
     """
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
         # EN: Execute 66 rendering with precise equal-width cropping
         # CN: 执行 66 渲染 (精准等宽裁切版)
         print("EN: [Renderer] Execute 66 rendering (precise equal-width cropping version)...")
@@ -106,6 +106,10 @@ class Renderer66(BaseFilmRenderer):
                     # CN: 元数据 (焦距单位 mm 小写)
                     data = meta_handler.get_data(img_list[idx])
                     date_str, exif_str = self.get_clean_exif(data)
+                    if not show_date:
+                        date_str = None
+                    if not show_exif:
+                        exif_str = None
                     
                     text_y_start = curr_y + new_h + 15
                     # EN: Draw date string if available

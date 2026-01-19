@@ -36,6 +36,22 @@ class BaseFilmRenderer:
             print(f"CN: [!] 未找到喷码字体: {led_path}, 将回退。")
             self.led_font = self.font
 
+        # D. EN: LED Dot-Matrix1 Font (for 135 date display) / CN: LED Dot-Matrix1 字体 (用于 135 日期显示)
+        led_dot_path = os.path.join(base_path, "assets", "fonts", "LED Dot-Matrix1.ttf")
+        try:
+            self.led_dot_font = ImageFont.truetype(led_dot_path, 40)
+        except:
+            print(f"CN: [!] 未找到 LED Dot-Matrix1 字体: {led_dot_path}, 将回退到数码管字体。")
+            self.led_dot_font = self.seg_font
+
+        # E. EN: IntoDotMatrix Font (alternative for 135 date stamp) / CN: IntoDotMatrix 字体（135 日期喷码备用）
+        into_dot_path = os.path.join(base_path, "assets", "fonts", "intodotmatrix.ttf")
+        try:
+            self.into_dot_font = ImageFont.truetype(into_dot_path, 40)
+        except:
+            print(f"CN: [!] 未找到 IntoDotMatrix 字体: {into_dot_path}, 将回退到 LED Dot-Matrix1。")
+            self.into_dot_font = self.led_dot_font
+
     def prepare_canvas(self, w, h, emulsion_number=None):
         """
         EN: Prepare canvas and get emulsion number

@@ -20,7 +20,7 @@ import io
 class Renderer135(BaseFilmRenderer):
     """EN: 135 Format - Dynamic EdgeCode & Precision Positioning (v9.2)
        CN: 135 画幅 - 动态喷码修正版：解决写死字符串问题、数据后背极低位压低、手动输入复用问题。"""
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
         # EN: Execute 135 rendering with fixed manual input reuse
         # CN: 执行 135 渲染，修复复用手动输入的 sample_data
         print("\n" + "="*65)
@@ -125,9 +125,9 @@ class Renderer135(BaseFilmRenderer):
 
                 # EN: [Precise definition] Define two variables controlling date and EXIF
                 # CN: [精准定义] 定义两个变量，分别控制日期和 EXIF
-                # EN: date_font for bottom-left of photo, exif_font for black margin outside photo
-                # CN: date_font 用于照片内左下角，exif_font 用于照片外黑边
-                date_font = self.seg_font.font_variant(size=int(1.5 * px_per_mm))
+                # EN: date_font for bottom-right of photo, exif_font for black margin outside photo
+                # CN: date_font 用于照片内右下角，exif_font 用于照片外黑边
+                date_font = self.into_dot_font.font_variant(size=int(1.5 * px_per_mm))
                 exif_font = self.seg_font.font_variant(size=int(1.5 * px_per_mm))  # EN: EXIF slightly smaller to fit margin / CN: EXIF 稍微小一点，适合塞进黑边
 
                 # EN: --- [Important] Data back information ---
@@ -146,7 +146,20 @@ class Renderer135(BaseFilmRenderer):
 
                 # EN: Lowered data back (far bottom-right corner)
                 # CN: 压低的数据后背 (极靠右下角)
-                self._draw_glowing_data_back(canvas, sample_data_for_back, curr_x, py, photo_w, photo_h, cur_color, date_font, exif_font, px_per_mm)
+                self._draw_glowing_data_back(
+                    canvas,
+                    sample_data_for_back,
+                    curr_x,
+                    py,
+                    photo_w,
+                    photo_h,
+                    cur_color,
+                    date_font,
+                    exif_font,
+                    px_per_mm,
+                    show_date=show_date,
+                    show_exif=show_exif
+                )
 
         # EN: --- [Final cutoff] Global right-side cleanup ---
         # CN: --- [最终截断] 全局右侧清理 ---
@@ -192,10 +205,17 @@ class Renderer135(BaseFilmRenderer):
         draw.text((pos[0]+1, pos[1]+1), text, font=font, fill=glow_color)
         draw.text(pos, text, font=font, fill=color)
 
-    def _draw_glowing_data_back(self, canvas, data, px, py, pw, ph, color, d_font, e_font, px_mm):
+    def _draw_glowing_data_back(self, canvas, data, px, py, pw, ph, color, d_font, e_font, px_mm, show_date=True, show_exif=True):
         # EN: Draw photo data on black margin (date and EXIF)
         # CN: 在黑边上绘制照片数据 (日期和 EXIF)
         date_str, exif_str = self.get_clean_exif(data)
+        # EN: Replace "/" with "." in date for LED Dot-Matrix1 font / CN: 日期中的"/"替换为"."以适配LED Dot-Matrix1字体
+        if date_str:
+            date_str = date_str.replace("/", ".")
+        if not show_date:
+            date_str = None
+        if not show_exif:
+            exif_str = None
 
         # EN: 1. Draw date (bottom-right corner style)
         # CN: 1. 绘制日期 (右下角版)
@@ -204,7 +224,9 @@ class Renderer135(BaseFilmRenderer):
             bbox = d_font.getbbox(date_str)  # EN: Use d_font / CN: 使用 d_font
             text_w, text_h = bbox[2]-bbox[0], bbox[3]-bbox[1]
             pos_d = (px + pw - margin - text_w, py + ph - margin - text_h)
-            self._draw_single_glowing_text(canvas, date_str, pos_d, d_font, color)
+            # EN: Use orange to mimic real film date stamp / CN: 使用橙色模拟真实胶片日期喷码
+            date_color = (255, 165, 0, 235)
+            self._draw_single_glowing_text(canvas, date_str, pos_d, d_font, date_color)
 
         # EN: 2. EXIF (Precisely center-aligned in bottom black margin)
         # CN: 2. EXIF (精准对齐下方黑边居中)

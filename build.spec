@@ -8,7 +8,15 @@ block_cipher = None
 # CN: 需要打包进 exe 的数据文件（配置、资源等）
 datas = [
     ('config', 'config'),      # Config files (layouts, films)
-    ('assets', 'assets'),      # Fonts and other assets
+    ('assets/libs', 'assets/libs'),  # Keep libs intact
+    ('assets/GT23_Icon.png', 'assets'),  # Window icon
+    # Fonts in use
+    ('assets/fonts/consola.ttf', 'assets/fonts'),
+    ('assets/fonts/LiquidCrystal-Bold.otf', 'assets/fonts'),
+    ('assets/fonts/LED Dot-Matrix1.ttf', 'assets/fonts'),
+    ('assets/fonts/intodotmatrix.ttf', 'assets/fonts'),
+    ('assets/fonts/palab.ttf', 'assets/fonts'),
+    ('assets/fonts/gara.ttf', 'assets/fonts'),
     ('core', 'core'),          # Core modules
     ('apps', 'apps'),          # App modules
 ]
@@ -49,13 +57,13 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,           # EN: Console app / CN: 控制台应用
+    console=False,          # EN: GUI app (no console) / CN: 图形应用（不显示控制台）
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,              # EN: Add icon path if needed / CN: 如需图标，在此添加路径
+    icon='assets/GT23_Icon.ico',  # EN: Windows exe icon / CN: Windows 可执行文件图标
 )
 
 # EN: Output structure:

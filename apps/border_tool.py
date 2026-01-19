@@ -104,7 +104,7 @@ def run_border_tool():
         input("\n按回车键退出 / Press Enter to exit...")
 
 
-def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh"):
+def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None):
     """
     EN: Pure logic function for batch border processing (GUI-friendly).
     CN: 批量边框处理纯逻辑函数（GUI友好）。
@@ -115,6 +115,8 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
         is_digital: Digital mode flag
         manual_film: Manual film selection (keyword)
         progress_callback: Function(current, total, filename) for progress updates
+        lang: Language for messages ("zh" or "en")
+        custom_layout: Dict with custom params: {"side": 0.04, "top": 0.04, "bottom": 0.13, "font_scale": 0.032}
     
     Returns:
         {
@@ -162,6 +164,13 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
                 else:
                     # EN: Auto-detect / CN: 自动检测
                     data = meta.get_data(img_path, is_digital_mode=is_digital)
+                
+                # EN: Apply custom layout params if provided / CN: 如果提供了自定义布局参数则应用
+                if custom_layout:
+                    if 'layout' in data:
+                        data['layout'].update(custom_layout)
+                    else:
+                        data['layout'] = custom_layout
                 
                 # EN: Final Rendering / CN: 最终渲染
                 renderer.process_image(img_path, data, output_dir)

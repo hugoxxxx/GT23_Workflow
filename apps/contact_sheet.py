@@ -68,7 +68,7 @@ class ContactSheetPro:
             print("-"*60)
             input("\n按回车键退出 / Press Enter to exit...")
     
-    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None):
+    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None, show_date=True, show_exif=True):
         """
         EN: Pure logic function for contact sheet generation (GUI-friendly).
         CN: 底片索引生成纯逻辑函数（GUI友好）。
@@ -76,7 +76,7 @@ class ContactSheetPro:
         Args:
             input_dir: Input directory path
             output_dir: Output directory path
-            format: Format type ("66", "645", "67", "135" or None for auto-detect)
+            format: Format type ("66", "645", "67", "135" or long names like "645_6x8_43", or None for auto-detect)
             manual_film: Manual film keyword
             emulsion_number: User-provided emulsion number
             orientation: For 645 format: "L" (landscape/vertical strip) or "P" (portrait/horizontal strip)
@@ -95,6 +95,18 @@ class ContactSheetPro:
             # EN: Localized message helper / CN: 本地化消息助手
             def _t(zh_text, en_text):
                 return zh_text if lang == "zh" else en_text
+            
+            # EN: Map long format names to short renderer keys / CN: 将长格式名映射到短渲染器key
+            format_map = {
+                "6x6": "66",
+                "6x7_4x5": "67",
+                "645_6x8_43": "645",
+                "135_6x9": "135",
+                "PANORAMIC": "135"  # EN: Fallback panoramic to 135 / CN: 全景降级为135
+            }
+            
+            if format and format in format_map:
+                format = format_map[format]
 
             if progress_callback:
                 progress_callback(_t("正在扫描文件...", "Scanning files..."))
@@ -131,6 +143,9 @@ class ContactSheetPro:
                     progress_callback(_t(f"使用指定画幅: {layout_key}", f"Using specified format: {layout_key}"))
             else:
                 layout_key = self.meta.detect_batch_layout(img_paths)
+                # EN: Map long format names to short renderer keys / CN: 将长格式名映射到短渲染器key
+                if layout_key in format_map:
+                    layout_key = format_map[layout_key]
                 if progress_callback:
                     progress_callback(_t(f"自动检测画幅: {layout_key}", f"Auto-detected format: {layout_key}"))
 
@@ -159,7 +174,17 @@ class ContactSheetPro:
             )
             
             # EN: Pass orientation to render for 645 format to avoid input() in GUI mode / CN: 传递方向参数给645画幅渲染器避免GUI模式下的input()
-            canvas = renderer.render(canvas, img_paths, cfg, self.meta, user_emulsion, sample_data=sample_data, orientation=orientation)
+            canvas = renderer.render(
+                canvas,
+                img_paths,
+                cfg,
+                self.meta,
+                user_emulsion,
+                sample_data=sample_data,
+                orientation=orientation,
+                show_date=show_date,
+                show_exif=show_exif
+            )
             
             # EN: 4. Save output / CN: 4. 保存输出
             if not os.path.exists(output_dir):

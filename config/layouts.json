@@ -1,26 +1,26 @@
 {
   "6x6": {
     "aspect_range": [1.0, 1.09],
-    "all": { "side_ratio": 0.06, "bottom_ratio": 0.18, "font_scale": 0.040 }
+    "all": { "side_ratio": 0.06, "top_ratio": 0.06, "bottom_ratio": 0.18, "font_scale": 0.040 }
   },
   "6x7_4x5": {
     "aspect_range": [1.09, 1.28],
-    "landscape": { "side_ratio": 0.03, "bottom_ratio": 0.20, "font_scale": 0.040 },
-    "portrait": { "side_ratio": 0.02, "bottom_ratio": 0.16, "font_scale": 0.036 }
+    "landscape": { "side_ratio": 0.03, "top_ratio": 0.03, "bottom_ratio": 0.20, "font_scale": 0.040 },
+    "portrait": { "side_ratio": 0.02, "top_ratio": 0.02, "bottom_ratio": 0.16, "font_scale": 0.036 }
   },
   "645_6x8_43": {
     "aspect_range": [1.28, 1.42],
-    "landscape": { "side_ratio": 0.045, "bottom_ratio": 0.16, "font_scale": 0.036 },
-    "portrait": { "side_ratio": 0.04, "bottom_ratio": 0.15, "font_scale": 0.032 }
+    "landscape": { "side_ratio": 0.045, "top_ratio": 0.045, "bottom_ratio": 0.16, "font_scale": 0.036 },
+    "portrait": { "side_ratio": 0.04, "top_ratio": 0.04, "bottom_ratio": 0.15, "font_scale": 0.032 }
   },
   "135_6x9": {
     "aspect_range": [1.42, 1.70],
-    "landscape": { "side_ratio": 0.06, "bottom_ratio": 0.15, "font_scale": 0.036 },
-    "portrait": { "side_ratio": 0.06, "bottom_ratio": 0.14, "font_scale": 0.032 }
+    "landscape": { "side_ratio": 0.06, "top_ratio": 0.06, "bottom_ratio": 0.15, "font_scale": 0.036 },
+    "portrait": { "side_ratio": 0.06, "top_ratio": 0.06, "bottom_ratio": 0.14, "font_scale": 0.032 }
   },
   "PANORAMIC": {
     "aspect_range": [1.70, 5.0],
-    "landscape": { "side_ratio": 0.015, "bottom_ratio": 0.18, "font_scale": 0.024 },
-    "portrait": { "side_ratio": 0.06, "bottom_ratio": 0.10, "font_scale": 0.024 }
+    "landscape": { "side_ratio": 0.015, "top_ratio": 0.015, "bottom_ratio": 0.18, "font_scale": 0.024 },
+    "portrait": { "side_ratio": 0.06, "top_ratio": 0.06, "bottom_ratio": 0.10, "font_scale": 0.024 }
   }
 }

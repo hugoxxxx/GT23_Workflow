@@ -78,12 +78,18 @@ class MainWindow:
         self.border_frame = ttk.Frame(self.notebook, padding=10)
         self.contact_frame = ttk.Frame(self.notebook, padding=10)
         
-        self.notebook.add(self.border_frame, text="边框工具")
-        self.notebook.add(self.contact_frame, text="底片索引")
+        # EN: Add tabs with language-specific text / CN: 添加带语言的标签页
+        border_text = "边框工具" if self.lang == "zh" else "Border Tool"
+        contact_text = "底片索引" if self.lang == "zh" else "Contact Sheet"
+        self.notebook.add(self.border_frame, text=border_text)
+        self.notebook.add(self.contact_frame, text=contact_text)
         
         # EN: Initialize panels with detected language / CN: 使用检测到的语言初始化面板
         self.border_panel = BorderPanel(self.border_frame, lang=self.lang)
         self.contact_panel = ContactPanel(self.contact_frame, lang=self.lang)
+        # EN: Apply detected language to panels immediately / CN: 立刻应用系统语言到面板
+        self.border_panel.update_language(self.lang)
+        self.contact_panel.update_language(self.lang)
     
     def setup_menu(self):
         """
@@ -95,11 +101,14 @@ class MainWindow:
         
         # EN: File menu / CN: 文件菜单
         self.file_menu = tk.Menu(self.menubar, tearoff=0)
-        self.menubar.add_cascade(label="文件", menu=self.file_menu)
+        file_label = "文件" if self.lang == "zh" else "File"
+        self.menubar.add_cascade(label=file_label, menu=self.file_menu)
         
-        self.file_menu.add_command(label="打开工作目录", command=self.open_working_folder)
+        open_label = "打开工作目录" if self.lang == "zh" else "Open Folder"
+        exit_label = "退出" if self.lang == "zh" else "Exit"
+        self.file_menu.add_command(label=open_label, command=self.open_working_folder)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label="退出", command=self.root.quit)
+        self.file_menu.add_command(label=exit_label, command=self.root.quit)
         
         # EN: Language menu (always in English for accessibility) / CN: 语言菜单（始终显示英文以便查找）
         self.lang_menu = tk.Menu(self.menubar, tearoff=0)
@@ -110,10 +119,13 @@ class MainWindow:
         
         # EN: Help menu / CN: 帮助菜单
         self.help_menu = tk.Menu(self.menubar, tearoff=0)
-        self.menubar.add_cascade(label="帮助", menu=self.help_menu)
+        help_label = "帮助" if self.lang == "zh" else "Help"
+        self.menubar.add_cascade(label=help_label, menu=self.help_menu)
         
-        self.help_menu.add_command(label="关于", command=self.show_about)
-        self.help_menu.add_command(label="GitHub 仓库", command=self.open_github)
+        about_label = "关于" if self.lang == "zh" else "About"
+        github_label = "GitHub 仓库" if self.lang == "zh" else "GitHub Repository"
+        self.help_menu.add_command(label=about_label, command=self.show_about)
+        self.help_menu.add_command(label=github_label, command=self.open_github)
     
     def switch_language(self, lang):
         """
@@ -124,7 +136,7 @@ class MainWindow:
         
         # EN: Update menu labels / CN: 更新菜单标签
         if lang == "zh":
-            self.root.title("GT23 胶片工作流 v2.0.0-alpha.1")
+            self.root.title("GT23 胶片工作流 v2.0.0")
             self.menubar.entryconfig(0, label="文件")
             # Language menu always stays as "Language" for accessibility
             self.menubar.entryconfig(2, label="帮助")
@@ -138,7 +150,7 @@ class MainWindow:
             self.notebook.tab(0, text="边框工具")
             self.notebook.tab(1, text="底片索引")
         else:
-            self.root.title("GT23 Film Workflow v2.0.0-alpha.1")
+            self.root.title("GT23 Film Workflow v2.0.0")
             self.menubar.entryconfig(0, label="File")
             # Language menu always stays as "Language" for accessibility
             self.menubar.entryconfig(2, label="Help")
@@ -194,7 +206,7 @@ class MainWindow:
             title = "关于 GT23"
             about_text = """GT23 胶片工作流
 
-版本: 2.0.0-alpha.1
+版本: 2.0.0
 作者: Hugo
 邮箱: xjames007@gmail.com
 
@@ -205,7 +217,7 @@ class MainWindow:
             title = "About GT23"
             about_text = """GT23 Film Workflow
 
-Version: 2.0.0-alpha.1
+Version: 2.0.0
 Author: Hugo
 Email: xjames007@gmail.com
 
