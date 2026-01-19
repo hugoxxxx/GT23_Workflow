@@ -19,7 +19,7 @@ def main():
     app = ttk.Window(
         title="GT23 胶片工作流 Film Workflow v2.0.0",
         themename="cosmo",  # Modern theme (others: darkly, superhero, solar, cyborg, vapor, journal)
-        size=(1000, 850),
+        size=(1000, 950),
         resizable=(True, True)
     )
     
@@ -34,6 +34,8 @@ def main():
         if os.path.exists(icon_path):
             app.iconbitmap(icon_path)
     except Exception:
+        # EN: Icon loading failed, continue without icon (silent fail is OK)
+        # CN: 图标加载失败，继续运行（静默失败可接受）
         pass
     
     # EN: Center window on screen / CN: 窗口居中显示

@@ -6,6 +6,8 @@ CN: 边框工具 GUI 面板（tkinter版本）
 
 import os
 import sys
+import platform
+import subprocess
 import json
 import threading
 import tkinter as tk
@@ -21,11 +23,16 @@ class BorderPanel:
     CN: 边框工具图形界面面板
     """
     
-    def __init__(self, parent):
+    def __init__(self, parent, lang="en"):
+        """
+        Args:
+            parent: Parent widget / 父部件
+            lang: UI language ("zh" or "en") / 界面语言（"zh" 或 "en"）
+        """
         self.parent = parent
         self.worker_thread = None
         self.film_list = []
-        self.lang = "zh"  # EN: Default language / CN: 默认语言
+        self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
         self.setup_ui()
         self.load_film_library()
     
@@ -202,6 +209,7 @@ class BorderPanel:
                 self.input_folder_var.set(photos_in)
                 self.update_file_count()
         except Exception:
+            # EN: Auto-detection failed, silent fail is OK / CN: 自动检测失败，静默失败可接受
             pass
     
     def select_input_folder(self):
@@ -370,7 +378,15 @@ class BorderPanel:
                     else:
                         working_dir = os.getcwd()
                     output_folder = os.path.join(working_dir, "photos_out")
-                    os.startfile(output_folder)
+                    
+                    # EN: Cross-platform folder opening / CN: 跨平台打开文件夹
+                    system = platform.system()
+                    if system == "Windows":
+                        os.startfile(output_folder)
+                    elif system == "Darwin":  # macOS
+                        subprocess.run(["open", output_folder])
+                    else:  # Linux and others
+                        subprocess.run(["xdg-open", output_folder])
                 except Exception as e:
                     error_title = "错误" if self.lang == "zh" else "Error"
                     error_msg = f"无法打开文件夹:\n{e}" if self.lang == "zh" else f"Failed to open folder:\n{e}"

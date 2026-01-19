@@ -6,6 +6,9 @@ CN: GT23 胶片工作流主窗口（tkinter版本）
 
 import os
 import sys
+import locale
+import platform
+import subprocess
 import webbrowser
 import tkinter as tk
 import ttkbootstrap as ttk
@@ -13,6 +16,37 @@ from ttkbootstrap.constants import *
 
 from gui.panels.border_panel import BorderPanel
 from gui.panels.contact_panel import ContactPanel
+
+
+def detect_system_language():
+    """
+    EN: Auto-detect system language based on locale settings
+    CN: 根据系统区域设置自动检测语言
+    
+    Returns:
+        str: "zh" for Chinese, "en" for English (default)
+    """
+    try:
+        # EN: Try to get system locale / CN: 尝试获取系统区域设置
+        system_locale = locale.getdefaultlocale()[0]
+        if system_locale:
+            # EN: Check if locale starts with 'zh' (zh_CN, zh_TW, etc.) / CN: 检查是否为中文区域
+            if system_locale.startswith('zh'):
+                return "zh"
+        
+        # EN: Fallback: check LANG environment variable / CN: 回退方案：检查 LANG 环境变量
+        lang_env = os.environ.get('LANG', '')
+        if lang_env.startswith('zh'):
+            return "zh"
+            
+    except Exception:
+        # EN: Language detection failed, silently fallback to default
+        # CN: 语言检测失败，静默回退到默认值
+        # Note: Silent fail is intentional - doesn't affect app functionality
+        pass
+    
+    # EN: Default to English / CN: 默认为英文
+    return "en"
 
 
 class MainWindow:
@@ -23,7 +57,8 @@ class MainWindow:
     
     def __init__(self, root):
         self.root = root
-        self.lang = "zh"  # EN: Language mode: "zh" or "en" / CN: 语言模式："zh" 或 "en"
+        # EN: Auto-detect system language / CN: 自动检测系统语言
+        self.lang = detect_system_language()
         
         # EN: Setup menu bar / CN: 设置菜单栏
         self.setup_menu()
@@ -46,9 +81,9 @@ class MainWindow:
         self.notebook.add(self.border_frame, text="边框工具")
         self.notebook.add(self.contact_frame, text="底片索引")
         
-        # EN: Initialize panels / CN: 初始化面板
-        self.border_panel = BorderPanel(self.border_frame)
-        self.contact_panel = ContactPanel(self.contact_frame)
+        # EN: Initialize panels with detected language / CN: 使用检测到的语言初始化面板
+        self.border_panel = BorderPanel(self.border_frame, lang=self.lang)
+        self.contact_panel = ContactPanel(self.contact_frame, lang=self.lang)
     
     def setup_menu(self):
         """
@@ -121,13 +156,17 @@ class MainWindow:
         self.border_panel.update_language(lang)
         self.contact_panel.update_language(lang)
     
-    def open_working_folder(self):
-        self.help_menu.add_command(label="GitHub 仓库", command=self.open_github)
-    
+    def open_github(self):
+        """
+        EN: Open GitHub repository in browser
+        CN: 在浏览器中打开 GitHub 仓库
+        """
+        webbrowser.open("https://github.com/hugoxxxx/GT23_Workflow")
+
     def open_working_folder(self):
         """
-        EN: Open working directory in file explorer
-        CN: 在文件管理器中打开工作目录
+        EN: Open working directory in file explorer (cross-platform)
+        CN: 在文件管理器中打开工作目录（跨平台）
         """
         try:
             if getattr(sys, 'frozen', False):
@@ -135,7 +174,14 @@ class MainWindow:
             else:
                 working_dir = os.getcwd()
             
-            os.startfile(working_dir)
+            # EN: Cross-platform folder opening / CN: 跨平台打开文件夹
+            system = platform.system()
+            if system == "Windows":
+                os.startfile(working_dir)
+            elif system == "Darwin":  # macOS
+                subprocess.run(["open", working_dir])
+            else:  # Linux and others
+                subprocess.run(["xdg-open", working_dir])
         except Exception as e:
             tk.messagebox.showerror("错误 Error", f"无法打开目录 Failed to open folder:\n{e}")
     
@@ -152,7 +198,7 @@ class MainWindow:
 作者: Hugo
 邮箱: xjames007@gmail.com
 
-专为胶片摄影师设计的数字接触印样与底片边框处理工具。
+专为胶片摄影师设计的数字全卷缩略图与底片边框处理工具。
 
 灵感来自 Contax G2 & T3 📷"""
         else:
@@ -169,10 +215,4 @@ digital contact sheets and professionally processed film borders.
 Inspired by Contax G2 & T3 📷"""
         
         tk.messagebox.showinfo(title, about_text)
-    
-    def open_github(self):
-        """
-        EN: Open GitHub repository in browser
-        CN: 在浏览器中打开 GitHub 仓库
-        """
-        webbrowser.open("https://github.com/hugoxxxx/GT23_Workflow")
+

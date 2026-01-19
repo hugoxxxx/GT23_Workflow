@@ -6,6 +6,8 @@ CN: 底片索引 GUI 面板（tkinter版本）
 
 import os
 import sys
+import platform
+import subprocess
 import json
 import threading
 import tkinter as tk
@@ -22,11 +24,16 @@ class ContactPanel:
     CN: 底片索引图形界面面板
     """
     
-    def __init__(self, parent):
+    def __init__(self, parent, lang="en"):
+        """
+        Args:
+            parent: Parent widget / 父部件
+            lang: UI language ("zh" or "en") / 界面语言（"zh" 或 "en"）
+        """
         self.parent = parent
         self.worker_thread = None
         self.film_list = []
-        self.lang = "zh"  # EN: Default language / CN: 默认语言
+        self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
         self.meta = MetadataHandler()  # EN: Initialize metadata handler / CN: 初始化元数据处理器
         self.setup_ui()
         self.load_film_library()
@@ -118,7 +125,7 @@ class ContactPanel:
         ttk.Entry(row3, textvariable=self.roll_id_var).pack(side=LEFT, fill=X, expand=YES)
         
         # EN: Generate button / CN: 生成按钮
-        self.generate_button = ttk.Button(self.parent, text="生成接触印样", 
+        self.generate_button = ttk.Button(self.parent, text="全卷缩略图", 
                                          command=self.start_generation, bootstyle="success", width=30)
         self.generate_button.pack(pady=10)
         
@@ -128,10 +135,11 @@ class ContactPanel:
         
         # EN: Log output / CN: 日志输出
         self.log_frame = ttk.Labelframe(self.parent, text="生成日志", padding=5)
-        self.log_frame.pack(fill=BOTH, expand=YES)
+        self.log_frame.pack(fill=BOTH, expand=YES, pady=(10, 0))
         
-        self.log_text = scrolledtext.ScrolledText(self.log_frame, height=15, wrap=tk.WORD, state="disabled")
-        self.log_text.pack(fill=BOTH, expand=YES)
+        # EN: Set minimum height for log area / CN: 设置日志区域最小高度
+        self.log_text = scrolledtext.ScrolledText(self.log_frame, height=25, wrap=tk.WORD, state="disabled")
+        self.log_text.pack(fill=BOTH, expand=YES, padx=2, pady=2)
     
     def select_input_folder(self):
         """
@@ -166,7 +174,9 @@ class ContactPanel:
                 
                 # EN: Auto-detect format from first image / CN: 从第一张照片自动检测画幅
                 self.detect_and_set_format(photos_in)
-        except Exception:
+        except Exception as e:
+            # EN: Auto-detection failed, log to GUI / CN: 自动检测失败，记录到GUI
+            # Note: This runs during init, log widget may not be ready yet, so silent fail is OK
             pass
     
     def detect_and_set_format(self, folder):
@@ -190,6 +200,7 @@ class ContactPanel:
                     else:
                         self.orientation_frame.pack_forget()
         except Exception:
+            # EN: Format detection failed, silent fail is OK / CN: 画幅检测失败，静默失败可接受
             pass
     
     def refresh_format(self):
@@ -262,7 +273,7 @@ class ContactPanel:
             self.auto_detect_check.config(text="自动识别胶片（从EXIF）")
             self.manual_label.config(text="手动选择:")
             self.emulsion_label.config(text="乳剂号 (可选):")
-            self.generate_button.config(text="生成接触印样")
+            self.generate_button.config(text="全卷缩略图")
             self.log_frame.config(text="生成日志")
             self.update_film_combo_values()
         else:
@@ -351,9 +362,16 @@ class ContactPanel:
     
     def start_generation(self):
         """
-        EN: Start contact sheet generation
-        CN: 开始生成接触印样
+        EN: Start contact sheet generation with thread safety check
+        CN: 开始生成全卷缩略图（带线程安全检查）
         """
+        # EN: Check if worker thread is already running / CN: 检查工作线程是否已在运行
+        if self.worker_thread is not None and self.worker_thread.is_alive():
+            title = "警告" if self.lang == "zh" else "Warning"
+            msg = "生成任务正在运行中，请等待..." if self.lang == "zh" else "Generation task is already running, please wait..."
+            messagebox.showwarning(title, msg)
+            return
+        
         # EN: Get input folder / CN: 获取输入文件夹
         input_folder = self.input_folder_var.get()
         if not input_folder or not os.path.exists(input_folder):
@@ -437,7 +455,7 @@ class ContactPanel:
             def progress_update(message):
                 self.parent.after(0, lambda msg=message: self.log(msg))
             
-            # EN: Create contact sheet instance / CN: 创建接触印样实例
+            # EN: Create contact sheet instance / CN: 创建缩略图生成器实例
             contact = ContactSheetPro()
             
             # EN: Generate using the generate() method / CN: 使用generate()方法生成
@@ -482,7 +500,7 @@ class ContactPanel:
         title = "完成" if self.lang == "zh" else "Complete"
         if self.lang == "zh":
             dialog_msg = (
-                "接触印样生成完成！\n\n"
+                "全卷缩略图生成完成！\n\n"
                 f"{os.path.basename(result_path)}\n\n"
                 "是否打开输出文件夹？"
             )
@@ -495,7 +513,15 @@ class ContactPanel:
         response = messagebox.askyesno(title, dialog_msg)
         if response:
             try:
-                os.startfile(os.path.dirname(result_path))
+                # EN: Cross-platform folder opening / CN: 跨平台打开文件夹
+                output_dir = os.path.dirname(result_path)
+                system = platform.system()
+                if system == "Windows":
+                    os.startfile(output_dir)
+                elif system == "Darwin":  # macOS
+                    subprocess.run(["open", output_dir])
+                else:  # Linux and others
+                    subprocess.run(["xdg-open", output_dir])
             except Exception as e:
                 err_title = "错误" if self.lang == "zh" else "Error"
                 err_msg = f"无法打开文件夹:\n{e}" if self.lang == "zh" else f"Failed to open folder:\n{e}"
