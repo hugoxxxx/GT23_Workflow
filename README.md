@@ -8,6 +8,28 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
+## 🔥 What's New — v2.0.0 (GUI Edition)
+
+- **GUI Released | 正式发布 GUI**
+   - EN: Brand‑new desktop app built with `tkinter + ttkbootstrap`. Two panels: Border Tool and Contact Sheet, bilingual UI with auto language detection.
+   - CN: 基于 `tkinter + ttkbootstrap` 的全新桌面版，提供「边框工具 / 底片索引」两大面板，内置中英双语并自动识别系统语言。
+
+- **MKL Runtime Included | 内置 MKL 运行库**
+   - EN: Bundle Intel MKL/OpenMP DLLs from Conda env to resolve "Failed to extract entry: mkl_avx2.2.dll".
+   - CN: 自动打包 Conda 环境中的 MKL/OpenMP DLL，修复 “mkl_avx2.2.dll 解包失败”。
+
+- **Dev/Build Streamlined | 开发/打包流程简化**
+   - EN: Single Conda env name `gt23`; UTF‑8 batch outputs; safer clean‑build with process unlock.
+   - CN: 统一环境名 `gt23`，批处理改为 UTF‑8，打包前自动清理并解锁旧进程。
+
+- **Consistency & Maintainability | 一致性与可维护性**
+   - EN: Centralized version in `version.py`; window titles auto‑sync. Dependencies aligned to `ttkbootstrap` (removed unused PySide6).
+   - CN: 版本集中到 `version.py` 并自动同步窗口标题；依赖切换为 `ttkbootstrap`（移除未使用的 PySide6）。
+
+Notes | 说明:
+- EN: CLI is paused for this release — GUI is the primary distribution.
+- CN: 本次发布暂停维护 CLI，主推 GUI 桌面版。
+
 ## 📷 About the Name | 项目名称由来
 
 **EN**: The name "GT23" pays homage to two legendary Contax compact cameras that shaped my film photography journey: the **G2** and **T3**. Both were once part of my collection, but circumstances led me to part with them. Since then, their prices have soared far beyond reach, closing the door on any chance of reunion. The memories of shooting with these exceptional cameras remain vivid, and when it came time to name a tool dedicated to film photography, honoring them felt like the only fitting tribute.
@@ -16,10 +38,18 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
+## 🖼️ GUI Preview | 界面预览
+
+<p align="center">
+  <img src="https://github.com/hugoxxxx/photos/blob/3e3ca307d3aa83c3039f6f851c67ba3e26c295e3/GT23samples/GUI.png" width="80%" alt="GT23 GUI">
+</p>
+
+---
+
 ## 🚀 Key Features | 核心功能
 
 * **Dual Toolsets | 双重工具集**: 
-    * **Border Tool**: Professional cropping, padding, and aesthetic border processing for individual scans. | **边框美化工具**: 为单张扫描件提供专业的裁剪、填充及边框美化处理。
+    * **Border Tool**: Professional cropping, padding, and aesthetic border processing for individual scans. Features real-time preview, auto date selection, EXIF visibility toggle, and customizable border ratio. | **边框美化工具**: 为单张扫描件提供专业的裁剪、填充及边框美化处理。支持实时预览、自动选择日期、EXIF 信息显隐控制、自定义边框比例。
     * **Contact Sheet (135/120)**: Automated index sheet generation with physical film simulation. | **底片索引工具**: 自动化生成具备物理底片质感的索引印样。
 
 * **Dynamic DataBack | 动态背印**:
@@ -41,88 +71,67 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ## 📦 Installation & Usage | 安装与使用
 
-### Option A: Executable (EXE) - No Python Required | 可执行程序版本（无需 Python）
+### Option A: GUI Executable (Recommended) | GUI 可执行程序（推荐）
 
-**EN**: Download the latest `.exe` from **Releases** and follow the setup below.
+**EN**: Download the latest `.exe` from Releases, place it in a working folder, then double‑click to launch the GUI.
 
-**CN**: 从 **Releases** 下载最新的 `.exe` 文件，按照以下步骤操作。
+**CN**: 从 Releases 下载最新 `.exe`，放到工作目录后双击运行即可进入 GUI。
 
-#### Setup Steps | 设置步骤
-
-1. **Create a working directory | 创建工作目录**:
+Steps | 步骤：
+1. Create a working directory | 创建工作目录：
 
    ```
    MyProject/
    ├── GT23_Workflow.exe
-   ├── photos_in/          (EN: Place your scanned JPG/PNG files here | CN: 在此放入扫描的 JPG/PNG 照片)
-   └── photos_out/         (EN: Output results will appear here | CN: 输出结果将出现在此)
+   ├── photos_in/          (Put scanned JPG/PNG here | 放入扫描 JPG/PNG)
+   └── photos_out/         (Outputs will appear here | 输出结果在此)
    ```
 
-   * EN: Create a folder (e.g., `C:\GT23\`) to hold the EXE and film scans.
-   * CN: 创建一个工作文件夹（例如 `C:\GT23\`），放置 EXE 文件和胶片扫描件。
+2. Launch GUI | 启动 GUI：
 
-2. **Prepare your photos | 准备照片**:
-   * EN: Copy all scanned film images into the `photos_in/` folder.
-   * CN: 将所有扫描的胶片照片复制到 `photos_in/` 文件夹中。
+   - Border Tool tab: single‑scan border processing | 边框工具：单张扫描的边框美化
+   - Contact Sheet tab: 135/120 contact sheet rendering | 底片索引：135/120 版式渲染
 
-3. **Run the EXE | 运行程序**:
-   ```powershell
-   .\GT23_Workflow.exe
-   ```
-
-4. **Follow the menu prompts | 按照菜单提示操作**:
-   * EN: A menu will appear. Select `[1]` for **Border Tool** or `[2]` for **Contact Sheet**.
-   * CN: 会出现菜单，选择 `[1]` 进入**边框工具**，或 `[2]` 进入**底片索引工具**。
-
-5. **Enter film information | 输入胶片信息**:
-   * EN: When prompted, enter the film name, emulsion number, and other parameters.
-   * CN: 按提示输入胶片名称、乳剂号等参数。
-
-6. **Check results | 查看结果**:
-   * EN: Output images will be saved in the `photos_out/` folder.
-   * CN: 处理后的图像将保存到 `photos_out/` 文件夹。
+3. Results | 结果：
+   - EN: Processed images are saved into `photos_out/`.
+   - CN: 处理图片输出到 `photos_out/`。
 
 ---
 
-### Option B: Python - For Advanced Users | Python 版本（适合高级用户）
+### Option B: Build From Source | 源码构建（进阶）
 
-**EN**: This option requires Python 3.x and manual installation of dependencies. Recommended for developers who want source code access or need to run on unsupported systems.
+**EN**: For developers. Use Conda env `gt23` and run `build_gui.bat`.
 
-**CN**: 此选项需要 Python 3.x 并手动安装依赖项。适合需要源代码访问权或在不支持的系统上运行的开发者。
+**CN**: 面向开发者。使用 Conda 环境 `gt23`，运行 `build_gui.bat` 进行打包。
 
 #### Setup Steps | 设置步骤
 
-1. **Install Python 3.x | 安装 Python 3.x**:
-   * EN: Download and install Python from [python.org](https://www.python.org/). Ensure `python` and `pip` are added to your system PATH.
-   * CN: 从 [python.org](https://www.python.org/) 下载并安装 Python。确保 `python` 和 `pip` 已添加到系统 PATH。
-
-2. **Clone the Repository | 克隆代码库**:
+1. **Clone the Repository | 克隆代码库**:
    ```bash
    git clone https://github.com/yourusername/GT23_Workflow.git
    cd GT23_Workflow
    ```
 
-3. **Install Dependencies | 安装依赖项**:
-   ```bash
-   pip install -r requirements.txt
+2. **Create/Activate env | 创建/激活环境**:
+   ```powershell
+   conda create -n gt23 python=3.11 -y
+   conda activate gt23
+   pip install -r requirements-gui.txt
    ```
 
-4. **Run the Tool | 运行工具**:
-   ```bash
-   python main.py
+3. **Build EXE | 打包 EXE**:
+   ```powershell
+   .\build_gui.bat
    ```
-
-5. **Follow On-Screen Instructions | 按照屏幕上的说明操作**:
-   * EN: Choose `[1]` for Border Tool or `[2]` for Contact Sheet. Have your film scans and desired output settings ready.
-   * CN: 从菜单中选择 `[1]` 进入边框工具或 `[2]` 进入底片索引工具。准备好你的胶片扫描件和期望的输出设置。
 
 ---
 
 ## 🗺️ Roadmap | 路线图
 
-- [x] **v1.0 - v1.8**: Basic layout, Dynamic EXIF, and Auto-rotation. | 完成基础排版、动态 EXIF 及自动旋转。
-- [x] **v1.9 - v2.0**: Full multi-format support (66, 645, 67, 135), expanded film library, optimized sprocket rendering, and EXE packaging. | **已完成：多画幅支持、扩展胶片库、齿孔优化、EXE 封包。**
-- [ ] **v2.0**: **GUI Interface**. | **长期规划：开发图形界面。**
+- [x] **v1.0 - v1.8**: Basic layout, Dynamic EXIF, Auto‑rotation | 完成基础排版、动态 EXIF、自动旋转
+- [x] **v1.9 - v2.0**: Multi‑format (66/645/67/135), film library expansion, sprocket rendering, EXE packaging | 多画幅、胶片库扩展、齿孔渲染、EXE 封包
+- [x] **v2.0.0**: Ship GUI desktop app with real-time preview, EXIF/date controls | 正式发布 GUI 桌面版，支持实时预览、EXIF/日期控制
+- [ ] **Future**: No further plans at this time | 远期暂无规划
 
 ---
 

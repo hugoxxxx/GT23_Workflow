@@ -1,66 +1,103 @@
-# main.py
-import os
-import sys
+# -*- coding: utf-8 -*-
+"""
+EN: GUI entry point for GT23 Film Workflow (tkinter version)
+CN: GT23 胶片工作流 GUI 入口（tkinter版本）
+"""
 
-# EN: Get the correct base path for both dev and PyInstaller exe
-# CN: 获取开发环境和打包 exe 环境下的正确基础路径
-if getattr(sys, 'frozen', False):
-    # EN: Running as PyInstaller exe, use executable's directory
-    # CN: 以 exe 运行时，使用可执行文件所在目录
-    root_path = os.path.dirname(sys.executable)
-else:
-    # EN: Running as Python script, use script's directory
-    # CN: 以脚本运行时，使用脚本所在目录
-    root_path = os.path.dirname(os.path.abspath(__file__))
-    if root_path not in sys.path:
-        sys.path.insert(0, root_path)
+import sys
+import os
+import tkinter as tk
+import ttkbootstrap as ttk
+from gui.main_window import MainWindow, detect_system_language
+from version import get_version_string
+
 
 def main():
     """
-    EN: Main loop for GT23 Workflow.
-    CN: GT23 工作流主循环。
+    EN: Main function - initialize and run GUI application
+    CN: 主程序 - 初始化并运行 GUI 应用程序
     """
-    while True:
-        print("\n" + "="*45)
-        print("EN: >>> GT23 Film Workflow Automation <<<")
-        print("CN: >>> GT23 胶片自动化工作流 <<<")
-        print("="*45)
-        print("EN: [1] Border Tool | CN: [1] 边框美化工具")
-        print("EN: [2] Contact Sheet | CN: [2] 底片索引工具")
-        print("EN: [Q] Exit | CN: [Q] 退出程序")
-        print("-" * 45)
-
-        choice = input("EN: Select function number | CN: 请选择功能数字 >>> ").strip().lower()
-
-        if choice == '1':
-            try:
-                from apps.border_tool import run_border_tool
-                run_border_tool()
-                input("\nEN: [OK] Processing complete, press Enter to return... | CN: [OK] 处理完成，按回车键返回主菜单...")
-            except Exception as e:
-                print(f"EN: [!] Failed to start Border Tool: {e} | CN: [!] 启动边框工具失败: {e}")
-                input("\nEN: Press Enter to return... | CN: 按回车键返回主菜单...")
-
-        elif choice == '2':
-            try:
-                # EN: Import the class directly to avoid 'run_contact_sheet' function error
-                # CN: 直接导入类，避免“找不到 run_contact_sheet 函数”的错误
-                from apps.contact_sheet import ContactSheetPro
-                app = ContactSheetPro()
-                app.run()
-                input("\nEN: [OK] Contact sheet generated, press Enter to return... | CN: [OK] 底片索引生成完成，按回车键返回主菜单...")
-            except Exception as e:
-                print(f"EN: [!] Failed to start Contact Sheet: {e} | CN: [!] 启动底片索引工具失败: {e}")
-                import traceback
-                traceback.print_exc()
-                input("\nEN: Press Enter to return... | CN: 按回车键返回主菜单...")
-
-        elif choice == 'q':
-            print("EN: >>> Thank you, program exited. | CN: >>> 感谢使用，程序已退出。")
-            break
-            
+    # EN: Detect system language / CN: 检测系统语言
+    _lang = detect_system_language()
+    ver = get_version_string()
+    _title = f"GT23 胶片工作流 {ver}" if _lang == "zh" else f"GT23 Film Workflow {ver}"
+    
+    # EN: Create application window / CN: 创建应用窗口
+    app = ttk.Window(
+        title=_title,
+        themename="cosmo",  # Modern theme (others: darkly, superhero, solar, cyborg, vapor, journal)
+        size=(1100, 1600),  # EN: Further increase window height for preview / CN: 增大窗口高度方便预览
+        resizable=(True, True)
+    )
+    
+    # EN: Set window icon (if exists) / CN: 设置窗口图标（如果存在）
+    try:
+        # EN: Resolve asset base (supports PyInstaller onefile via _MEIPASS)
+        # CN: 解析资源基础路径（支持 PyInstaller 单文件的 _MEIPASS 目录）
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            base_path = sys._MEIPASS  # type: ignore[attr-defined]
+        elif getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
         else:
-            print("EN: [!] Invalid input, please select 1, 2 or Q. | CN: [!] 无效输入，请重新选择 1, 2 或 Q。")
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        
+        ico_path = os.path.join(base_path, 'assets', 'GT23_Icon.ico')
+        png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
+
+        # EN: Prefer .ico on Windows for title bar + taskbar
+        # CN: Windows 上优先使用 .ico，能同时影响标题栏与任务栏
+        if os.path.exists(ico_path):
+            try:
+                # EN: Try multiple Tk variants for reliability on Windows
+                # CN: 兼容性处理：尝试多种 Tk 设置方式，提升在 Windows 上的成功率
+                app.iconbitmap(default=ico_path)
+                app.iconbitmap(ico_path)
+                try:
+                    app.wm_iconbitmap(ico_path)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+            except Exception:
+                # EN: Fallback to PNG with iconphoto
+                # CN: 回退到使用 PNG 的 iconphoto
+                if os.path.exists(png_path):
+                    img = tk.PhotoImage(file=png_path)
+                    app.iconphoto(True, img)
+                    app.iconphoto(False, img)
+        elif os.path.exists(png_path):
+            # EN: Non-Windows or missing .ico → use PNG
+            # CN: 非 Windows 或无 .ico 时使用 PNG
+            img = tk.PhotoImage(file=png_path)
+            app.iconphoto(True, img)
+            app.iconphoto(False, img)
+    except Exception:
+        # EN: Icon loading failed, continue without icon (silent fail is OK)
+        # CN: 图标加载失败，不中止程序，默认失败可接受
+        pass
+    
+    # EN: Center window on screen / CN: 居中显示窗口
+    app.place_window_center()
+    
+    # EN: Ensure working folders exist / CN: 确保工作文件夹存在
+    try:
+        if getattr(sys, 'frozen', False):
+            working_dir = os.path.dirname(sys.executable)
+        else:
+            working_dir = os.getcwd()
+
+        photos_in = os.path.join(working_dir, 'photos_in')
+        photos_out = os.path.join(working_dir, 'photos_out')
+        os.makedirs(photos_in, exist_ok=True)
+        os.makedirs(photos_out, exist_ok=True)
+    except Exception:
+        # EN: Fail silently, not critical / CN: 默认失败，不影响使用
+        pass
+
+    # EN: Initialize main window / CN: 初始化主窗口
+    MainWindow(app)
+    
+    # EN: Start event loop / CN: 启动事件循环
+    app.mainloop()
+
 
 if __name__ == "__main__":
     main()

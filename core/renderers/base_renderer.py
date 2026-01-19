@@ -36,8 +36,42 @@ class BaseFilmRenderer:
             print(f"CN: [!] 未找到喷码字体: {led_path}, 将回退。")
             self.led_font = self.font
 
-    def prepare_canvas(self, w, h):
-        user_emulsion = input("EN: Enter emulsion number (e.g. 049) | CN: 请输入乳剂号 (如 049) >>> ").strip()
+        # D. EN: LED Dot-Matrix1 Font (for 135 date display) / CN: LED Dot-Matrix1 字体 (用于 135 日期显示)
+        led_dot_path = os.path.join(base_path, "assets", "fonts", "LED Dot-Matrix1.ttf")
+        try:
+            self.led_dot_font = ImageFont.truetype(led_dot_path, 40)
+        except:
+            print(f"CN: [!] 未找到 LED Dot-Matrix1 字体: {led_dot_path}, 将回退到数码管字体。")
+            self.led_dot_font = self.seg_font
+
+        # E. EN: IntoDotMatrix Font (alternative for 135 date stamp) / CN: IntoDotMatrix 字体（135 日期喷码备用）
+        into_dot_path = os.path.join(base_path, "assets", "fonts", "intodotmatrix.ttf")
+        try:
+            self.into_dot_font = ImageFont.truetype(into_dot_path, 40)
+        except:
+            print(f"CN: [!] 未找到 IntoDotMatrix 字体: {into_dot_path}, 将回退到 LED Dot-Matrix1。")
+            self.into_dot_font = self.led_dot_font
+
+    def prepare_canvas(self, w, h, emulsion_number=None):
+        """
+        EN: Prepare canvas and get emulsion number
+        CN: 准备画布并获取乳剂号
+        
+        Args:
+            emulsion_number: Optional emulsion number for GUI mode
+        """
+        if emulsion_number is None:
+            # EN: If interactive (CLI), ask user; otherwise default to empty to avoid GUI blocking.
+            # CN: 若为可交互命令行则询问用户；否则默认空字符串，避免 GUI 阻塞。
+            if getattr(sys.stdin, "isatty", lambda: False)():
+                user_emulsion = input(
+                    "EN: Enter emulsion number (e.g. 049) | CN: 请输入乳剂号 (如 049) >>> "
+                ).strip()
+            else:
+                user_emulsion = ""
+        else:
+            # EN: GUI mode - use provided value / CN: GUI模式 - 使用提供的值
+            user_emulsion = (emulsion_number or "").strip() if isinstance(emulsion_number, str) else str(emulsion_number)
         canvas = Image.new("RGB", (w, h), (235, 235, 235))
         return canvas, user_emulsion
 

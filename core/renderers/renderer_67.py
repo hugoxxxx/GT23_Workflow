@@ -12,7 +12,7 @@ class Renderer67(BaseFilmRenderer):
     CN: 6x7 画幅渲染器 (645 物理喷码步进 + 左对齐随机抖动版)
     """
     
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
         # EN: Execute 6x7 rendering with calibrated marking logic
         # CN: 执行 6x7 渲染，喷码逻辑校准
         print("\n" + "="*65)
@@ -140,6 +140,10 @@ class Renderer67(BaseFilmRenderer):
                     # CN: B. 右侧 EXIF (150px 压缩空间)
                     data = meta_handler.get_data(img_list[idx])
                     date_str, exif_str = self.get_clean_exif(data)
+                    if not show_date:
+                        date_str = None
+                    if not show_exif:
+                        exif_str = None
                         
                     # EN: Key physical logic: Center line of right-side black margin
                     # CN: 关键物理逻辑：右侧黑边的中轴线

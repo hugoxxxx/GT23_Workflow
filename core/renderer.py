@@ -30,22 +30,24 @@ class FilmRenderer:
             layout = data.get('layout', {})
             layout_name = layout.get('name', 'CUSTOM')
             side_ratio = layout.get('side', 0.04)
+            top_ratio = layout.get('top', side_ratio)
             bottom_ratio = layout.get('bottom', 0.13)
             font_base_scale = layout.get('font_scale', 0.032)
             
             # --- EN: CALCULATE SPACING / CN: 计算物理间距 ---
             side_pad = int(w * side_ratio)
+            top_pad = int(w * top_ratio)
             bottom_splice = int(h * bottom_ratio)
             
-            new_w, new_h = w + (side_pad * 2), h + (side_pad * 2) + bottom_splice
+            new_w, new_h = w + (side_pad * 2), h + top_pad + side_pad + bottom_splice
             
             # --- EN: DRAWING / CN: 绘制流程 ---
             canvas = Image.new("RGB", (new_w, new_h), self.bg_color)
-            canvas.paste(img, (side_pad, side_pad))
+            canvas.paste(img, (side_pad, top_pad))
             draw = ImageDraw.Draw(canvas)
             
             # EN: 1px inner border / CN: 1像素内边框
-            draw.rectangle([side_pad, side_pad, side_pad + w, side_pad + h], outline=self.border_line_color, width=1)
+            draw.rectangle([side_pad, top_pad, side_pad + w, top_pad + h], outline=self.border_line_color, width=1)
             
             # --- EN: TYPOGRAPHY HIERARCHY / CN: 字体层级关联 ---
             main_text, sub_text = self._prepare_strings(data)
@@ -64,10 +66,10 @@ class FilmRenderer:
                 base_main_font_size, base_sub_font_size
             )
 
-            self._draw_pro_text(draw, new_w, h, side_pad, bottom_splice, 
+            self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
                             main_text, sub_text, actual_main_size, actual_sub_size)
             
-            
+            # EN: Apply shadow effect for professional film look / CN: 应用阴影效果实现专业胶片感
             final_output = self._apply_pro_shadow(canvas)
             return self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name)
 
@@ -77,9 +79,24 @@ class FilmRenderer:
 
     def _prepare_strings(self, data):
         """EN: Dual-Engine Typography / CN: 胶片/数码双引擎排版"""
-        make = str(data.get('Make') or "").upper()
-        model = str(data.get('Model') or "").upper()
-        camera_text = f"HASSELBLAD {model}" if "HASSELBLAD" in make else f"{make} {model}"
+        make_raw = str(data.get('Make') or "").strip()
+        model_raw = str(data.get('Model') or "").strip()
+        make = make_raw.upper()
+        model = model_raw.upper()
+
+        # EN: Deduplicate brand prefix in model (e.g., CANON CANON EOS R6 -> CANON EOS R6)
+        # CN: 去重型号里的品牌前缀（示例：CANON CANON EOS R6 -> CANON EOS R6）
+        dedup_model = model
+        if make and model and model.startswith(make):
+            dedup_model = model[len(make):].lstrip(" -_/") or model
+
+        if "HASSELBLAD" in make:
+            camera_text = f"HASSELBLAD {dedup_model or model or make}".strip()
+        else:
+            if make and dedup_model:
+                camera_text = f"{make} {dedup_model}".strip()
+            else:
+                camera_text = dedup_model or make
         
         info_parts = []
         is_digi = data.get('is_digital', False)
@@ -107,9 +124,9 @@ class FilmRenderer:
         
         return camera_text, "  |  ".join(info_parts)
 
-    def _draw_pro_text(self, draw, new_w, h, side_pad, bottom_splice, main_text, sub_text, m_size, s_size):
+    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size):
         # EN: Vertical center of the white area / CN: 白色区域垂直中心
-        base_y = h + side_pad + (side_pad + bottom_splice) // 2
+        base_y = top_pad + h + (side_pad + bottom_splice) // 2
         
         # EN: Pro-tip: offset main and sub for better visual balance
         # CN: 专家提示：主标题微调上移，副标题微调下移，视觉更平衡

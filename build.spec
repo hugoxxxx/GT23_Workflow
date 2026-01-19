@@ -1,6 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 # EN: PyInstaller spec file for GT23_Workflow
 # CN: GT23_Workflow 的 PyInstaller 打包配置文件
+import os
+import sys
+import glob
 
 block_cipher = None
 
@@ -8,7 +11,16 @@ block_cipher = None
 # CN: 需要打包进 exe 的数据文件（配置、资源等）
 datas = [
     ('config', 'config'),      # Config files (layouts, films)
-    ('assets', 'assets'),      # Fonts and other assets
+    ('assets/libs', 'assets/libs'),  # Keep libs intact
+    ('assets/GT23_Icon.ico', 'assets'),  # Include ICO for runtime window icon
+    ('assets/GT23_Icon.png', 'assets'),  # Window icon
+    # Fonts in use
+    ('assets/fonts/consola.ttf', 'assets/fonts'),
+    ('assets/fonts/LiquidCrystal-Bold.otf', 'assets/fonts'),
+    ('assets/fonts/LED Dot-Matrix1.ttf', 'assets/fonts'),
+    ('assets/fonts/intodotmatrix.ttf', 'assets/fonts'),
+    ('assets/fonts/palab.ttf', 'assets/fonts'),
+    ('assets/fonts/gara.ttf', 'assets/fonts'),
     ('core', 'core'),          # Core modules
     ('apps', 'apps'),          # App modules
 ]
@@ -17,10 +29,30 @@ datas = [
 # CN: 隐式导入（如果需要）
 hiddenimports = []
 
+
+def _find_mkl_binaries():
+    """
+    EN: Collect Intel MKL/OpenMP runtime DLLs from the conda env so numpy can unpack safely.
+    CN: 从 conda 环境收集 MKL/OpenMP 运行时 DLL，避免 numpy 解包时报缺失。
+    """
+    root = os.getenv("CONDA_PREFIX", sys.base_prefix)
+    bin_dir = os.path.join(root, "Library", "bin")
+    patterns = ["mkl_*.dll", "mkl_rt*.dll", "libiomp5md.dll"]
+    dlls = []
+    for pat in patterns:
+        dlls.extend(glob.glob(os.path.join(bin_dir, pat)))
+    # Dedup and map to (src, dest)
+    return list({dll: (dll, ".") for dll in dlls}.values())
+
+
+# EN: Bundle MKL/OpenMP binaries to fix "Failed to extract entry: mkl_avx2.2.dll"
+# CN: 打包 MKL/OpenMP 运行库，修复 "Failed to extract entry: mkl_avx2.2.dll" 问题
+binary_overrides = _find_mkl_binaries()
+
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=binary_overrides,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
@@ -49,13 +81,13 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,           # EN: Console app / CN: 控制台应用
+    console=False,          # EN: GUI app (no console) / CN: 图形应用（不显示控制台）
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,              # EN: Add icon path if needed / CN: 如需图标，在此添加路径
+    icon='assets/GT23_Icon.ico',  # EN: Windows exe icon / CN: Windows 可执行文件图标
 )
 
 # EN: Output structure:

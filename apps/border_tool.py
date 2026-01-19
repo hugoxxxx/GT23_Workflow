@@ -103,5 +103,105 @@ def run_border_tool():
         print("-"*60)
         input("\n按回车键退出 / Press Enter to exit...")
 
+
+def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None):
+    """
+    EN: Pure logic function for batch border processing (GUI-friendly).
+    CN: 批量边框处理纯逻辑函数（GUI友好）。
+    
+    Args:
+        input_dir: Input directory path
+        output_dir: Output directory path
+        is_digital: Digital mode flag
+        manual_film: Manual film selection (keyword)
+        progress_callback: Function(current, total, filename) for progress updates
+        lang: Language for messages ("zh" or "en")
+        custom_layout: Dict with custom params: {"side": 0.04, "top": 0.04, "bottom": 0.13, "font_scale": 0.032}
+    
+    Returns:
+        {
+            'success': bool,
+            'processed': int,
+            'failed': list[(filename, error)],
+            'message': str
+        }
+    """
+    try:
+        # EN: Localized message helper / CN: 本地化消息助手
+        def _t(zh_text, en_text):
+            return zh_text if lang == "zh" else en_text
+
+        # EN: Initialization / CN: 初始化
+        meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
+        renderer = FilmRenderer()
+        
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        # EN: File scanning / CN: 扫描文件
+        images = [f for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        if not images:
+            return {
+                'success': False,
+                'processed': 0,
+                'failed': [],
+                'message': _t("文件夹中没有图片", "No images in folder")
+            }
+        
+        total = len(images)
+        processed = 0
+        failed = []
+        
+        # EN: Batch processing / CN: 批量处理
+        for idx, img_name in enumerate(images, 1):
+            img_path = os.path.join(input_dir, img_name)
+            
+            try:
+                # EN: Extract metadata / CN: 提取元数据
+                if manual_film:
+                    # EN: Use manual film selection / CN: 使用手动胶片选择
+                    data = meta.get_data(img_path, is_digital_mode=is_digital, manual_film=manual_film)
+                else:
+                    # EN: Auto-detect / CN: 自动检测
+                    data = meta.get_data(img_path, is_digital_mode=is_digital)
+                
+                # EN: Apply custom layout params if provided / CN: 如果提供了自定义布局参数则应用
+                if custom_layout:
+                    if 'layout' in data:
+                        data['layout'].update(custom_layout)
+                    else:
+                        data['layout'] = custom_layout
+                
+                # EN: Final Rendering / CN: 最终渲染
+                renderer.process_image(img_path, data, output_dir)
+                processed += 1
+                
+                # EN: Report progress / CN: 报告进度
+                if progress_callback:
+                    progress_callback(idx, total, img_name)
+                    
+            except Exception as e:
+                failed.append((img_name, str(e)))
+                if progress_callback:
+                    progress_callback(idx, total, _t(f"{img_name}（失败: {e}）", f"{img_name} (Failed: {e})"))
+        
+        # EN: Return result / CN: 返回结果
+        return {
+            'success': len(failed) < total,  # Success if at least one processed
+            'processed': processed,
+            'failed': failed,
+            'message': _t(f"已处理 {processed}/{total} 张照片", f"Processed {processed}/{total} photos")
+        }
+        
+    except Exception as e:
+        import traceback
+        return {
+            'success': False,
+            'processed': 0,
+            'failed': [],
+            'message': f"{_t('错误', 'Error')}: {e}\n{traceback.format_exc()}"
+        }
+
+
 if __name__ == "__main__":
     run_border_tool()

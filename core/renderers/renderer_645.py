@@ -7,14 +7,18 @@ from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
 
 class Renderer645(BaseFilmRenderer):
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
         # EN: Execute 645 rendering | CN: 执行 645 渲染
         print("EN: [645 2.0] Executing render ... | CN: [645 2.0] 执行渲染 ...")
         
         # EN: 1. Re-select mode and reset canvas size
         # CN: 1. 重新选择模式并重置画布尺寸
-        choice = input("\nEN: 1. Vertical strip (L) - horizontal photo  2. Horizontal strip (P) - vertical photo [Default 1]\nCN: 1.垂直条(L)照片横向 2.水平条(P)照片竖向 [默认 1]: ").strip()
-        suffix = "L" if choice != "2" else "P"
+        # EN: Use provided orientation or ask user in CLI mode / CN: 使用提供的方向或在CLI模式下询问用户
+        if orientation is None:
+            choice = input("\nEN: 1. Vertical strip (L) - horizontal photo  2. Horizontal strip (P) - vertical photo [Default 1]\nCN: 1.垂直条(L)照片横向 2.水平条(P)照片竖向 [默认 1]: ").strip()
+            suffix = "L" if choice != "2" else "P"
+        else:
+            suffix = orientation  # EN: Use provided orientation directly / CN: 直接使用提供的方向
         final_cfg = meta_handler.get_contact_layout(f"645_{suffix}")
         
         # EN: Key step! Regenerate canvas based on JSON-defined dimensions for correct PL mode aspect ratio
@@ -112,6 +116,10 @@ class Renderer645(BaseFilmRenderer):
                         # CN: 让 EXIF 紧贴照片底边。不再使用 black_area_center，改为固定偏移
                         data = meta_handler.get_data(img_list[idx])
                         date_str, exif_str = self.get_clean_exif(data)
+                        if not show_date:
+                            date_str = None
+                        if not show_exif:
+                            exif_str = None
                         
                         # EN: Base offset from photo bottom (e.g., 60 pixels)
                         # CN: 设定 EXIF 第一行离照片底部的距离 (例如 60 像素)
@@ -214,6 +222,10 @@ class Renderer645(BaseFilmRenderer):
                         # CN: B. 右侧信息：双行 EXIF (旋转 90)
                         data = meta_handler.get_data(img_list[idx])
                         date_str, exif_str = self.get_clean_exif(data)
+                        if not show_date:
+                            date_str = None
+                        if not show_exif:
+                            exif_str = None
                         
                         # EN: Key physical logic: Center line of right-side black margin
                         # CN: 关键物理逻辑：右侧黑边的中轴线

@@ -11,25 +11,17 @@ class MetadataHandler:
         """ EN: Refined MetadataHandler - Strictly preserves structure, fixes keyword matching.
              CN: 核心逻辑修复版：严格保留结构，修复关键字匹配路径。
         """
-        # EN: Get resource base path (works both in dev and PyInstaller exe)
-        # CN: 获取资源基础路径（开发环境和打包后的 exe 都适用）
-        if getattr(sys, 'frozen', False):
-            # EN: Running in PyInstaller bundle / CN: 在打包的 exe 中运行
-            base_path = sys._MEIPASS
-        else:
-            # EN: Running in normal Python environment / CN: 在普通 Python 环境中运行
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            base_path = os.path.dirname(current_dir)
-        
-        layout_path = os.path.join(base_path, 'config', layout_config)
-        films_path = os.path.join(base_path, 'config', films_config)
-        contact_path = os.path.join(base_path, 'config', contact_config)
+        # EN: Resolve config paths (dev, onefile, onedir/_internal)
+        # CN: 解析配置路径，兼容开发与打包 (_internal)
+        self.layout_path = self._resolve_config_path(layout_config)
+        self.films_path = self._resolve_config_path(films_config)
+        self.contact_path = self._resolve_config_path(contact_config)
 
-        with open(layout_path, 'r', encoding='utf-8') as f:
+        with open(self.layout_path, 'r', encoding='utf-8') as f:
             self.layout_db = json.load(f)
-        with open(films_path, 'r', encoding='utf-8') as f:
+        with open(self.films_path, 'r', encoding='utf-8') as f:
             self.films_map = json.load(f)
-        with open(contact_path, 'r', encoding='utf-8') as f:
+        with open(self.contact_path, 'r', encoding='utf-8') as f:
             self.contact_layouts = json.load(f)
 
         # --- [精准重构] 扁平化特征映射表：匹配即所得 ---
@@ -54,6 +46,38 @@ class MetadataHandler:
         # EN: Sort by length descending to prevent partial matching (e.g., 'Portra' vs 'Portra 400')
         # CN: 按长度倒序排列特征词，确保长词（如 PORTRA 400）优先于短词（如 PORTRA）被匹配
         self.sorted_features = sorted(self.feature_db.keys(), key=len, reverse=True)
+
+
+    @staticmethod
+    def _resolve_config_path(filename):
+        """
+        EN: Robust config path resolver for dev / onefile / onedir(_internal).
+        CN: 兼容开发与打包 (_internal) 的配置路径解析。
+        """
+        if os.path.isabs(filename):
+            return filename
+
+        candidates = []
+        # 1) CWD/config
+        candidates.append(os.path.join(os.getcwd(), 'config', filename))
+
+        # 2) Frozen exe dir /config and /_internal/config
+        if getattr(sys, 'frozen', False):
+            exe_dir = os.path.dirname(sys.executable)
+            candidates.append(os.path.join(exe_dir, 'config', filename))
+            candidates.append(os.path.join(exe_dir, '_internal', 'config', filename))
+            if hasattr(sys, '_MEIPASS'):
+                candidates.append(os.path.join(sys._MEIPASS, 'config', filename))
+
+        # 3) Source tree relative to this file
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        candidates.append(os.path.join(os.path.dirname(base_dir), 'config', filename))
+
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+
+        raise FileNotFoundError(f"Config file not found: {filename}. Tried: {candidates}")
 
 
     def match_film(self, raw_input):
@@ -89,48 +113,50 @@ class MetadataHandler:
 
         # --- [核心逻辑修复] 三级识别引擎 ---
         display_film = ""
-        edge_code = "aaaa" # 修改：初始值设为 "aaaa"
+        edge_code = "FILM" # EN: Default value when film not detected / CN: 无法识别胶片时的默认值
         contact_color = (245, 130, 35, 210)
 
         if not is_digital_mode:
-            # 1. 自动扫描 (合并多个 Description 字段以体现专业性)
-            d1 = str(tags.get('Image ImageDescription', ''))
-            d2 = str(tags.get('EXIF UserComment', ''))
-            d3 = str(tags.get('EXIF ImageDescription', ''))
-            # 补充扫描位
-            search_pool = f"{d1} {d2} {d3}".upper()
+            # EN: If manual film is specified, use it directly (priority over auto-detection)
+            # CN: 如果指定了手动胶片，直接使用（优先于自动识别）
+            if manual_film:
+                m_q = manual_film.upper().strip()
+                manual_bundle = None
+                for feat in self.sorted_features:
+                    if feat == m_q or feat in m_q:
+                        manual_bundle = self.feature_db[feat]
+                        break
 
-            # 2. 尝试自动识别
-            auto_bundle = None
-            for feat in self.sorted_features:
-                if feat in search_pool:
-                    auto_bundle = self.feature_db[feat]
-                    break
-
-            if auto_bundle:
-                display_film = auto_bundle["std_name"]
-                edge_code = auto_bundle["edge_code"]
-                contact_color = tuple(auto_bundle["color"])
+                if manual_bundle:
+                    display_film = manual_bundle["std_name"]
+                    edge_code = manual_bundle["edge_code"]
+                    contact_color = tuple(manual_bundle["color"])
+                else:
+                    # EN: If not found in database, use as-is
+                    # CN: 如果数据库中找不到，原样使用
+                    display_film = manual_film
+                    edge_code = manual_film.upper()
             else:
-                # 3. 如果自动失败，使用手动输入并撞库
-                if manual_film: # 注意：这里加了 if，确保 manual_film 不为空
-                    m_q = manual_film.upper().strip()
-                    manual_bundle = None
-                    for feat in self.sorted_features:
-                        if feat == m_q or feat in m_q:
-                            manual_bundle = self.feature_db[feat]
-                            break
+                # EN: Auto-detection from EXIF (only when manual_film is not specified)
+                # CN: 从EXIF自动识别（仅在未指定手动胶片时）
+                # 1. 自动扫描 (合并多个 Description 字段以体现专业性)
+                d1 = str(tags.get('Image ImageDescription', ''))
+                d2 = str(tags.get('EXIF UserComment', ''))
+                d3 = str(tags.get('EXIF ImageDescription', ''))
+                # 补充扫描位
+                search_pool = f"{d1} {d2} {d3}".upper()
 
-                    if manual_bundle:
-                        display_film = manual_bundle["std_name"]
-                        edge_code = manual_bundle["edge_code"]
-                        contact_color = tuple(manual_bundle["color"])
-                    else:
-                        # 4. 彻底兜底：原样输出
-                        display_film = manual_film
-                        edge_code = manual_film.upper()
-                        contact_color = (245, 130, 35, 210)
-                # 如果 manual_film 也为空，则保持默认值
+                # 2. 尝试自动识别
+                auto_bundle = None
+                for feat in self.sorted_features:
+                    if feat in search_pool:
+                        auto_bundle = self.feature_db[feat]
+                        break
+
+                if auto_bundle:
+                    display_film = auto_bundle["std_name"]
+                    edge_code = auto_bundle["edge_code"]
+                    contact_color = tuple(auto_bundle["color"])
 
         # --- 布局参数计算 (完全保留) ---
         with Image.open(img_path) as img:
@@ -138,12 +164,12 @@ class MetadataHandler:
             ratio = max(w, h) / min(w, h)
             is_portrait = h > w
 
-        layout_params = {"name": "CUSTOM", "side": 0.04, "bottom": 0.13, "font_scale": 0.032, "is_portrait": is_portrait}
+        layout_params = {"name": "CUSTOM", "side": 0.04, "top": 0.04, "bottom": 0.13, "font_scale": 0.032, "is_portrait": is_portrait}
         for name, cfg in self.layout_db.items():
             r_min, r_max = cfg['aspect_range']
             if (r_min - 0.01) <= ratio <= (r_max + 0.01):
                 params = cfg.get("portrait" if is_portrait else "landscape", cfg.get("all"))
-                layout_params = {"name": name, "side": params['side_ratio'], "bottom": params['bottom_ratio'], "font_scale": params.get('font_scale', 0.032), "is_portrait": is_portrait}
+                layout_params = {"name": name, "side": params['side_ratio'], "top": params.get('top_ratio', params['side_ratio']), "bottom": params['bottom_ratio'], "font_scale": params.get('font_scale', 0.032), "is_portrait": is_portrait}
                 break
 
         return {
@@ -167,15 +193,18 @@ class MetadataHandler:
         with Image.open(img_paths[0]) as img:
             w, h = img.size
             ratio = max(w, h) / min(w, h)
+        # EN: Map aspect ratio to layout name / CN: 将宽高比映射到布局名称
         if 0.95 <= ratio <= 1.05:
-            return "66"
-        if 1.2 <= ratio <= 1.4:
-            return "645"
-        if 1.4 <= ratio <= 1.6:
-            return "135"
-        if 1.1 <= ratio <= 1.2:
-            return "67"
-        return "135"
+            return "6x6"
+        if 1.09 <= ratio <= 1.28:
+            return "6x7_4x5"
+        if 1.28 <= ratio <= 1.42:
+            return "645_6x8_43"
+        if 1.42 <= ratio <= 1.70:
+            return "135_6x9"
+        if 1.70 <= ratio <= 5.0:
+            return "PANORAMIC"
+        return "135_6x9"  # EN: Default to 135 / CN: 默认为135
 
 
     def get_contact_layout(self, key):
