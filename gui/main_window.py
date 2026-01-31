@@ -16,7 +16,10 @@ from ttkbootstrap.constants import *
 
 from gui.panels.border_panel import BorderPanel
 from gui.panels.contact_panel import ContactPanel
+from gui.panels.matin_panel import MatinPanel
 from version import get_version_string
+
+import tkinter.font as tkfont
 
 
 def detect_system_language():
@@ -64,69 +67,155 @@ class MainWindow:
         # EN: Setup menu bar / CN: 设置菜单栏
         self.setup_menu()
         
-        # EN: Configure tab style / CN: 配置标签样式
-        style = ttk.Style()
-        style.configure("TNotebook.Tab", padding=[10, 5])
-        style.map("TNotebook.Tab",
-                 background=[("selected", "#2780e3")],
-                 foreground=[("selected", "white")])
+        self.setup_styles()
+        self.root.configure(background="#0D0D0D") # Almost black
+        self.setup_header()
         
         # EN: Create notebook (tabbed interface) / CN: 创建标签页界面
-        self.notebook = ttk.Notebook(root)
-        self.notebook.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+        self.notebook = ttk.Notebook(root, bootstyle="secondary")
+        self.notebook.pack(fill=BOTH, expand=YES, padx=20, pady=(0, 20))
         
         # EN: Add tool panels / CN: 添加工具面板
         self.border_frame = ttk.Frame(self.notebook, padding=10)
         self.contact_frame = ttk.Frame(self.notebook, padding=10)
+        self.matin_frame = ttk.Frame(self.notebook, padding=10)
+
+        
+        from utils.i18n import get_string
         
         # EN: Add tabs with language-specific text / CN: 添加带语言的标签页
-        border_text = "边框工具" if self.lang == "zh" else "Border Tool"
-        contact_text = "底片索引" if self.lang == "zh" else "Contact Sheet"
-        self.notebook.add(self.border_frame, text=border_text)
-        self.notebook.add(self.contact_frame, text=contact_text)
+        self.notebook.add(self.border_frame, text=get_string("border_tool", self.lang))
+        self.notebook.add(self.contact_frame, text=get_string("contact_sheet", self.lang))
+        self.notebook.add(self.matin_frame, text=get_string("slide_mode", self.lang))
         
         # EN: Initialize panels with detected language / CN: 使用检测到的语言初始化面板
         self.border_panel = BorderPanel(self.border_frame, lang=self.lang)
         self.contact_panel = ContactPanel(self.contact_frame, lang=self.lang)
-        # EN: Apply detected language to panels immediately / CN: 立刻应用系统语言到面板
-        self.border_panel.update_language(self.lang)
-        self.contact_panel.update_language(self.lang)
-    
+        self.matin_panel = MatinPanel(self.matin_frame, lang=self.lang)
+
+
+
+    def setup_styles(self):
+        """
+        EN: Configure custom styles for a TRULY minimalist, border-less look
+        CN: 配置真正的极简无边界样式
+        """
+        self.style = ttk.Style()
+        bg_color = "#0D0D0D"
+        accent_color = "#F58223"
+        
+        # EN: Global Settings
+        self.style.configure("TNotebook", background=bg_color, borderwidth=0, padding=0)
+        self.style.configure("TNotebook.Tab", 
+                            padding=[20, 12], 
+                            font=("Segoe UI", 10, "bold"),
+                            background=bg_color,
+                            foreground="#555555",
+                            borderwidth=0,
+                            focuscolor=bg_color)
+        self.style.map("TNotebook.Tab",
+                      background=[("selected", bg_color), ("active", "#1A1A1A")],
+                      foreground=[("selected", accent_color), ("active", "#FFFFFF")],
+                      expand=[("selected", [1, 1, 1, 0])])
+        
+        # EN: Frames & Labels
+        self.style.configure("TFrame", background=bg_color)
+        self.style.configure("TLabel", background=bg_color, foreground="#A0A0A0")
+        self.style.configure("Header.TLabel", background=bg_color, foreground="#FFFFFF")
+        
+        # EN: Flat Inputs / CN: 扁平化输入框
+        self.style.configure("TEntry", 
+                            fieldbackground="#1A1A1A", 
+                            foreground="#FFFFFF", 
+                            borderwidth=0)
+        self.style.map("TEntry",
+                      fieldbackground=[("focus", "#222222")])
+                      
+        self.style.configure("TCombobox", 
+                            fieldbackground="#1A1A1A", 
+                            background="#1A1A1A",
+                            foreground="#FFFFFF",
+                            borderwidth=0, 
+                            arrowcolor="#666")
+        self.style.map("TCombobox",
+                      fieldbackground=[("focus", "#222222")])
+        
+        # EN: Custom Radiobuttons / CN: 自定义单选按钮
+        self.style.configure("TRadiobutton", background=bg_color, foreground="#888")
+        self.style.map("TRadiobutton", 
+                      foreground=[("selected", accent_color), ("active", "#FFFFFF")])
+        
+        # EN: Modern Primary Button / CN: 现代主按钮
+        self.style.configure("Action.TButton", 
+                            background="#1A1A1A",
+                            foreground="#F58223",
+                            font=("Segoe UI", 10, "bold"),
+                            borderwidth=1,
+                            relief=FLAT,
+                            padding=(20, 10))
+        self.style.map("Action.TButton", 
+                      background=[("active", "#F58223"), ("pressed", "#D46D1E")],
+                      foreground=[("active", "#000000"), ("pressed", "#000000")])
+        
+        # EN: Panedwindow / CN: 分割窗格
+        self.style.configure("TPanedwindow", background=bg_color, borderwidth=0)
+
+    def setup_header(self):
+        """
+        EN: Create a minimalist, professional header
+        CN: 创建极简专业的页眉
+        """
+        header_frame = ttk.Frame(self.root, padding=(20, 8))
+        header_frame.pack(fill=X)
+        
+        # EN: Main Title - Clean, Bold, Modern / CN: 主标题 - 简洁、加粗、现代
+        title_font = ("Segoe UI", 14, "bold") if platform.system() == "Windows" else ("Helvetica", 14, "bold")
+        sub_font = ("Segoe UI", 8)
+        
+        title_label = ttk.Label(header_frame, text="GT23 FILM WORKFLOW", font=title_font, style="Header.TLabel")
+        title_label.pack(side=LEFT)
+        
+        # EN: Subtle Version/Tag / CN: 微小的版本或装饰性文字
+        tag_text = "DARKROOM EDITION"
+        tag_label = ttk.Label(header_frame, text=tag_text, font=sub_font, foreground="#F58223")
+        tag_label.pack(side=LEFT, padx=15, pady=(4, 0))
+
+        # EN: Right-aligned description / CN: 右对齐的描述
+        from utils.i18n import get_string
+        self.desc_label = ttk.Label(header_frame, text=get_string("desc", self.lang), font=sub_font, foreground="#666")
+        self.desc_label.pack(side=RIGHT, pady=(4, 0))
+
+        # EN: Thin divider / CN: 极细分割线
+        divider = ttk.Frame(self.root, height=1, bootstyle="secondary")
+        divider.pack(fill=X, padx=20)
+
     def setup_menu(self):
         """
         EN: Create menu bar
         CN: 创建菜单栏
         """
+        from utils.i18n import get_string
         self.menubar = tk.Menu(self.root)
         self.root.config(menu=self.menubar)
         
         # EN: File menu / CN: 文件菜单
         self.file_menu = tk.Menu(self.menubar, tearoff=0)
-        file_label = "文件" if self.lang == "zh" else "File"
-        self.menubar.add_cascade(label=file_label, menu=self.file_menu)
-        
-        open_label = "打开工作目录" if self.lang == "zh" else "Open Folder"
-        exit_label = "退出" if self.lang == "zh" else "Exit"
-        self.file_menu.add_command(label=open_label, command=self.open_working_folder)
+        self.menubar.add_cascade(label=get_string("file", self.lang), menu=self.file_menu)
+        self.file_menu.add_command(label=get_string("open_folder", self.lang), command=self.open_working_folder)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label=exit_label, command=self.root.quit)
+        self.file_menu.add_command(label=get_string("exit", self.lang), command=self.root.quit)
         
-        # EN: Language menu (always in English for accessibility) / CN: 语言菜单（始终显示英文以便查找）
+        # EN: Language menu
         self.lang_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Language", menu=self.lang_menu)
-        
         self.lang_menu.add_command(label="中文", command=lambda: self.switch_language("zh"))
         self.lang_menu.add_command(label="English", command=lambda: self.switch_language("en"))
         
         # EN: Help menu / CN: 帮助菜单
         self.help_menu = tk.Menu(self.menubar, tearoff=0)
-        help_label = "帮助" if self.lang == "zh" else "Help"
-        self.menubar.add_cascade(label=help_label, menu=self.help_menu)
-        
-        about_label = "关于" if self.lang == "zh" else "About"
-        github_label = "GitHub 仓库" if self.lang == "zh" else "GitHub Repository"
-        self.help_menu.add_command(label=about_label, command=self.show_about)
-        self.help_menu.add_command(label=github_label, command=self.open_github)
+        self.menubar.add_cascade(label=get_string("help", self.lang), menu=self.help_menu)
+        self.help_menu.add_command(label=get_string("about", self.lang), command=self.show_about)
+        self.help_menu.add_command(label=get_string("github", self.lang), command=self.open_github)
     
     def switch_language(self, lang):
         """
@@ -134,40 +223,33 @@ class MainWindow:
         CN: 切换界面语言
         """
         self.lang = lang
+        from utils.i18n import get_string
+        
+        # EN: Update window title / CN: 更新窗口标题
+        title = f"GT23 胶片工作流 {get_version_string()}" if lang == "zh" else f"GT23 Film Workflow {get_version_string()}"
+        self.root.title(title)
         
         # EN: Update menu labels / CN: 更新菜单标签
-        if lang == "zh":
-            self.root.title(f"GT23 胶片工作流 {get_version_string()}")
-            self.menubar.entryconfig(0, label="文件")
-            # Language menu always stays as "Language" for accessibility
-            self.menubar.entryconfig(2, label="帮助")
-            
-            self.file_menu.entryconfig(0, label="打开工作目录")
-            self.file_menu.entryconfig(2, label="退出")
-            
-            self.help_menu.entryconfig(0, label="关于")
-            self.help_menu.entryconfig(1, label="GitHub 仓库")
-            
-            self.notebook.tab(0, text="边框工具")
-            self.notebook.tab(1, text="底片索引")
-        else:
-            self.root.title(f"GT23 Film Workflow {get_version_string()}")
-            self.menubar.entryconfig(0, label="File")
-            # Language menu always stays as "Language" for accessibility
-            self.menubar.entryconfig(2, label="Help")
-            
-            self.file_menu.entryconfig(0, label="Open Folder")
-            self.file_menu.entryconfig(2, label="Exit")
-            
-            self.help_menu.entryconfig(0, label="About")
-            self.help_menu.entryconfig(1, label="GitHub Repository")
-            
-            self.notebook.tab(0, text="Border Tool")
-            self.notebook.tab(1, text="Contact Sheet")
+        self.menubar.entryconfig(0, label=get_string("file", lang))
+        self.menubar.entryconfig(2, label=get_string("help", lang))
+        
+        self.file_menu.entryconfig(0, label=get_string("open_folder", lang))
+        self.file_menu.entryconfig(2, label=get_string("exit", lang))
+        
+        self.help_menu.entryconfig(0, label=get_string("about", lang))
+        self.help_menu.entryconfig(1, label=get_string("github", lang))
+        
+        self.notebook.tab(0, text=get_string("border_tool", lang))
+        self.notebook.tab(1, text=get_string("contact_sheet", lang))
+        self.notebook.tab(2, text=get_string("slide_mode", lang))
+        self.desc_label.config(text=get_string("desc", lang))
+
         
         # EN: Update panel languages / CN: 更新面板语言
         self.border_panel.update_language(lang)
         self.contact_panel.update_language(lang)
+        self.matin_panel.update_language(lang)
+
     
     def open_github(self):
         """
@@ -182,10 +264,8 @@ class MainWindow:
         CN: 在文件管理器中打开工作目录（跨平台）
         """
         try:
-            if getattr(sys, 'frozen', False):
-                working_dir = os.path.dirname(sys.executable)
-            else:
-                working_dir = os.getcwd()
+            from utils.paths import get_working_dir
+            working_dir = get_working_dir()
             
             # EN: Cross-platform folder opening / CN: 跨平台打开文件夹
             system = platform.system()
@@ -196,36 +276,17 @@ class MainWindow:
             else:  # Linux and others
                 subprocess.run(["xdg-open", working_dir])
         except Exception as e:
-            tk.messagebox.showerror("错误 Error", f"无法打开目录 Failed to open folder:\n{e}")
+            err_title = "错误" if self.lang == "zh" else "Error"
+            err_msg = f"无法打开目录:\n{e}" if self.lang == "zh" else f"Failed to open folder:\n{e}"
+            tk.messagebox.showerror(err_title, err_msg)
     
     def show_about(self):
         """
         EN: Show about dialog
         CN: 显示关于对话框
         """
-        if self.lang == "zh":
-            title = "关于 GT23"
-            about_text = """GT23 胶片工作流
-
-版本: 2.0.0
-作者: Hugo
-邮箱: xjames007@gmail.com
-
-专为胶片摄影师设计的数字全卷缩略图与底片边框处理工具。
-
-灵感来自 Contax G2 & T3 📷"""
-        else:
-            title = "About GT23"
-            about_text = """GT23 Film Workflow
-
-Version: 2.0.0
-Author: Hugo
-Email: xjames007@gmail.com
-
-A dedicated tool for film photographers to generate
-digital contact sheets and professionally processed film borders.
-
-Inspired by Contax G2 & T3 📷"""
-        
-        tk.messagebox.showinfo(title, about_text)
-
+        from utils.i18n import get_string
+        tk.messagebox.showinfo(
+            get_string("about_title", self.lang),
+            get_string("about_text", self.lang)
+        )

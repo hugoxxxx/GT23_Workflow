@@ -51,33 +51,11 @@ class MetadataHandler:
     @staticmethod
     def _resolve_config_path(filename):
         """
-        EN: Robust config path resolver for dev / onefile / onedir(_internal).
-        CN: 兼容开发与打包 (_internal) 的配置路径解析。
+        EN: Resolved via standardized utils.paths.
+        CN: 通过标准化的 utils.paths 解析。
         """
-        if os.path.isabs(filename):
-            return filename
-
-        candidates = []
-        # 1) CWD/config
-        candidates.append(os.path.join(os.getcwd(), 'config', filename))
-
-        # 2) Frozen exe dir /config and /_internal/config
-        if getattr(sys, 'frozen', False):
-            exe_dir = os.path.dirname(sys.executable)
-            candidates.append(os.path.join(exe_dir, 'config', filename))
-            candidates.append(os.path.join(exe_dir, '_internal', 'config', filename))
-            if hasattr(sys, '_MEIPASS'):
-                candidates.append(os.path.join(sys._MEIPASS, 'config', filename))
-
-        # 3) Source tree relative to this file
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        candidates.append(os.path.join(os.path.dirname(base_dir), 'config', filename))
-
-        for path in candidates:
-            if os.path.exists(path):
-                return path
-
-        raise FileNotFoundError(f"Config file not found: {filename}. Tried: {candidates}")
+        from utils.paths import get_config_path
+        return get_config_path(filename)
 
 
     def match_film(self, raw_input):

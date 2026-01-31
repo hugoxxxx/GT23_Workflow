@@ -6,13 +6,14 @@ class FilmRenderer:
     EN: Pro-grade renderer with dynamic typography hierarchy.
     CN: 中英双语：具备动态字号层级感的高级渲染器。
     """
-    def __init__(self, font_main="assets/fonts/palab.ttf", font_sub="assets/fonts/gara.ttf"):
-        self.font_main = font_main
-        self.font_sub = font_sub
-        self.bg_color = (255, 255, 255)
-        self.main_color = (26, 26, 26)   
-        self.sub_color = (85, 85, 85)
-        self.border_line_color = (238, 238, 238)
+    def __init__(self, font_main=None, font_sub=None):
+        from utils.paths import get_asset_path
+        self.font_main = font_main or get_asset_path("fonts/palab.ttf")
+        self.font_sub = font_sub or get_asset_path("fonts/gara.ttf")
+        self.bg_color = (252, 252, 252)  # EN: Premium Off-white / CN: 象牙细纹白
+        self.main_color = (10, 10, 10)    # EN: Deep Charcoal / CN: 深炭黑
+        self.sub_color = (120, 120, 120)  # EN: Muted Gray / CN: 哑灰色
+        self.border_line_color = (235, 235, 235) # EN: Subtle border / CN: 微弱边框线
 
     def process_image(self, img_path, data, output_dir, target_long_edge=3000):
         try:
@@ -143,12 +144,13 @@ class FilmRenderer:
         return img.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
 
     def _apply_pro_shadow(self, canvas):
-        shadow_margin = 140
+        shadow_margin = 160
         full_canvas = Image.new("RGBA", (canvas.width + shadow_margin, canvas.height + shadow_margin), (255, 255, 255, 0))
-        shadow_mask = Image.new("RGBA", canvas.size, (0, 0, 0, 140))
-        shadow_pos = (shadow_margin // 2, shadow_margin // 2 + 10)
+        # EN: Multi-layer shadow for softer falloff / CN: 多层阴影，更柔滑的过渡
+        shadow_mask = Image.new("RGBA", canvas.size, (0, 0, 0, 80))
+        shadow_pos = (shadow_margin // 2, shadow_margin // 2 + 15)
         full_canvas.paste(shadow_mask, shadow_pos)
-        full_canvas = full_canvas.filter(ImageFilter.GaussianBlur(radius=20))
+        full_canvas = full_canvas.filter(ImageFilter.GaussianBlur(radius=35))
         canvas_rgba = canvas.convert("RGBA")
         full_canvas.paste(canvas_rgba, (shadow_margin // 2, shadow_margin // 2), canvas_rgba)
         return full_canvas

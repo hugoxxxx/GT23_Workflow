@@ -6,45 +6,54 @@ CN: 边框工具 GUI 面板（tkinter版本）
 
 import os
 import sys
-import platform
-import subprocess
 import json
+import threading
 import tempfile
 import shutil
-import threading
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from tkinter import filedialog, messagebox
-from tkinter import scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext
 from PIL import Image, ImageTk
+
+from gui.panels.base_panel import BasePanel
+from utils.paths import get_asset_path, get_working_dir
 from core.metadata import MetadataHandler
 from core.renderer import FilmRenderer
 
-
-class BorderPanel:
+class BorderPanel(BasePanel):
     """
     EN: Border Tool GUI panel
     CN: 边框工具图形界面面板
     """
-    
     def __init__(self, parent, lang="en"):
         """
         Args:
             parent: Parent widget / 父部件
-            lang: UI language ("zh" or "en") / 界面语言（"zh" 或 "en"）
+            lang: UI language ("zh") / 界面语言（"zh"）
         """
-        self.parent = parent
-        self.worker_thread = None
-        self.preview_thread = None
-        self.preview_job_id = 0  # EN: Preview job marker / CN: 预览任务标记
-        self.film_list = []
-        self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
+        super().__init__(parent, lang)
         
-        # EN: Load layout config for parameter initialization / CN: 加载布局配置用于参数初始化
+        # EN: Initialize Tk variables / CN: 初始化 Tk 变量
+        self.mode_var = ttk.StringVar(value="film")
+        self.side_ratio_var = ttk.DoubleVar(value=0.04)
+        self.top_ratio_var = ttk.DoubleVar(value=0.04)
+        self.bottom_ratio_var = ttk.DoubleVar(value=0.13)
+        self.font_scale_var = ttk.DoubleVar(value=0.032)
+        self.auto_detect_var = ttk.BooleanVar(value=True)
+        self.show_date_var = ttk.BooleanVar(value=True)
+        self.roll_id_var = ttk.StringVar(value="")
+        
+        # Internal state
         self.layout_config = {}
-        self.load_layout_config()
-        
+        self._full_preview_img = None
+        self._preview_img_ref = None
+        self._resize_job = None
+        self.preview_job_id = 0  # For debounced preview updates
+        self.worker_thread = None
+        self.renderer = FilmRenderer()
+        self.meta = MetadataHandler()
+
         self.setup_ui()
         self.load_film_library()
     
@@ -69,210 +78,212 @@ class BorderPanel:
     
     def setup_ui(self):
         """
-        EN: Setup user interface
-        CN: 设置用户界面
+        EN: Setup user interface with two-column layout
+        CN: 设置双栏布局的用户界面
         """
-        # EN: Mode selection / CN: 模式选择
-        mode_text = "工作模式" if self.lang == "zh" else "Working Mode"
-        self.mode_frame = ttk.Labelframe(self.parent, text=mode_text, padding=10)
-        self.mode_frame.pack(fill=X, pady=(0, 10))
+        # EN: Create PanedWindow for flexible split / CN: 创建水平分割窗格
+        self.paned = ttk.Panedwindow(self.parent, orient=HORIZONTAL)
+        self.paned.pack(fill=BOTH, expand=YES)
         
-        self.mode_var = ttk.StringVar(value="film")
-        film_text = "胶片项目" if self.lang == "zh" else "Film Project"
-        digital_text = "数码项目" if self.lang == "zh" else "Digital Project"
-        self.film_radio = ttk.Radiobutton(self.mode_frame, text=film_text, variable=self.mode_var, 
-                       value="film", command=self.on_mode_changed, bootstyle="primary")
-        self.film_radio.pack(side=LEFT, padx=10)
-        self.digital_radio = ttk.Radiobutton(self.mode_frame, text=digital_text, variable=self.mode_var, 
-                       value="digital", command=self.on_mode_changed, bootstyle="primary")
-        self.digital_radio.pack(side=LEFT)
+        self.left_panel = ttk.Frame(self.paned)
+        self.right_panel = ttk.Frame(self.paned, width=300) # Slightly reduced width
         
-        # EN: Input folder / CN: 输入文件夹
-        folder_text = "输入文件夹" if self.lang == "zh" else "Input Folder"
-        self.folder_frame = ttk.Labelframe(self.parent, text=folder_text, padding=10)
-        self.folder_frame.pack(fill=X, pady=(0, 10))
-        
-        input_row = ttk.Frame(self.folder_frame)
-        input_row.pack(fill=X, pady=(0, 5))
-        
-        self.input_folder_var = ttk.StringVar()
-        ttk.Entry(input_row, textvariable=self.input_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES, padx=(0, 5))
-        refresh_text = "刷新" if self.lang == "zh" else "Refresh"
-        self.refresh_button = ttk.Button(input_row, text=refresh_text, command=self.refresh_input_folder, bootstyle="info-outline", width=8)
-        self.refresh_button.pack(side=RIGHT, padx=(2, 5))
-        browse_text = "浏览" if self.lang == "zh" else "Browse"
-        self.browse_button = ttk.Button(input_row, text=browse_text, command=self.select_input_folder, bootstyle="info-outline")
-        self.browse_button.pack(side=RIGHT)
-        
-        no_folder_text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
-        self.file_count_label = ttk.Label(self.folder_frame, text=no_folder_text, foreground="gray")
-        self.file_count_label.pack(anchor=W)
-        
-        # EN: Film selection / CN: 胶片选择
-        film_selection_text = "胶片选择" if self.lang == "zh" else "Film Selection"
-        self.film_selection_frame = ttk.Labelframe(self.parent, text=film_selection_text, padding=10)
-        self.film_selection_frame.pack(fill=X, pady=(0, 10))
-        
-        self.auto_detect_var = ttk.BooleanVar(value=True)
-        auto_detect_text = "自动识别胶片（从EXIF）" if self.lang == "zh" else "Auto Detect from EXIF"
-        self.auto_detect_check = ttk.Checkbutton(self.film_selection_frame, text=auto_detect_text, 
-                       variable=self.auto_detect_var, command=self.on_auto_detect_changed, 
-                       bootstyle="round-toggle")
-        self.auto_detect_check.pack(anchor=W, pady=(0, 5))
-        
-        film_row = ttk.Frame(self.film_selection_frame)
-        film_row.pack(fill=X)
-        manual_text = "手动选择:" if self.lang == "zh" else "Manual Select:"
-        self.manual_label = ttk.Label(film_row, text=manual_text)
-        self.manual_label.pack(side=LEFT, padx=(0, 10))
-        
-        self.film_combo = ttk.Combobox(film_row, state="disabled")
-        self.film_combo.pack(side=LEFT, fill=X, expand=YES)
+        self.paned.add(self.left_panel, weight=1)  # Main area expands
+        self.paned.add(self.right_panel, weight=0) # Sidebar stays fixed width initially
 
-        # EN: Advanced settings (border parameters) / CN: 高级设置（边框参数）
-        advanced_text = "高级设置" if self.lang == "zh" else "Advanced Settings"
-        self.advanced_frame = ttk.Labelframe(self.parent, text=advanced_text, padding=10)
-        self.advanced_frame.pack(fill=X, pady=(0, 10))
+        # EN: Dense Settings Container / CN: 高密度设置容器
+        self.settings_frame = ttk.Frame(self.left_panel, padding=(0, 2))
+        self.settings_frame.pack(fill=X)
         
-        # EN: Side/Left-Right ratio / CN: 左右边框比例
-        lr_row = ttk.Frame(self.advanced_frame)
-        lr_row.pack(fill=X, pady=5)
-        side_text = "左右边框" if self.lang == "zh" else "Side Margin"
-        side_width = 12 if self.lang == "zh" else 15
-        self.side_label = ttk.Label(lr_row, text=side_text, width=side_width)
-        self.side_label.pack(side=LEFT)
-        self.side_ratio_var = ttk.DoubleVar(value=0.04)
-        side_entry = ttk.Entry(lr_row, textvariable=self.side_ratio_var, width=10)
-        side_entry.pack(side=LEFT, padx=(0, 10))
-        # EN: Bind to preview refresh / CN: 绑定预览刷新
-        self.side_ratio_var.trace('w', lambda *args: self.on_params_changed())
+        from utils.i18n import get_string
         
-        top_text = "顶部留白" if self.lang == "zh" else "Top Margin"
-        self.top_label = ttk.Label(lr_row, text=top_text, width=side_width)
-        self.top_label.pack(side=LEFT)
-        self.top_ratio_var = ttk.DoubleVar(value=0.04)
-        top_entry = ttk.Entry(lr_row, textvariable=self.top_ratio_var, width=10)
-        top_entry.pack(side=LEFT)
-        self.top_ratio_var.trace('w', lambda *args: self.on_params_changed())
+        # Row 0: Mode & Film Selection
+        r0 = ttk.Frame(self.settings_frame)
+        r0.pack(fill=X, pady=2)
+        self.mode_label = ttk.Label(r0, text=get_string("mode", self.lang))
+        self.mode_label.pack(side=LEFT)
+        self.film_radio = ttk.Radiobutton(r0, text=get_string("film", self.lang), variable=self.mode_var, value="film", command=self.on_mode_changed)
+        self.film_radio.pack(side=LEFT, padx=(5, 2))
+        self.digital_radio = ttk.Radiobutton(r0, text=get_string("digital", self.lang), variable=self.mode_var, value="digital", command=self.on_mode_changed)
+        self.digital_radio.pack(side=LEFT, padx=(5, 2))
         
-        # EN: Bottom ratio / CN: 底部留白比例
-        bottom_row = ttk.Frame(self.advanced_frame)
-        bottom_row.pack(fill=X, pady=5)
-        bottom_text = "底部留白" if self.lang == "zh" else "Bottom Margin"
-        self.bottom_label = ttk.Label(bottom_row, text=bottom_text, width=side_width)
-        self.bottom_label.pack(side=LEFT)
-        self.bottom_ratio_var = ttk.DoubleVar(value=0.13)
-        bottom_entry = ttk.Entry(bottom_row, textvariable=self.bottom_ratio_var, width=10)
-        bottom_entry.pack(side=LEFT, padx=(0, 10))
-        self.bottom_ratio_var.trace('w', lambda *args: self.on_params_changed())
-        
-        font_text = "字体基础" if self.lang == "zh" else "Font Scale"
-        self.font_label = ttk.Label(bottom_row, text=font_text, width=side_width)
-        self.font_label.pack(side=LEFT)
-        self.font_scale_var = ttk.DoubleVar(value=0.032)
-        font_entry = ttk.Entry(bottom_row, textvariable=self.font_scale_var, width=10)
-        font_entry.pack(side=LEFT)
-        self.font_scale_var.trace('w', lambda *args: self.on_params_changed())
+        self.film_select_label = ttk.Label(r0, text=" | 胶片:" if self.lang == "zh" else " | Film:")
+        self.film_select_label.pack(side=LEFT, padx=(5, 2))
+        self.auto_detect_check = ttk.Checkbutton(r0, text="自动" if self.lang == "zh" else "Auto Detect", variable=self.auto_detect_var, command=self.on_auto_detect_changed, bootstyle="secondary-round-toggle")
+        self.auto_detect_check.pack(side=LEFT)
+        self.film_combo = ttk.Combobox(r0, state="disabled", width=20)
+        self.film_combo.pack(side=LEFT, padx=5, fill=X, expand=YES)
 
-        # EN: Preview area / CN: 预览区域
-        preview_text = "预览（显示文件夹第一张图片）" if self.lang == "zh" else "Preview (First Image in Folder)"
-        self.preview_frame = ttk.Labelframe(self.parent, text=preview_text, padding=10)
-        self.preview_frame.pack(fill=BOTH, pady=(0, 10))
-        no_preview_text = "暂无预览" if self.lang == "zh" else "No preview"
-        self.preview_label = ttk.Label(self.preview_frame, text=no_preview_text, anchor="center")
-        self.preview_label.pack(fill=BOTH, expand=YES)
-        self._preview_img_ref = None  # EN: hold reference to avoid GC / CN: 保存引用防止被回收
+        # Row 1: Folder Selection
+        r1 = ttk.Frame(self.settings_frame)
+        r1.pack(fill=X, pady=2)
+        ttk.Entry(r1, textvariable=self.input_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES)
+        self.browse_button = ttk.Button(r1, text="浏览" if self.lang == "zh" else "Browse", command=self.select_input_folder, width=6)
+        self.browse_button.pack(side=LEFT, padx=2)
+        self.refresh_button = ttk.Button(r1, text="刷新" if self.lang == "zh" else "Refresh", command=self.refresh_input_folder, width=6)
+        self.refresh_button.pack(side=LEFT)
+
+        # Row 2: Border Settings (Grid)
+        r2 = ttk.Frame(self.settings_frame)
+        r2.pack(fill=X, pady=5)
         
+        self.param_labels = []
+        labels_zh = ["左右:", "顶部:", "底部:", "字体:"]
+        labels_en = ["Sides:", "Top:", "Bottom:", "Font:"]
+        vars = [self.side_ratio_var, self.top_ratio_var, self.bottom_ratio_var, self.font_scale_var]
+        for i, (lab_zh, lab_en, var) in enumerate(zip(labels_zh, labels_en, vars)):
+            lbl = ttk.Label(r2, text=lab_zh if self.lang == "zh" else lab_en)
+            lbl.pack(side=LEFT, padx=(5 if i==0 else 15, 2))
+            self.param_labels.append(lbl)
+            ttk.Entry(r2, textvariable=var, width=8).pack(side=LEFT)
+            var.trace_add('write', lambda *args: self.on_params_changed())
+
+        # EN: File count label / CN: 文件计数标签
+        self.file_count_label = ttk.Label(self.settings_frame, text="", font=("Segoe UI", 8), foreground="#444")
+        self.file_count_label.pack(anchor=W, pady=(2, 0))
+        
+        from utils.i18n import get_string
+        
+        # Row 1: Border Settings (Grid)
+
         # EN: Process button / CN: 处理按钮
-        process_text = "开始处理" if self.lang == "zh" else "Start Processing"
-        self.process_button = ttk.Button(self.parent, text=process_text, 
-                                         command=self.start_processing, bootstyle="success", width=20)
-        self.process_button.pack(pady=10)
+        self.btn_frame = ttk.Frame(self.left_panel)
+        self.btn_frame.pack(side=BOTTOM, fill=X, pady=10)
+        self.process_button = ttk.Button(self.left_panel, text=get_string("generate", self.lang), command=self.start_processing, bootstyle="primary", padding=10)
+        self.process_button.pack(fill=X, pady=10)
         
-        self.progress = ttk.Progressbar(self.parent, mode="determinate", bootstyle="success-striped")
-        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress = ttk.Progressbar(self.left_panel, mode="determinate", bootstyle="primary-striped")
+        self.progress.pack(side=BOTTOM, fill=X, pady=(0, 5), padx=50)
         self.progress.pack_forget()  # Hide initially
+
+        # EN: Preview area (Expands to fill middle) / CN: 预览区域（填充中间）
+        self.preview_section = ttk.Frame(self.left_panel, padding=(0, 5))
+        self.preview_section.pack(fill=BOTH, expand=YES)
+        
+        self.preview_title_label = ttk.Label(self.preview_section, text="", font=("Segoe UI", 8, "bold"), foreground="#666")
+        self.preview_title_label.pack(anchor=W, pady=(0, 5))
+        no_preview_text = "暂无预览" if self.lang == "zh" else "No preview"
+        self.preview_label = ttk.Label(self.preview_section, text=no_preview_text, anchor="center")
+        self.preview_label.pack(fill=BOTH, expand=YES)
+        
+        # EN: Bind resize event / CN: 绑定缩放事件
+        self.preview_label.bind("<Configure>", self.on_preview_resize)
+
+        # --- RIGHT PANEL: Logs ---
         
         # EN: Log output / CN: 日志输出
-        log_text = "处理日志" if self.lang == "zh" else "Processing Log"
-        self.log_frame = ttk.Labelframe(self.parent, text=log_text, padding=5)
-        self.log_frame.pack(fill=BOTH, expand=YES)
+        self.log_section = ttk.Frame(self.right_panel, padding=(15, 10, 0, 10))
+        self.log_section.pack(fill=BOTH, expand=YES)
         
-        self.log_text = scrolledtext.ScrolledText(self.log_frame, height=15, wrap=tk.WORD, state="disabled")
+        self.log_title_label = ttk.Label(self.log_section, text="", font=("Segoe UI", 8, "bold"), foreground="#666")
+        self.log_title_label.pack(anchor=W, pady=(0, 5))
+        
+        self.log_text = scrolledtext.ScrolledText(self.log_section, wrap=tk.WORD, state="disabled", width=35,
+                                                 font=("Consolas", 10), background="#101010", foreground="#A0A0A0",
+                                                 insertbackground="white", borderwidth=0)
         self.log_text.pack(fill=BOTH, expand=YES)
         
         # EN: Auto-detect photos_in / CN: 自动检测 photos_in
         self.auto_detect_photos_in()
     
+    def on_preview_resize(self, event):
+        """
+        EN: Handle preview resize event with debouncing.
+        CN: 带防抖效果的预览图缩放处理。
+        """
+        if not self._full_preview_img:
+            return
+            
+        if self._resize_job:
+            self.parent.after_cancel(self._resize_job)
+            
+        self._resize_job = self.parent.after(100, self._perform_resize)
+        
+    def _perform_resize(self):
+        """
+        EN: Actually perform the resizing using the stored full preview image.
+        CN: 使用存储的全尺寸图实际执行缩放更新。
+        """
+        if not self._full_preview_img:
+            return
+            
+        try:
+            # EN: Get available space (minus some margin) / CN: 获取可用空间（减去边距）
+            w = self.preview_label.winfo_width() - 10
+            h = self.preview_label.winfo_height() - 10
+            
+            if w < 50 or h < 50:
+                return
+                
+            img = self._full_preview_img.copy()
+            img.thumbnail((w, h))
+            tk_img = ImageTk.PhotoImage(img)
+            
+            self.preview_label.config(image=tk_img, text="")
+            self._preview_img_ref = tk_img
+        except Exception:
+            pass
+        finally:
+            self._resize_job = None
+
     def update_language(self, lang):
         """
         EN: Update UI language
         CN: 更新界面语言
         """
         self.lang = lang
+        from utils.i18n import get_string
         
-        if lang == "zh":
-            self.mode_frame.config(text="工作模式")
-            self.film_radio.config(text="胶片项目")
-            self.digital_radio.config(text="数码项目")
-            self.folder_frame.config(text="输入文件夹")
-            self.refresh_button.config(text="刷新")
-            self.browse_button.config(text="浏览")
-            self.film_selection_frame.config(text="胶片选择")
-            self.auto_detect_check.config(text="自动识别胶片（从EXIF）")
-            self.manual_label.config(text="手动选择:")
-            self.advanced_frame.config(text="高级设置")
-            self.side_label.config(text="左右边框")
-            self.side_label.configure(width=12)
-            self.top_label.config(text="顶部留白")
-            self.top_label.configure(width=12)
-            self.bottom_label.config(text="底部留白")
-            self.bottom_label.configure(width=12)
-            self.font_label.config(text="字体基础")
-            self.font_label.configure(width=12)
-            self.preview_frame.config(text="预览（显示文件夹第一张图片）")
-            if not self._preview_img_ref:
-                self.preview_label.config(text="暂无预览")
-            self.process_button.config(text="开始处理")
-            self.log_frame.config(text="处理日志")
-            self.update_film_combo_values()
-        else:
-            self.mode_frame.config(text="Working Mode")
-            self.film_radio.config(text="Film Project")
-            self.digital_radio.config(text="Digital Project")
-            self.folder_frame.config(text="Input Folder")
-            self.refresh_button.config(text="Refresh")
-            self.browse_button.config(text="Browse")
-            self.film_selection_frame.config(text="Film Selection")
-            self.auto_detect_check.config(text="Auto Detect from EXIF")
-            self.manual_label.config(text="Manual Select:")
-            self.advanced_frame.config(text="Advanced Settings")
-            self.side_label.config(text="Side Margin")
-            self.side_label.configure(width=15)
-            self.top_label.config(text="Top Margin")
-            self.top_label.configure(width=15)
-            self.bottom_label.config(text="Bottom Margin")
-            self.bottom_label.configure(width=15)
-            self.font_label.config(text="Font Scale")
-            self.font_label.configure(width=15)
-            self.preview_frame.config(text="Preview (First Image in Folder)")
-            if not self._preview_img_ref:
-                self.preview_label.config(text="No preview")
-            self.process_button.config(text="Start Processing")
-            self.log_frame.config(text="Processing Log")
-            self.update_film_combo_values()
+        self.mode_label.config(text=get_string("mode", lang))
+        self.film_radio.config(text=get_string("film", lang))
+        self.digital_radio.config(text=get_string("digital", lang))
+        self.film_select_label.config(text=get_string("film_colon", lang))
+        self.auto_detect_check.config(text=get_string("auto_detect", lang))
+        self.browse_button.config(text=get_string("browse", lang))
+        self.refresh_button.config(text=get_string("refresh", lang))
+        self.process_button.config(text=get_string("generate", lang))
+        self.preview_title_label.config(text=get_string("preview", lang))
+        self.log_title_label.config(text=get_string("log_title", lang))
+
+        labels_keys = ["sides_colon", "top_colon", "bottom_colon", "font_colon"]
+        for lbl, key in zip(self.param_labels, labels_keys):
+            lbl.config(text=get_string(key, lang))
+
+        # EN: Update placeholders
+        self.update_film_combo_values()
+        self.update_file_count_label(self.file_count_label)
         
-        # EN: Update file count label / CN: 更新文件计数标签
-        self.update_file_count()
-        
-        # EN: Refresh log with current language / CN: 使用当前语言刷新日志
-        if self.film_list:
-            self.log_text.config(state="normal")
-            self.log_text.delete(1.0, tk.END)
-            self.log_text.config(state="disabled")
-            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
-            self.log(msg)
+        # EN: Update current preview text if empty
+        if not self._full_preview_img:
+            no_preview_text = get_string("no_preview", self.lang)
+            self.preview_label.config(text=no_preview_text)
+            
+        # EN: Clear log and re-log initial status to match new language
+        # CN: 清空日志并重新记录初始状态以匹配新语言
+        self.log_text.config(state="normal")
+        self.log_text.delete(1.0, tk.END)
+        self.log_text.config(state="disabled")
+        self.log_ready_status()
     
+    def log_ready_status(self):
+        """
+        EN: Log current status (film count, photos found)
+        CN: 记录当前状态（胶片数量、发现的照片）
+        """
+        if self.film_list:
+            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if self.lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
+            self.log(msg)
+        
+        folder = self.input_folder_var.get()
+        if folder and os.path.exists(folder):
+            try:
+                files = [f for f in os.listdir(folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                if files:
+                    msg = f"✓ 文件夹中找到 {len(files)} 张照片" if self.lang == "zh" else f"✓ Found {len(files)} photos in folder"
+                    self.log(msg)
+            except Exception:
+                pass
+
     def update_film_combo_values(self):
         """
         EN: Update film combo box values with current language
@@ -287,54 +298,21 @@ class BorderPanel:
         self.film_combo['values'] = film_names
         self.film_combo.current(current if current >= 0 else 0)
     
-    def load_film_library(self):
+    def on_folder_selected(self, folder):
         """
-        EN: Load film library from config
-        CN: 从配置文件加载胶片库
+        EN: Handle folder selection.
+        CN: 处理文件夹选择。
         """
-        try:
-            # EN: Use MetadataHandler resolver to locate films.json in dev/onefile/_MEIPASS
-            # CN: 通过 MetadataHandler 的路径解析器定位 films.json（开发/单文件/_MEIPASS 均可）
-            config_path = MetadataHandler._resolve_config_path('films.json')
-            
-            with open(config_path, 'r', encoding='utf-8') as f:
-                films_data = json.load(f)
-            
-            self.film_list = []
-            for brand, films in films_data.items():
-                for film_name in films.keys():
-                    display_name = f"{brand} {film_name}"
-                    self.film_list.append((display_name, film_name))
-            
-            self.film_list.sort()
-            self.update_film_combo_values()
-            
-            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if self.lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
-            self.log(msg)
-        except Exception as e:
-            msg = f"✗ 胶片库加载失败: {e}" if self.lang == "zh" else f"✗ Film library load failed: {e}"
-            self.log(msg)
-    
-    def auto_detect_photos_in(self):
+        self.update_file_count()
+        self.detect_layout_and_load_params(folder)
+        self.update_preview(folder)
+
+    def update_file_count(self):
         """
-        EN: Auto-detect photos_in folder
-        CN: 自动检测 photos_in 文件夹
+        EN: Update file count display using base class.
+        CN: 使用基类更新文件数量显示。
         """
-        try:
-            if getattr(sys, 'frozen', False):
-                working_dir = os.path.dirname(sys.executable)
-            else:
-                working_dir = os.getcwd()
-            
-            photos_in = os.path.join(working_dir, "photos_in")
-            if os.path.exists(photos_in):
-                self.input_folder_var.set(photos_in)
-                self.update_file_count()
-                self.detect_layout_and_load_params(photos_in)
-                self.update_preview(photos_in)
-        except Exception:
-            # EN: Auto-detection failed, silent fail is OK / CN: 自动检测失败，静默失败可接受
-            pass
+        return self.update_file_count_label(self.file_count_label)
 
     def refresh_input_folder(self):
         """
@@ -392,44 +370,7 @@ class BorderPanel:
             # EN: Failed to detect layout, keep defaults / CN: 无法检测布局，保持默认值
             pass
     
-    def select_input_folder(self):
-        """
-        EN: Open folder selection dialog
-        CN: 打开文件夹选择对话框
-        """
-        folder = filedialog.askdirectory(
-            title="选择输入文件夹 Select Input Folder",
-            initialdir=self.input_folder_var.get() or os.path.expanduser("~")
-        )
-        if folder:
-            self.input_folder_var.set(folder)
-            self.update_file_count()
-            self.detect_layout_and_load_params(folder)
-            self.update_preview(folder)
-    
-    def update_file_count(self):
-        """
-        EN: Update file count display
-        CN: 更新文件数量显示
-        """
-        folder = self.input_folder_var.get()
-        if not folder or not os.path.exists(folder):
-            text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
-            self.file_count_label.config(text=text, foreground="gray")
-            return
-        
-        try:
-            files = [f for f in os.listdir(folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-            count = len(files)
-            if count > 0:
-                text = f"✓ 找到 {count} 张照片" if self.lang == "zh" else f"✓ Found {count} photos"
-                self.file_count_label.config(text=text, foreground="green")
-            else:
-                text = "⚠ 文件夹中没有图片" if self.lang == "zh" else "⚠ No images in folder"
-                self.file_count_label.config(text=text, foreground="red")
-        except Exception as e:
-            text = f"错误: {e}" if self.lang == "zh" else f"Error: {e}"
-            self.file_count_label.config(text=text, foreground="red")
+    # Removed select_input_folder and update_file_count (now in BasePanel / hook)
 
     def update_preview(self, folder):
         """
@@ -441,6 +382,7 @@ class BorderPanel:
             if not images:
                 self.preview_label.config(text="暂无预览 / No preview", image="")
                 self._preview_img_ref = None
+                self._full_preview_img = None
                 return
 
             first_img = os.path.join(folder, images[0])
@@ -465,6 +407,7 @@ class BorderPanel:
             loading_text = "正在生成预览..." if self.lang == "zh" else "Rendering preview..."
             self.preview_label.config(text=loading_text, image="")
             self._preview_img_ref = None
+            self._full_preview_img = None
 
             def worker(img_path, job_mark, is_digital_mode, manual_film_keyword):
                 temp_dir = None
@@ -496,27 +439,26 @@ class BorderPanel:
 
                     with Image.open(out_path) as img:
                         img = img.convert("RGB")
-                        img.thumbnail((800, 600))
-                        tk_img = ImageTk.PhotoImage(img)
+                        self._full_preview_img = img.copy() # Store full size
 
                     def apply_image():
                         if job_mark != getattr(self, 'preview_job_id', None):
                             return
-                        self.preview_label.config(image=tk_img, text="")
-                        self._preview_img_ref = tk_img
+                        self._perform_resize() # Use resize logic to set initial image
 
                     self.parent.after(0, apply_image)
 
                 except Exception as e:
+                    error_msg = str(e)  # Capture the error message
                     def apply_error():
                         if job_mark != getattr(self, 'preview_job_id', None):
                             return
-                        fallback = f"预览失败: {e}" if self.lang == "zh" else f"Preview failed: {e}"
+                        fallback = f"预览失败: {error_msg}" if self.lang == "zh" else f"Preview failed: {error_msg}"
                         try:
                             # EN: Fallback to raw thumbnail if render fails / CN: 渲染失败时降级为原图缩略图
                             with Image.open(img_path) as img:
                                 img = img.convert("RGB")
-                                img.thumbnail((800, 600))
+                                img.thumbnail((650, 400))
                                 tk_img = ImageTk.PhotoImage(img)
                             self.preview_label.config(image=tk_img, text="")
                             self._preview_img_ref = tk_img
@@ -547,11 +489,9 @@ class BorderPanel:
         EN: Handle mode change
         CN: 处理模式切换
         """
-        is_film = self.mode_var.get() == "film"
-        if is_film:
-            self.film_selection_frame.pack(before=self.process_button, fill=X, pady=(0, 10))
-        else:
-            self.film_selection_frame.pack_forget()
+        folder = self.input_folder_var.get()
+        if folder and os.path.exists(folder):
+            self.update_preview(folder)
     
     def on_auto_detect_changed(self):
         """
@@ -721,12 +661,4 @@ class BorderPanel:
         messagebox.showerror("错误 Error", 
                            f"处理过程中发生错误 Error during processing:\n\n{error_msg[:200]}...\n\n如需帮助请联系\nFor help contact: xjames007@gmail.com")
     
-    def log(self, message):
-        """
-        EN: Append message to log
-        CN: 添加消息到日志
-        """
-        self.log_text.config(state="normal")
-        self.log_text.insert(tk.END, message + "\n")
-        self.log_text.see(tk.END)
-        self.log_text.config(state="disabled")
+    # Removed redundant log() implementation

@@ -1,24 +1,19 @@
-# gui/panels/contact_panel.py
-"""
-EN: Contact Sheet panel for GUI (tkinter version)
-CN: 底片索引 GUI 面板（tkinter版本）
-"""
-
 import os
 import sys
-import platform
-import subprocess
 import json
 import threading
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from tkinter import filedialog, messagebox
-from tkinter import scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext
+from PIL import Image, ImageTk
+
+from gui.panels.base_panel import BasePanel
+from utils.paths import get_asset_path, get_working_dir
 from core.metadata import MetadataHandler
+from core.renderer import FilmRenderer
 
-
-class ContactPanel:
+class ContactPanel(BasePanel):
     """
     EN: Contact Sheet GUI panel
     CN: 底片索引图形界面面板
@@ -28,33 +23,53 @@ class ContactPanel:
         """
         Args:
             parent: Parent widget / 父部件
-            lang: UI language ("zh" or "en") / 界面语言（"zh" 或 "en"）
+            lang: UI language ("zh" or "en") / 界面语言（\"zh\" 或 \"en\"）
         """
-        self.parent = parent
+        super().__init__(parent, lang)
         self.worker_thread = None
-        self.film_list = []
-        self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
-        self.meta = MetadataHandler()  # EN: Initialize metadata handler / CN: 初始化元数据处理器
+        self.meta = MetadataHandler()
+        
+        # EN: Initialize Tk variables / CN: 初始化 Tk 变量
+        self.format_var = ttk.StringVar(value="")
+        self.orientation_var = ttk.StringVar(value="L")
+        self.auto_detect_var = ttk.BooleanVar(value=True)
+        self.show_date_var = ttk.BooleanVar(value=True)
+        self.show_exif_var = ttk.BooleanVar(value=True)
+        self.roll_id_var = ttk.StringVar(value="")
+
         self.setup_ui()
         self.load_film_library()
     
     def setup_ui(self):
         """
-        EN: Setup user interface
-        CN: 设置用户界面
+        EN: Setup user interface with two-column layout
+        CN: 设置双栏布局的用户界面
         """
+        # EN: Create PanedWindow for flexible split / CN: 创建水平分割窗格
+        self.paned = ttk.Panedwindow(self.parent, orient=HORIZONTAL)
+        self.paned.pack(fill=BOTH, expand=YES)
+        
+        self.left_panel = ttk.Frame(self.paned)
+        self.right_panel = ttk.Frame(self.paned, width=350)
+        
+        self.paned.add(self.left_panel, weight=1)
+        self.paned.add(self.right_panel, weight=0)
+
+        # --- LEFT PANEL: Settings ---
+        
         # EN: Create a container for format and orientation side-by-side / CN: 创建格式和方向的并排容器
-        top_container = ttk.Frame(self.parent)
+        top_container = ttk.Frame(self.left_panel)
         top_container.pack(fill=X, pady=(0, 10))
         
-        # EN: Format display (auto-detected, read-only) / CN: 画幅显示（自动检测，只读）
-        format_text = "画幅" if self.lang == "zh" else "Format"
-        self.format_frame = ttk.Labelframe(top_container, text=format_text, padding=10)
-        self.format_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(0, 5))
+        # EN: Format display / CN: 画幅显示
+        self.format_row = ttk.Frame(top_container)
+        self.format_row.pack(side=LEFT, fill=BOTH, expand=YES)
         
-        self.format_var = ttk.StringVar(value="")
-        format_label = ttk.Label(self.format_frame, textvariable=self.format_var, font=("Microsoft YaHei UI", 11, "bold"), foreground="#2780e3")
-        format_label.pack(anchor=W, pady=5)
+        from utils.i18n import get_string
+        
+        self.format_title_label = ttk.Label(self.format_row, text=get_string("format", self.lang), font=("Segoe UI", 8, "bold"), foreground="#666")
+        format_label = ttk.Label(self.format_row, textvariable=self.format_var, font=("Segoe UI", 14, "bold"), foreground="#F58223")
+        format_label.pack(anchor=W, pady=(2, 0))
         
         # EN: Store the actual format value separately / CN: 单独存储实际的画幅值
         self.detected_format = ""
@@ -72,138 +87,109 @@ class ContactPanel:
         
         self.orientation_radios = []
         for value, text_zh, text_en in self.orientations:
-            radio_text = text_zh if self.lang == "zh" else text_en
-            radio = ttk.Radiobutton(self.orientation_frame, text=radio_text, variable=self.orientation_var, 
+            radio = ttk.Radiobutton(self.orientation_frame, text="", variable=self.orientation_var, 
                           value=value, bootstyle="primary")
             radio.pack(anchor=W, pady=2)
             self.orientation_radios.append(radio)
         
         # EN: Input folder / CN: 输入文件夹
-        folder_text = "输入文件夹" if self.lang == "zh" else "Input Folder"
-        self.folder_frame = ttk.Labelframe(self.parent, text=folder_text, padding=10)
-        self.folder_frame.pack(fill=X, pady=(0, 10))
+        self.folder_section = ttk.Frame(self.left_panel, padding=(0, 10))
+        self.folder_section.pack(fill=X)
         
-        input_row = ttk.Frame(self.folder_frame)
-        input_row.pack(fill=X, pady=(0, 5))
+        self.folder_title_label = ttk.Label(self.folder_section, text=get_string("input_folder", self.lang), font=("Segoe UI", 8, "bold"), foreground="#666")
+        self.folder_title_label.pack(anchor=W, pady=(0, 5))
+        
+        input_row = ttk.Frame(self.folder_section)
+        input_row.pack(fill=X)
         
         self.input_folder_var = ttk.StringVar()
-        ttk.Entry(input_row, textvariable=self.input_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES, padx=(0, 5))
+        ttk.Entry(input_row, textvariable=self.input_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
         
         # EN: Refresh button / CN: 刷新按钮
-        refresh_text = "刷新" if self.lang == "zh" else "Refresh"
-        self.refresh_button = ttk.Button(input_row, text=refresh_text, command=self.refresh_format, bootstyle="info-outline", width=8)
-        self.refresh_button.pack(side=RIGHT, padx=(2, 5))
+        self.refresh_button = ttk.Button(input_row, text=get_string("refresh", self.lang), command=self.refresh_format, width=10)
+        self.refresh_button.pack(side=RIGHT, padx=(5, 0))
         
-        browse_text = "浏览" if self.lang == "zh" else "Browse"
-        self.browse_button = ttk.Button(input_row, text=browse_text, command=self.select_input_folder, bootstyle="info-outline")
+        self.browse_button = ttk.Button(input_row, text=get_string("browse", self.lang), command=self.select_input_folder, width=10)
         self.browse_button.pack(side=RIGHT)
         
-        no_folder_text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
-        self.file_count_label = ttk.Label(self.folder_frame, text=no_folder_text, foreground="gray")
-        self.file_count_label.pack(anchor=W)
+        self.file_count_label = ttk.Label(self.folder_section, text="", font=("Segoe UI", 8), foreground="#444")
+        self.file_count_label.pack(anchor=W, pady=(5, 0))
         
-        # EN: Auto-detect photos_in / CN: 自动检测 photos_in
-        self.auto_detect_photos_in()
-        
+        # EN: Separator / CN: 分割线
+        ttk.Separator(self.left_panel, orient=HORIZONTAL).pack(fill=X, pady=15)
+
         # EN: Film selection / CN: 胶片选择
-        film_info_text = "胶片信息" if self.lang == "zh" else "Film Information"
-        self.film_info_frame = ttk.Labelframe(self.parent, text=film_info_text, padding=10)
-        self.film_info_frame.pack(fill=X, pady=(0, 10))
+        self.film_section = ttk.Frame(self.left_panel)
+        self.film_section.pack(fill=X)
         
-        self.auto_detect_var = ttk.BooleanVar(value=True)
-        auto_detect_text = "自动识别胶片（从EXIF）" if self.lang == "zh" else "Auto Detect from EXIF"
-        self.auto_detect_check = ttk.Checkbutton(self.film_info_frame, text=auto_detect_text, 
+        self.film_title_label = ttk.Label(self.film_section, text=get_string("film_info", self.lang), font=("Segoe UI", 8, "bold"), foreground="#666")
+        self.film_title_label.pack(anchor=W, pady=(0, 10))
+        
+        self.auto_detect_check = ttk.Checkbutton(self.film_section, text=get_string("auto_detect", self.lang), 
                        variable=self.auto_detect_var, command=self.on_auto_detect_changed, 
-                       bootstyle="round-toggle")
-        self.auto_detect_check.pack(anchor=W, pady=(0, 5))
+                       bootstyle="secondary-round-toggle")
+        self.auto_detect_check.pack(anchor=W, pady=(0, 10))
         
-        film_row = ttk.Frame(self.film_info_frame)
+        film_row = ttk.Frame(self.film_section)
         film_row.pack(fill=X, pady=5)
-        manual_text = "手动选择:" if self.lang == "zh" else "Manual Select:"
-        self.manual_label = ttk.Label(film_row, text=manual_text, width=20)
+        self.manual_label = ttk.Label(film_row, text=get_string("manual_select", self.lang), width=15)
         self.manual_label.pack(side=LEFT)
         
         self.film_combo = ttk.Combobox(film_row, state="disabled")
         self.film_combo.pack(side=LEFT, fill=X, expand=YES)
         
-        # EN: Emulsion number / CN: 乳剂号（可选）
-        row3 = ttk.Frame(self.film_info_frame)
-        row3.pack(fill=X, pady=5)
-        emulsion_text = "乳剂号 (可选):" if self.lang == "zh" else "Emulsion No. (optional):"
-        self.emulsion_label = ttk.Label(row3, text=emulsion_text, width=20)
-        self.emulsion_label.pack(side=LEFT)
-        self.roll_id_var = ttk.StringVar(value="")
-        ttk.Entry(row3, textvariable=self.roll_id_var).pack(side=LEFT, fill=X, expand=YES)
-
-        # EN: Display options for date and EXIF
-        # CN: 日期与EXIF显示选项
-        options_row = ttk.Frame(self.film_info_frame)
-        options_row.pack(fill=X, pady=5)
-        self.show_date_var = ttk.BooleanVar(value=True)
-        self.show_exif_var = ttk.BooleanVar(value=True)
-        date_text = "显示日期" if self.lang == "zh" else "Show Date"
-        exif_text = "显示EXIF" if self.lang == "zh" else "Show EXIF"
-        self.show_date_check = ttk.Checkbutton(options_row, text=date_text, variable=self.show_date_var, bootstyle="round-toggle")
-        self.show_date_check.pack(side=LEFT, padx=(0, 10))
-        self.show_exif_check = ttk.Checkbutton(options_row, text=exif_text, variable=self.show_exif_var, bootstyle="round-toggle")
+        # EN: Emulsion and Options Grid / CN: 乳剂号与选项网格排列
+        grid_frame = ttk.Frame(self.film_section)
+        grid_frame.pack(fill=X, pady=5)
+        
+        self.emulsion_label = ttk.Label(grid_frame, text=get_string("emulsion", self.lang))
+        self.emulsion_label.grid(row=0, column=0, sticky=W, padx=(0, 10), pady=5)
+        ttk.Entry(grid_frame, textvariable=self.roll_id_var, width=25).grid(row=0, column=1, sticky=W)
+        
+        options_frame = ttk.Frame(self.film_section)
+        options_frame.pack(fill=X, pady=10)
+        self.show_date_check = ttk.Checkbutton(options_frame, text=get_string("show_date", self.lang), variable=self.show_date_var, bootstyle="secondary-round-toggle")
+        self.show_date_check.pack(side=LEFT, padx=(0, 20))
+        self.show_exif_check = ttk.Checkbutton(options_frame, text=get_string("show_exif", self.lang), variable=self.show_exif_var, bootstyle="secondary-round-toggle")
         self.show_exif_check.pack(side=LEFT)
         
+        # EN: Separator / CN: 分割线
+        ttk.Separator(self.left_panel, orient=HORIZONTAL).pack(fill=X, pady=15)
+
         # EN: Generate button / CN: 生成按钮
-        generate_text = "全卷缩略图" if self.lang == "zh" else "Contact Sheet"
-        self.generate_button = ttk.Button(self.parent, text=generate_text, 
-                                         command=self.start_generation, bootstyle="success", width=30)
-        self.generate_button.pack(pady=10)
+        btn_frame = ttk.Frame(self.left_panel)
+        btn_frame.pack(fill=X, pady=30)
+        btn_text = "生成全卷缩略图" if self.lang == "zh" else "Generate Contact Sheet"
+        self.generate_button = ttk.Button(btn_frame, text=btn_text, 
+                                         command=self.start_generation, style="Action.TButton")
+        self.generate_button.pack(expand=YES)
         
-        self.progress = ttk.Progressbar(self.parent, mode="indeterminate", bootstyle="success-striped")
-        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress = ttk.Progressbar(self.left_panel, mode="indeterminate", bootstyle="success-striped")
+        self.progress.pack(fill=X, pady=(0, 10), padx=50)
         self.progress.pack_forget()  # Hide initially
         
+        # --- RIGHT PANEL: Logs ---
+        
         # EN: Log output / CN: 日志输出
-        log_text = "生成日志" if self.lang == "zh" else "Generation Log"
-        self.log_frame = ttk.Labelframe(self.parent, text=log_text, padding=5)
-        self.log_frame.pack(fill=BOTH, expand=YES, pady=(10, 0))
+        self.log_section = ttk.Frame(self.right_panel, padding=(15, 10, 0, 10))
+        self.log_section.pack(fill=BOTH, expand=YES)
+        
+        self.log_title_label = ttk.Label(self.log_section, text="任务日志" if self.lang == "zh" else "Log", font=("Segoe UI", 8, "bold"), foreground="#666")
+        self.log_title_label.pack(anchor=W, pady=(0, 5))
         
         # EN: Set minimum height for log area / CN: 设置日志区域最小高度
-        self.log_text = scrolledtext.ScrolledText(self.log_frame, height=25, wrap=tk.WORD, state="disabled")
-        self.log_text.pack(fill=BOTH, expand=YES, padx=2, pady=2)
+        self.log_text = scrolledtext.ScrolledText(self.log_section, wrap=tk.WORD, state="disabled", width=35,
+                                                 font=("Consolas", 10), background="#101010", foreground="#A0A0A0",
+                                                 insertbackground="white", borderwidth=0)
+        self.log_text.pack(fill=BOTH, expand=YES)
     
-    def select_input_folder(self):
+    def on_folder_selected(self, folder):
         """
-        EN: Open folder selection dialog
-        CN: 打开文件夹选择对话框
+        EN: Handle folder selection.
+        CN: 处理文件夹选择。
         """
-        folder = filedialog.askdirectory(
-            title="选择输入文件夹 Select Input Folder",
-            initialdir=self.input_folder_var.get() or os.path.expanduser("~")
-        )
-        if folder:
-            self.input_folder_var.set(folder)
-            self.update_file_count()
-            # EN: Auto-detect format from first image / CN: 从第一张照片自动检测画幅
-            self.detect_and_set_format(folder)
-    
-    def auto_detect_photos_in(self):
-        """
-        EN: Auto-detect photos_in folder and detect format from first image
-        CN: 自动检测 photos_in 文件夹并从第一张照片检测画幅
-        """
-        try:
-            if getattr(sys, 'frozen', False):
-                working_dir = os.path.dirname(sys.executable)
-            else:
-                working_dir = os.getcwd()
-            
-            photos_in = os.path.join(working_dir, "photos_in")
-            if os.path.exists(photos_in):
-                self.input_folder_var.set(photos_in)
-                self.update_file_count()
-                
-                # EN: Auto-detect format from first image / CN: 从第一张照片自动检测画幅
-                self.detect_and_set_format(photos_in)
-        except Exception as e:
-            # EN: Auto-detection failed, log to GUI / CN: 自动检测失败，记录到GUI
-            # Note: This runs during init, log widget may not be ready yet, so silent fail is OK
-            pass
+        self.update_file_count()
+        self.detect_and_set_format(folder)
     
     def detect_and_set_format(self, folder):
         """
@@ -256,27 +242,10 @@ class ContactPanel:
     
     def update_file_count(self):
         """
-        EN: Update file count display
-        CN: 更新文件数量显示
+        EN: Update file count using base class.
+        CN: 使用基类更新文件数量。
         """
-        folder = self.input_folder_var.get()
-        if not folder or not os.path.exists(folder):
-            text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
-            self.file_count_label.config(text=text, foreground="gray")
-            return
-        
-        try:
-            files = [f for f in os.listdir(folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-            count = len(files)
-            if count > 0:
-                text = f"✓ 找到 {count} 张照片" if self.lang == "zh" else f"✓ Found {count} photos"
-                self.file_count_label.config(text=text, foreground="green")
-            else:
-                text = "⚠ 文件夹中没有图片" if self.lang == "zh" else "⚠ No images in folder"
-                self.file_count_label.config(text=text, foreground="red")
-        except Exception as e:
-            text = f"错误: {e}" if self.lang == "zh" else f"Error: {e}"
-            self.file_count_label.config(text=text, foreground="red")
+        return self.update_file_count_label(self.file_count_label)
     
     def update_language(self, lang):
         """
@@ -284,98 +253,35 @@ class ContactPanel:
         CN: 更新界面语言
         """
         self.lang = lang
+        from utils.i18n import get_string
         
-        if lang == "zh":
-            self.format_frame.config(text="画幅")
-            self.orientation_frame.config(text="645 方向")
-            for i, radio in enumerate(self.orientation_radios):
-                _, text_zh, _ = self.orientations[i]
-                radio.config(text=text_zh)
-            
-            self.folder_frame.config(text="输入文件夹")
-            self.refresh_button.config(text="刷新")
-            self.browse_button.config(text="浏览")
-            self.film_info_frame.config(text="胶片信息")
-            self.auto_detect_check.config(text="自动识别胶片（从EXIF）")
-            self.manual_label.config(text="手动选择:")
-            self.emulsion_label.config(text="乳剂号 (可选):")
-            self.show_date_check.config(text="显示日期")
-            self.show_exif_check.config(text="显示EXIF")
-            self.generate_button.config(text="全卷缩略图")
-            self.log_frame.config(text="生成日志")
-            self.update_film_combo_values()
-        else:
-            self.format_frame.config(text="Format")
-            self.orientation_frame.config(text="645 Orientation")
-            for i, radio in enumerate(self.orientation_radios):
-                _, _, text_en = self.orientations[i]
-                radio.config(text=text_en)
-            
-            self.folder_frame.config(text="Input Folder")
-            self.refresh_button.config(text="Refresh")
-            self.browse_button.config(text="Browse")
-            self.film_info_frame.config(text="Film Information")
-            self.auto_detect_check.config(text="Auto Detect from EXIF")
-            self.manual_label.config(text="Manual Select:")
-            self.emulsion_label.config(text="Emulsion # (optional):")
-            self.show_date_check.config(text="Show Date")
-            self.show_exif_check.config(text="Show EXIF")
-            self.generate_button.config(text="Generate Contact Sheet")
-            self.log_frame.config(text="Generation Log")
-            self.update_film_combo_values()
-        
-        # EN: Refresh log with current language / CN: 使用当前语言刷新日志
-        if self.film_list:
-            self.log_text.config(state="normal")
-            self.log_text.delete(1.0, tk.END)
-            self.log_text.config(state="disabled")
-            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
-            self.log(msg)
-        
-        # EN: Update file count display / CN: 更新文件数量显示
+        self.format_title_label.config(text=get_string("format", lang))
+        self.folder_title_label.config(text=get_string("input_folder", lang))
+        self.refresh_button.config(text=get_string("refresh", lang))
+        self.browse_button.config(text=get_string("browse", lang))
+        self.film_title_label.config(text=get_string("film_info", lang))
+        self.auto_detect_check.config(text=get_string("auto_detect", lang))
+        self.manual_label.config(text=get_string("manual_select", lang))
+        self.emulsion_label.config(text=get_string("emulsion", lang))
+        self.show_date_check.config(text=get_string("show_date", lang))
+        self.show_exif_check.config(text=get_string("show_exif", lang))
+        self.generate_button.config(text=get_string("generate_contact", lang))
+        # Note: log_section is a Frame, not a Label, so it doesn't have a text attribute
+
         self.update_file_count()
-    
-    def update_film_combo_values(self):
-        """
-        EN: Update film combo box values with current language
-        CN: 使用当前语言更新胶片下拉框选项
-        """
-        if not self.film_list:
-            return
         
-        placeholder = "-- 请选择胶片 --" if self.lang == "zh" else "-- Select Film --"
-        film_names = [placeholder] + [name for name, _ in self.film_list]
-        current = self.film_combo.current()
-        self.film_combo['values'] = film_names
-        self.film_combo.current(current if current >= 0 else 0)
+        # EN: Update orientation radios / CN: 更新方向选项按钮
+        for i, radio in enumerate(self.orientation_radios):
+            _, text_zh, text_en = self.orientations[i]
+            radio.config(text=text_zh if lang == "zh" else text_en)
+        
+        # Clear and refresh log
+        self.log_text.config(state="normal")
+        self.log_text.delete(1.0, tk.END)
+        self.log_text.config(state="disabled")
+
     
-    def load_film_library(self):
-        """
-        EN: Load film library from config
-        CN: 从配置文件加载胶片库
-        """
-        try:
-            # EN: Use MetadataHandler resolver to locate films.json in dev/onefile/_MEIPASS
-            # CN: 通过 MetadataHandler 的路径解析器定位 films.json（开发/单文件/_MEIPASS 均可）
-            config_path = MetadataHandler._resolve_config_path('films.json')
-            
-            with open(config_path, 'r', encoding='utf-8') as f:
-                films_data = json.load(f)
-            
-            self.film_list = []
-            for brand, films in films_data.items():
-                for film_name in films.keys():
-                    display_name = f"{brand} {film_name}"
-                    self.film_list.append((display_name, film_name))
-            
-            self.film_list.sort()
-            self.update_film_combo_values()
-            
-            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if self.lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
-            self.log(msg)
-        except Exception as e:
-            msg = f"✗ 胶片库加载失败: {e}" if self.lang == "zh" else f"✗ Film library load failed: {e}"
-            self.log(msg)
+    # Removed redundant load_film_library and log_ready_status
     
     def on_auto_detect_changed(self):
         """
@@ -584,12 +490,4 @@ class ContactPanel:
             )
         messagebox.showerror(err_title, dialog_msg)
     
-    def log(self, message):
-        """
-        EN: Append message to log
-        CN: 添加消息到日志
-        """
-        self.log_text.config(state="normal")
-        self.log_text.insert(tk.END, message + "\n")
-        self.log_text.see(tk.END)
-        self.log_text.config(state="disabled")
+    # Removed redundant log() implementation

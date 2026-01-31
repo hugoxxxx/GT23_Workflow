@@ -6,11 +6,19 @@ from core.renderers.renderer_66 import Renderer66
 from core.renderers.renderer_645 import Renderer645
 from core.renderers.renderer_67 import Renderer67
 from core.renderers.renderer_135 import Renderer135
+from core.renderers.renderer_matin import RendererMatin
 
 class ContactSheetPro:
     def __init__(self):
         self.meta = MetadataHandler()
-        self.renderers = {"66": Renderer66(), "645": Renderer645(), "67": Renderer67(), "135": Renderer135()}
+        self.renderers = {
+            "66": Renderer66(), 
+            "645": Renderer645(), 
+            "67": Renderer67(), 
+            "135": Renderer135(),
+            "MATIN_135": RendererMatin(),
+            "MATIN_120": RendererMatin()
+        }
 
     def run(self):
         try:
