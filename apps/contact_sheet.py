@@ -75,7 +75,7 @@ class ContactSheetPro:
             print("-"*60)
             input("\n按回车键退出 / Press Enter to exit...")
     
-    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None, show_date=True, show_exif=True, limit=None, target_w=None, preview_mode=False, overrides=None, global_l1=None, global_l2=None, font_path=None):
+    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None, show_date=True, show_exif=True, limit=None, target_w=None, preview_mode=False, overrides=None, global_l1=None, global_l2=None, font_path=None, label_cfg=None, jitter_cfg=None):
         """
         EN: Pure logic function for contact sheet generation (GUI-friendly).
         CN: 底片索引生成纯逻辑函数（GUI友好）。
@@ -232,6 +232,8 @@ class ContactSheetPro:
                  render_kwargs["global_l1"] = global_l1 # NEW
                  render_kwargs["global_l2"] = global_l2 # NEW
                  render_kwargs["font_path"] = font_path # NEW
+                 render_kwargs["label_cfg"] = label_cfg # NEW
+                 render_kwargs["jitter_cfg"] = jitter_cfg # NEW
             
             canvas = renderer.render(**render_kwargs)
             
@@ -263,7 +265,7 @@ class ContactSheetPro:
             }
 
     
-    def generate_single(self, img_path, format=None, manual_film=None, orientation=None, show_date=True, show_exif=True, custom_l1=None, custom_l2=None, font_path=None):
+    def generate_single(self, img_path, format=None, manual_film=None, orientation=None, show_date=True, show_exif=True, custom_l1=None, custom_l2=None, font_path=None, label_cfg=None, jitter_cfg=None):
         """
         EN: Generate a single high-fidelity slide image for detail preview.
         CN: 生成单张高保真幻灯片图像用于细节预览。
@@ -298,9 +300,11 @@ class ContactSheetPro:
                 return renderer.render_single_slide(
                     img_path, cfg, self.meta, 
                     show_date=show_date, show_exif=show_exif, 
-                    manual_format=layout_key, 
+                    manual_format=layout_key,
                     custom_l1=custom_l1, custom_l2=custom_l2,
-                    font_path=font_path
+                    font_path=font_path,
+                    label_cfg=label_cfg,
+                    jitter_cfg=jitter_cfg
                 )
         except Exception as e:
             print(f"Generate Single Error: {e}")

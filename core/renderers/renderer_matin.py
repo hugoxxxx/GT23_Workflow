@@ -17,7 +17,7 @@ class RendererMatin(BaseFilmRenderer):
     
     def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, 
                orientation=None, show_date=True, show_exif=True, progress_callback=None, preview_mode=False, 
-               manual_format=None, overrides=None, global_l1=None, global_l2=None, font_path=None):
+               manual_format=None, overrides=None, global_l1=None, global_l2=None, font_path=None, label_cfg=None, jitter_cfg=None):
         
         draw = ImageDraw.Draw(canvas)
         
@@ -87,25 +87,41 @@ class RendererMatin(BaseFilmRenderer):
                                          meta_handler, show_date, show_exif, cfg, preview_mode, 
                                          forced_format=manual_format,
                                          custom_l1=c_l1, custom_l2=c_l2,
-                                         font_path=font_path)
+                                         font_path=font_path,
+                                         label_cfg=label_cfg,
+                                         jitter_cfg=jitter_cfg)
         
         return canvas
 
-    def _get_handwritten_img(self, txt, font_size=28, color=(20, 30, 80), font_path=None, bold=True):
+    def _get_handwritten_img(self, txt, font_size=28, color=(20, 30, 80), font_path=None, bold=True, jitter_cfg=None):
         """
-        EN: Generate realistic handwritten text with jitter using handright library.
-        CN: 使用 handright 库生成带抖动的逼真手写文字。
+        EN: Generate realistic handwritten text with 3x Oversampling and dynamic jitter.
+        CN: 使用 3 倍过采样和动态抖动生成逼真的手写文字。
         """
         if not txt:
             return None
             
         try:
-            # 1. Resolve Font
-            # (same font logic)
+            # EN: Default config / CN: 默认配置
+            if not jitter_cfg:
+                jitter_cfg = {
+                    'word_spacing': 0.15,
+                    'line_spacing': 1.3,
+                    'perturb_x_sigma': 0.5,
+                    'perturb_y_sigma': 0.5,
+                    'perturb_theta_sigma': 0.03,
+                    'perturb_size_sigma': 0.02
+                }
+            
+            # --- 3x Oversampling Logic / 3倍过分采样逻辑 ---
+            scale = 3
+            scaled_font_size = font_size * scale
+            
+            # 1. Resolve Font (At 3x size)
             font = None
             if font_path and os.path.exists(font_path):
                 try:
-                    font = ImageFont.truetype(font_path, font_size)
+                    font = ImageFont.truetype(font_path, scaled_font_size)
                 except: pass
             
             if not font:
@@ -113,27 +129,30 @@ class RendererMatin(BaseFilmRenderer):
                     f_path = r"C:\Windows\Fonts\segoepr.ttf"
                     if not os.path.exists(f_path):
                         f_path = "arial.ttf"
-                    font = ImageFont.truetype(f_path, font_size)
+                    font = ImageFont.truetype(f_path, scaled_font_size)
                 except:
                     font = ImageFont.load_default()
 
-            # 2. Handright Template
+            # 2. Handright Template (At 3x size)
+            ws = int(scaled_font_size * jitter_cfg.get('word_spacing', 0.15))
+            ls = int(scaled_font_size * jitter_cfg.get('line_spacing', 1.3))
+            
             template = Template(
-                background=Image.new("RGBA", (2000, 200), (255, 255, 255, 0)),
+                background=Image.new("RGBA", (6000, 600), (255, 255, 255, 0)),
                 font=font,
-                line_spacing=font_size + 10,
+                line_spacing=ls,
                 fill=color,
-                left_margin=10,
-                top_margin=10,
-                right_margin=10,
-                bottom_margin=10,
-                word_spacing=int(font_size * 0.15),
-                line_spacing_sigma=1,
-                font_size_sigma=1,
-                word_spacing_sigma=1,
-                perturb_x_sigma=0.5,
-                perturb_y_sigma=0.5,
-                perturb_theta_sigma=0.03,
+                left_margin=30,
+                top_margin=30,
+                right_margin=30,
+                bottom_margin=30,
+                word_spacing=ws,
+                line_spacing_sigma=jitter_cfg.get('perturb_y_sigma', 0.5), # Reuse y-sigma for line var
+                font_size_sigma=scaled_font_size * jitter_cfg.get('perturb_size_sigma', 0.02),
+                word_spacing_sigma=jitter_cfg.get('perturb_x_sigma', 0.5), # Reuse x-sigma for spacing var
+                perturb_x_sigma=scale * jitter_cfg.get('perturb_x_sigma', 0.5),
+                perturb_y_sigma=scale * jitter_cfg.get('perturb_y_sigma', 0.5),
+                perturb_theta_sigma=jitter_cfg.get('perturb_theta_sigma', 0.03),
             )
             
             images = list(handwrite(txt, template))
@@ -142,17 +161,26 @@ class RendererMatin(BaseFilmRenderer):
                 
             txt_img = images[0]
             
-            # 3. Bold (Thickening) - Simulates oil marker
+            # 3. Bold (Thickening) + Anti-aliasing / 加粗与平滑
+            # We expand then blur the alpha channel for organic edges
             if bold:
                 alpha = txt_img.getchannel('A')
-                # MaxFilter expands pixels. size=3 is 1px expansion in each direction
-                alpha = alpha.filter(ImageFilter.MaxFilter(size=3))
+                # MaxFilter at scale: size=5 is roughly 2px spread in 3x world, results in ~0.7px in final
+                alpha = alpha.filter(ImageFilter.MaxFilter(size=5))
+                # Gaussian Blur to smooth edges
+                alpha = alpha.filter(ImageFilter.GaussianBlur(radius=1.5))
                 txt_img.putalpha(alpha)
             
-            # 4. Crop to content transparency
+            # 4. Downscale (Anti-aliasing) / 高质量缩小 (抗锯齿核心)
+            # Use LANCZOS for maximum sharpness and filtering quality
+            final_w = txt_img.width // scale
+            final_h = txt_img.height // scale
+            txt_img = txt_img.resize((final_w, final_h), Image.Resampling.LANCZOS)
+            
+            # 5. Crop to content
             bbox = txt_img.getbbox()
             if bbox:
-                txt_img = txt_img.crop((bbox[0]-5, bbox[1]-5, bbox[2]+5, bbox[3]+5))
+                txt_img = txt_img.crop((bbox[0]-2, bbox[1]-2, bbox[2]+2, bbox[3]+2))
             
             return txt_img
             
@@ -160,7 +188,7 @@ class RendererMatin(BaseFilmRenderer):
             # print(f"Handwrite failed: {e}")
             return None
 
-    def _draw_mounted_slide(self, canvas, img_path, x, y, cw, ch, meta, show_date, show_exif, cfg, preview_mode=False, forced_format=None, custom_l1=None, custom_l2=None, font_path=None):
+    def _draw_mounted_slide(self, canvas, img_path, x, y, cw, ch, meta, show_date, show_exif, cfg, preview_mode=False, forced_format=None, custom_l1=None, custom_l2=None, font_path=None, label_cfg=None, jitter_cfg=None):
         """
         EN: Draw Accurate Slide Master V6 (Physics Engine)
         CN: 绘制幻灯片大师 V6 (物理仿真引擎)
@@ -385,10 +413,16 @@ class RendererMatin(BaseFilmRenderer):
              
         r_fs = int(0.03 * cw)
         
+        # Label Config / 标签配置
+        if not label_cfg: label_cfg = {}
+        l1_y_off = label_cfg.get('l1_y_offset', 0)
+        l1_fs_off = label_cfg.get('l1_fs_offset', 0)
+        l2_y_off = label_cfg.get('l2_y_offset', 0)
+        l2_fs_off = label_cfg.get('l2_fs_offset', 0)
+
         # Safe minimum of 8px to assume readable rendering
-        # Safe minimum of 8px to assume readable rendering
-        l_img = self._get_handwritten_img(l_txt, font_size=max(8, l_fs), font_path=font_path, bold=True)
-        r_img = self._get_handwritten_img(r_txt, font_size=max(8, r_fs), color=(40, 40, 40), font_path=font_path, bold=True)
+        l_img = self._get_handwritten_img(l_txt, font_size=max(8, l_fs + l1_fs_off), font_path=font_path, bold=True, jitter_cfg=jitter_cfg)
+        r_img = self._get_handwritten_img(r_txt, font_size=max(8, r_fs + l2_fs_off), color=(40, 40, 40), font_path=font_path, bold=True, jitter_cfg=jitter_cfg)
 
         if l_img and r_img:
             # EN: Disable jitter in preview mode for cleaner alignment
@@ -443,14 +477,14 @@ class RendererMatin(BaseFilmRenderer):
                 
                 # EN: Apply Multiply Blending for realism
                 paper = Image.new("RGB", (cw, ch), (255, 255, 255))
-                if l_img: paper.paste(l_img, (margin_x + l_jx, l1_y_base + l_jy), l_img)
-                if r_img: paper.paste(r_img, (cw - margin_x - r_img.width + r_jx, l2_y_base + r_jy), r_img)
+                if l_img: paper.paste(l_img, (margin_x + l_jx, l1_y_base + l_jy + l1_y_off), l_img)
+                if r_img: paper.paste(r_img, (cw - margin_x - r_img.width + r_jx, l2_y_base + r_jy + l2_y_off), r_img)
                 
                 slide_area = canvas.crop((x, y, x + cw, y + ch)).convert("RGB")
                 multiplied = ImageChops.multiply(slide_area, paper)
                 canvas.paste(multiplied, (x, y))
 
-    def render_single_slide(self, img_path, cfg, meta_handler, show_date=True, show_exif=True, manual_format=None, custom_l1=None, custom_l2=None, font_path=None):
+    def render_single_slide(self, img_path, cfg, meta_handler, show_date=True, show_exif=True, manual_format=None, custom_l1=None, custom_l2=None, font_path=None, label_cfg=None, jitter_cfg=None):
         """
         EN: Cleanly render a single slide in high fidelity (V6 Physics).
         CN: 以高保真 (V6 物理) 渲染单张幻灯片。
@@ -470,6 +504,8 @@ class RendererMatin(BaseFilmRenderer):
                                  meta_handler, show_date, show_exif, cfg, preview_mode=False, 
                                  forced_format=manual_format,
                                  custom_l1=custom_l1, custom_l2=custom_l2,
-                                 font_path=font_path)
+                                 font_path=font_path,
+                                 label_cfg=label_cfg,
+                                 jitter_cfg=jitter_cfg)
         
         return canvas

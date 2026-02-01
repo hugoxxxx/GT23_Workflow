@@ -32,7 +32,7 @@ class MatinPanel(BasePanel):
         self.font_files = [] # List of filenames
         self.font_map = {}   # Name -> Full Path
         try:
-            assets_font_dir = os.path.join(os.path.dirname(get_asset_path("GT23_Icon.png")), "fonts")
+            assets_font_dir = os.path.join(os.path.dirname(get_asset_path("GT23_Icon.png")), "fonts", "slide")
             if os.path.exists(assets_font_dir):
                 for f in os.listdir(assets_font_dir):
                     if f.lower().endswith((".ttf", ".otf")):
@@ -61,6 +61,27 @@ class MatinPanel(BasePanel):
         self.global_l2_var = ttk.StringVar()
         self.local_l1_var = ttk.StringVar()
         self.local_l2_var = ttk.StringVar()
+        
+        # EN: New controls for Y-offset and Font Size / CN: 新增位置偏移与字号控制
+        # Values are offsets from default: format_name logic / baseline
+        self.l1_y_off_var = ttk.IntVar(value=0)
+        self.l1_fs_off_var = ttk.IntVar(value=0)
+        self.l2_y_off_var = ttk.IntVar(value=0)
+        self.l2_fs_off_var = ttk.IntVar(value=0)
+        
+        # Link trace / 链路追踪
+        for v in [self.l1_y_off_var, self.l1_fs_off_var, self.l2_y_off_var, self.l2_fs_off_var]:
+            v.trace_add("write", self.on_detail_param_change)
+            
+        # EN: Handwriting (jitter) config / CN: 手写体（抖动）配置
+        self.jitter_cfg = {
+            'word_spacing': 0.15,
+            'line_spacing': 1.3,
+            'perturb_x_sigma': 0.5,
+            'perturb_y_sigma': 0.5,
+            'perturb_theta_sigma': 0.03,
+            'perturb_size_sigma': 0.02
+        }
         
         # EN: Preview state / CN: 预览状态
         self._preview_img_ref = None
@@ -134,16 +155,53 @@ class MatinPanel(BasePanel):
             self.font_combo.pack(side=LEFT, fill=X, expand=YES)
         else:
             ttk.Label(r_font, text="(No fonts found)", foreground="red").pack(side=LEFT)
+            
+        # NEW: Handright Settings Button
+        self.btn_jitter = ttk.Button(r_font, text="手写设置" if self.lang == "zh" else "Handwriting Settings", 
+                                     command=self.open_handright_dialog, bootstyle="outline-secondary", width=12)
+        self.btn_jitter.pack(side=LEFT, padx=(5, 0))
+
+        # NEW: Regenerate Button
+        self.btn_refresh = ttk.Button(r_font, text="重新生成" if self.lang == "zh" else "Regenerate", 
+                                      command=self.on_detail_param_change, bootstyle="outline-info", width=12)
+        self.btn_refresh.pack(side=LEFT, padx=(5, 0))
         
         # Global Custom Text
         r_txt = ttk.Frame(self.settings_labelframe)
         r_txt.pack(fill=X, pady=10)
         
-        ttk.Label(r_txt, text="Line 1 (Title):", font=("Segoe UI", 8)).pack(anchor=W)
-        ttk.Entry(r_txt, textvariable=self.global_l1_var).pack(fill=X, pady=(0, 5))
+        # Line 1 Row
+        l1_head = ttk.Frame(r_txt)
+        l1_head.pack(fill=X)
+        ttk.Label(l1_head, text="Line 1 (Title):", font=("Segoe UI", 8)).pack(side=LEFT)
         
-        ttk.Label(r_txt, text="Line 2 (Info):", font=("Segoe UI", 8)).pack(anchor=W)
-        ttk.Entry(r_txt, textvariable=self.global_l2_var).pack(fill=X)
+        # Controls for L1
+        l1_ctrl = ttk.Frame(r_txt)
+        l1_ctrl.pack(fill=X, pady=(0, 5))
+        ttk.Entry(l1_ctrl, textvariable=self.global_l1_var).pack(side=LEFT, fill=X, expand=YES)
+        
+        # Y and Size adjustment
+        ttk.Label(l1_ctrl, text="Y:", font=("Segoe UI", 8)).pack(side=LEFT, padx=(5, 0))
+        ttk.Spinbox(l1_ctrl, from_=-100, to=100, width=4, textvariable=self.l1_y_off_var).pack(side=LEFT, padx=2)
+        ttk.Label(l1_ctrl, text="Size:", font=("Segoe UI", 8)).pack(side=LEFT, padx=(5, 0))
+        ttk.Spinbox(l1_ctrl, from_=-50, to=50, width=4, textvariable=self.l1_fs_off_var).pack(side=LEFT, padx=2)
+        
+        # Line 2 Row
+        l2_head = ttk.Frame(r_txt)
+        l2_head.pack(fill=X)
+        ttk.Label(l2_head, text="Line 2 (Info):", font=("Segoe UI", 8)).pack(side=LEFT)
+        
+        # Controls for L2
+        l2_ctrl = ttk.Frame(r_txt)
+        l2_ctrl.pack(fill=X)
+        ttk.Entry(l2_ctrl, textvariable=self.global_l2_var).pack(side=LEFT, fill=X, expand=YES)
+        
+        # Y and Size adjustment
+        ttk.Label(l2_ctrl, text="Y:", font=("Segoe UI", 8)).pack(side=LEFT, padx=(5, 0))
+        ttk.Spinbox(l2_ctrl, from_=-100, to=100, width=4, textvariable=self.l2_y_off_var).pack(side=LEFT, padx=2)
+        ttk.Label(l2_ctrl, text="Size:", font=("Segoe UI", 8)).pack(side=LEFT, padx=(5, 0))
+        ttk.Spinbox(l2_ctrl, from_=-50, to=50, width=4, textvariable=self.l2_fs_off_var).pack(side=LEFT, padx=2)
+
 
         # Options
         r3 = ttk.Frame(self.settings_labelframe)
@@ -232,11 +290,11 @@ class MatinPanel(BasePanel):
         self.show_date_var.trace_add("write", lambda *args: self.on_params_changed())
         self.show_exif_var.trace_add("write", lambda *args: self.on_params_changed())
         if self.font_files:
-            self.font_var.trace_add("write", lambda *args: self.on_params_changed())
+            self.font_var.trace_add("write", self.on_detail_param_change)
         
         # Custom input traces (Debounced)
-        self.global_l1_var.trace_add("write", self.on_global_change)
-        self.global_l2_var.trace_add("write", self.on_global_change)
+        self.global_l1_var.trace_add("write", self.on_detail_param_change)
+        self.global_l2_var.trace_add("write", self.on_detail_param_change)
         self.local_l1_var.trace_add("write", self.on_local_change)
         self.local_l2_var.trace_add("write", self.on_local_change)
 
@@ -257,11 +315,18 @@ class MatinPanel(BasePanel):
         
         self.generate_button.config(state="disabled")
         
-        thread = threading.Thread(target=self.generation_worker, args=(input_dir, output_dir, font_path))
+        thread = threading.Thread(target=self.generation_worker, args=(input_dir, output_dir, font_path, self.jitter_cfg))
         thread.daemon = True
         thread.start()
         
-    def generation_worker(self, input_dir, output_dir, font_path=None):
+    def open_handright_dialog(self):
+        """EN: Open Handright Settings Dialog / CN: 打开手写体参数设置窗口"""
+        dialog = HandrightSettingsDialog(self.parent, self.jitter_cfg, self.lang)
+        self.parent.wait_window(dialog)
+        # After dialog closes, jitter_cfg is updated, trigger preview
+        self.on_detail_param_change()
+        
+    def generation_worker(self, input_dir, output_dir, font_path=None, jitter_cfg=None):
         try:
             handler = ContactSheetPro()
             result = handler.generate(
@@ -275,7 +340,14 @@ class MatinPanel(BasePanel):
                 overrides=self.overrides, # Pass overrides
                 global_l1=self.global_l1_var.get(),
                 global_l2=self.global_l2_var.get(),
-                font_path=font_path # Pass Font
+                font_path=font_path,
+                label_cfg={
+                    'l1_y_offset': self.l1_y_off_var.get(),
+                    'l1_fs_offset': self.l1_fs_off_var.get(),
+                    'l2_y_offset': self.l2_y_off_var.get(),
+                    'l2_fs_offset': self.l2_fs_off_var.get()
+                },
+                jitter_cfg=jitter_cfg
             )
             
             if result['success']:
@@ -331,6 +403,10 @@ class MatinPanel(BasePanel):
         self.local_l1_var.set(ov.get('l1', ''))
         self.local_l2_var.set(ov.get('l2', ''))
         self._ignore_trace = False
+        
+    def on_detail_param_change(self, *args):
+        if getattr(self, '_ignore_trace', False): return
+        self.debounce_update_detail()
 
     def on_global_change(self, *args):
         self.debounce_update()
@@ -394,7 +470,14 @@ class MatinPanel(BasePanel):
                     show_exif=self.show_exif_var.get(),
                     custom_l1=c_l1,
                     custom_l2=c_l2,
-                    font_path=font_path # Pass Font
+                    font_path=font_path,
+                    label_cfg={
+                        'l1_y_offset': self.l1_y_off_var.get(),
+                        'l1_fs_offset': self.l1_fs_off_var.get(),
+                        'l2_y_offset': self.l2_y_off_var.get(),
+                        'l2_fs_offset': self.l2_fs_off_var.get()
+                    },
+                    jitter_cfg=self.jitter_cfg
                 )
                 
                 if job_id != self.preview_job_id: return
@@ -453,9 +536,16 @@ class MatinPanel(BasePanel):
                         lang=self.lang,
                         target_w=1024,
                         preview_mode=True,
-                        global_l1=self.global_l1_var.get(), # Pass global
+                        global_l1=self.global_l1_var.get(),
                         global_l2=self.global_l2_var.get(),
-                        font_path=font_path # Pass Font
+                        font_path=font_path,
+                        label_cfg={
+                            'l1_y_offset': self.l1_y_off_var.get(),
+                            'l1_fs_offset': self.l1_fs_off_var.get(),
+                            'l2_y_offset': self.l2_y_off_var.get(),
+                            'l2_fs_offset': self.l2_fs_off_var.get()
+                        },
+                        jitter_cfg=self.jitter_cfg
                     )
                     
                     if job_id != self.preview_job_id: return
@@ -474,7 +564,13 @@ class MatinPanel(BasePanel):
                         show_exif=self.show_exif_var.get(),
                         custom_l1=c_l1,
                         custom_l2=c_l2,
-                        font_path=font_path # Pass Font
+                        font_path=font_path,
+                        label_cfg={
+                            'l1_y_offset': self.l1_y_off_var.get(),
+                            'l1_fs_offset': self.l1_fs_off_var.get(),
+                            'l2_y_offset': self.l2_y_off_var.get(),
+                            'l2_fs_offset': self.l2_fs_off_var.get()
+                        }
                     )
                     
                     if job_id != self.preview_job_id: return
@@ -596,4 +692,111 @@ class MatinPanel(BasePanel):
         # Refresh preview text if no image
         if not self._full_preview_img:
             self.preview_label.config(text=get_string("no_preview", lang))
+        
+        # New button
+        self.btn_jitter.config(text="手写设置" if lang == "zh" else "Handwriting Settings")
+        self.btn_refresh.config(text="重新生成" if lang == "zh" else "Regenerate")
+
+
+class HandrightSettingsDialog(tk.Toplevel):
+    def __init__(self, parent, jitter_cfg, lang="en"):
+        super().__init__(parent)
+        self.jitter_cfg = jitter_cfg
+        self.lang = lang
+        
+        self.title("手写配置" if lang == "zh" else "Handwriting Settings")
+        self.geometry("480x700")
+        self.minsize(400, 400)
+        self.resizable(True, True) # EN: Allow user to drag / CN: 允许手动拉大
+        self.grab_set() # Modal
+        
+        self.setup_ui()
+        
+    def setup_ui(self):
+        # EN: Create Scrollable Container / CN: 创建可滚动容器
+        self.canvas = tk.Canvas(self, highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self, orient=VERTICAL, command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.window_id = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        
+        # EN: Sync width / CN: 同步宽度
+        def on_canvas_configure(event):
+            self.canvas.itemconfig(self.window_id, width=event.width)
+        self.canvas.bind("<Configure>", on_canvas_configure)
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        
+        # EN: Layout / CN: 布局
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+        self.canvas.pack(side=LEFT, fill=BOTH, expand=YES)
+
+        # EN: Mousewheel / CN: 鼠标滚轮
+        def _on_mousewheel(event):
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # EN: Content Container / CN: 内容容器
+        container = ttk.Frame(self.scrollable_frame, padding=20)
+        container.pack(fill=BOTH, expand=YES)
+        
+        ttl = "手写引擎参数调节" if self.lang == "zh" else "Handwriting Engine Parameters"
+        ttk.Label(container, text=ttl, font=("Segoe UI", 12, "bold")).pack(pady=(0, 20))
+        
+        # 1. Letter Spacing (word_spacing)
+        self.create_slider(container, "字距 (Letter Spacing):", 'word_spacing', 0.0, 1.0, 0.01)
+        
+        # 2. Line Spacing (line_spacing)
+        self.create_slider(container, "行距 (Line Spacing):", 'line_spacing', 0.5, 3.0, 0.1)
+        
+        ttk.Separator(container, orient=HORIZONTAL).pack(fill=X, pady=20)
+        
+        jt_ttl = "随机抖动幅度 (Random Jitter):" if self.lang == "zh" else "Random Jitter Magnitudes:"
+        ttk.Label(container, text=jt_ttl, font=("Segoe UI", 10, "bold")).pack(anchor=W)
+        
+        # 3. X Jitter
+        self.create_slider(container, "X 轴抖动 (X Jitter):", 'perturb_x_sigma', 0.0, 2.0, 0.1)
+        
+        # 4. Y Jitter
+        self.create_slider(container, "Y 轴抖动 (Y Jitter):", 'perturb_y_sigma', 0.0, 2.0, 0.1)
+        
+        # 5. Rotation Jitter
+        self.create_slider(container, "角度旋转抖动 (Rotation):", 'perturb_theta_sigma', 0.0, 0.1, 0.005)
+        
+        # 6. Size Jitter
+        self.create_slider(container, "字号大小抖动 (Size Var):", 'perturb_size_sigma', 0.0, 0.1, 0.005)
+        
+        btn_txt = "确定 (Done)" if self.lang == "zh" else "Done"
+        btn = ttk.Button(container, text=btn_txt, command=self.destroy, bootstyle="primary", padding=12)
+        btn.pack(fill=X, pady=(30, 0))
+
+    def create_slider(self, parent, label_text, key, from_, to_, res):
+        frame = ttk.Frame(parent)
+        frame.pack(fill=X, pady=10)
+        
+        ttk.Label(frame, text=label_text, font=("Segoe UI", 9)).pack(anchor=W)
+        
+        val_var = ttk.DoubleVar(value=self.jitter_cfg.get(key, 0))
+        
+        def update_cfg(*args):
+            try:
+                self.jitter_cfg[key] = val_var.get()
+            except: pass
+            
+        val_var.trace_add("write", update_cfg)
+        
+        ctrl_frame = ttk.Frame(frame)
+        ctrl_frame.pack(fill=X, pady=(2, 0))
+        
+        scale = ttk.Scale(ctrl_frame, from_=from_, to=to_, variable=val_var, orient=HORIZONTAL, bootstyle="info")
+        scale.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
+        
+        spin = ttk.Spinbox(ctrl_frame, from_=from_, to=to_, increment=res, textvariable=val_var, width=8)
+        spin.pack(side=LEFT)
+
 
