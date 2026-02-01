@@ -2,6 +2,7 @@
 # EN: Renderer for 6x7 film format with calibrated edge markings
 # CN: 6x7 画幅渲染器，带有校准的喷码逻辑
 
+import os
 import random
 from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
@@ -12,9 +13,11 @@ class Renderer67(BaseFilmRenderer):
     CN: 6x7 画幅渲染器 (645 物理喷码步进 + 左对齐随机抖动版)
     """
     
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True, progress_callback=None):
         # EN: Execute 6x7 rendering with calibrated marking logic
         # CN: 执行 6x7 渲染，喷码逻辑校准
+        if progress_callback:
+            progress_callback("EN: Executing 67 rendering... | CN: 执行 67 渲染...")
         print("\n" + "="*65)
         print("EN: [67 3.2] Marking logic calibration (step: 645 physical length, align: left-side jitter)")
         print("CN: [67 3.2] 喷码逻辑校准 (步进: 645物理长度, 对齐: 左侧随机抖动)")
@@ -132,6 +135,8 @@ class Renderer67(BaseFilmRenderer):
                 # EN: If photo exists, render it and related information
                 # CN: 如果有对应的照片，则绘制照片和相关信息
                 if idx < len(img_list):
+                    if progress_callback:
+                        progress_callback(f"[{idx+1}/{len(img_list)}] {os.path.basename(img_list[idx])}")
                     # EN: A. Paste photo (Force Landscape)
                     # CN: A. 粘贴照片 (强制横向)
                     self._paste_photo(canvas, img_list[idx], curr_x, py, photo_w, photo_h, force_landscape=True)

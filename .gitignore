@@ -36,3 +36,11 @@ output/
 *.jpeg
 *.png
 *.tiff
+
+# Temp scripts & debug
+debug_slide_v6_*.py
+demo_handright.py
+test_*.py
+verify_*.py
+change_log.md
+README_FOR_AI.md

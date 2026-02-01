@@ -9,13 +9,12 @@ from utils.paths import get_config_path, get_working_dir
 
 from utils.i18n import get_string
 
-class BasePanel(ttk.Frame):
+class BasePanel:
     """
     EN: Base class for GUI panels with shared logic.
     CN: 包含共享逻辑的 GUI 面板基类。
     """
     def __init__(self, parent, lang="en"):
-        super().__init__(parent)
         self.parent = parent
         self.lang = lang
         self.film_list = []

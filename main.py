@@ -26,7 +26,7 @@ def main():
     app = ttk.Window(
         title=_title,
         themename="darkly",  # EN: High-contrast Darkroom theme / CN: 高对比度暗房主题 (darkly)
-        size=(1400, 1200),   # EN: Maximum height for preview clarity / CN: 再次增加高度确保预览完整
+        size=(1500, 1350),   # EN: Maximum height for preview clarity / CN: 再次增加高度确保预览完整
         resizable=(True, True)
     )
     

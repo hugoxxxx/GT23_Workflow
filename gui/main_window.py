@@ -69,16 +69,17 @@ class MainWindow:
         
         self.setup_styles()
         self.root.configure(background="#0D0D0D") # Almost black
-        self.setup_header()
+        # self.setup_header() # Removed banner
         
         # EN: Create notebook (tabbed interface) / CN: 创建标签页界面
         self.notebook = ttk.Notebook(root, bootstyle="secondary")
-        self.notebook.pack(fill=BOTH, expand=YES, padx=20, pady=(0, 20))
+        self.notebook.pack(fill=BOTH, expand=YES, padx=20, pady=(20, 20))
+
         
         # EN: Add tool panels / CN: 添加工具面板
-        self.border_frame = ttk.Frame(self.notebook, padding=10)
-        self.contact_frame = ttk.Frame(self.notebook, padding=10)
-        self.matin_frame = ttk.Frame(self.notebook, padding=10)
+        self.border_frame = ttk.Frame(self.notebook)
+        self.contact_frame = ttk.Frame(self.notebook)
+        self.matin_frame = ttk.Frame(self.notebook)
 
         
         from utils.i18n import get_string

@@ -2,13 +2,16 @@
 # EN: Renderer for 645 film format (landscape and portrait modes)
 # CN: 645 胶片渲染器 (横纵向模式)
 
+import os
 import random
 from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
 
 class Renderer645(BaseFilmRenderer):
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True, progress_callback=None):
         # EN: Execute 645 rendering | CN: 执行 645 渲染
+        if progress_callback:
+            progress_callback("EN: Executing 645 rendering... | CN: 执行 645 渲染...")
         print("EN: [645 2.0] Executing render ... | CN: [645 2.0] 执行渲染 ...")
         
         # EN: 1. Re-select mode and reset canvas size
@@ -107,6 +110,8 @@ class Renderer645(BaseFilmRenderer):
                     # EN: If photo exists, render it and related information
                     # CN: 如果有对应的照片，则绘制照片和相关信息
                     if idx < len(img_list):
+                        if progress_callback:
+                            progress_callback(f"[{idx+1}/{len(img_list)}] {os.path.basename(img_list[idx])}")
                         px = sx + (strip_w - photo_w)//2
                         self._paste_photo(canvas, img_list[idx], px, curr_y, photo_w, photo_h, rotate=True)
                         
@@ -214,6 +219,8 @@ class Renderer645(BaseFilmRenderer):
                     # EN: If photo exists, render it and related information
                     # CN: 如果有对应的照片，则绘制照片和相关信息
                     if idx < len(img_list):
+                        if progress_callback:
+                            progress_callback(f"[{idx+1}/{len(img_list)}] {os.path.basename(img_list[idx])}")
                         # EN: A. Paste photo
                         # CN: A. 粘贴照片
                         self._paste_photo(canvas, img_list[idx], curr_x, py, photo_w, photo_h, rotate=False)

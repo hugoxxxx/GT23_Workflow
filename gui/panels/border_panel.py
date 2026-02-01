@@ -8,6 +8,8 @@ import os
 import sys
 import json
 import threading
+import platform
+import subprocess
 import tempfile
 import shutil
 import tkinter as tk
@@ -55,7 +57,10 @@ class BorderPanel(BasePanel):
         self.meta = MetadataHandler()
 
         self.setup_ui()
-        self.load_film_library()
+        self.load_film_library(on_success_callback=self.update_film_combo_values)
+        # EN: Force a second refresh a bit later to be sure it's visible
+        # CN: 稍后强制进行第二次刷新以确保可见
+        self.parent.after(200, self.update_film_combo_values)
     
     def load_layout_config(self):
         """
@@ -78,26 +83,20 @@ class BorderPanel(BasePanel):
     
     def setup_ui(self):
         """
-        EN: Setup user interface with two-column layout
-        CN: 设置双栏布局的用户界面
+        EN: Setup user interface with two-column layout using Place geometry
+        CN: 使用 Place 几何管理器设置双栏布局
         """
-        # EN: Create PanedWindow for flexible split / CN: 创建水平分割窗格
-        self.paned = ttk.Panedwindow(self.parent, orient=HORIZONTAL)
-        self.paned.pack(fill=BOTH, expand=YES)
-        
-        self.left_panel = ttk.Frame(self.paned)
-        self.right_panel = ttk.Frame(self.paned, width=300) # Slightly reduced width
-        
-        self.paned.add(self.left_panel, weight=1)  # Main area expands
-        self.paned.add(self.right_panel, weight=0) # Sidebar stays fixed width initially
-
-        # EN: Dense Settings Container / CN: 高密度设置容器
-        self.settings_frame = ttk.Frame(self.left_panel, padding=(0, 2))
-        self.settings_frame.pack(fill=X)
-        
         from utils.i18n import get_string
         
-        # Row 0: Mode & Film Selection
+        # ========== LEFT PANEL - 38% width ==========
+        self.left_panel = ttk.Frame(self.parent)
+        self.left_panel.place(relx=0, rely=0, relwidth=0.38, relheight=1.0)
+        
+        # EN: Dense Settings Container / CN: 高密度设置容器
+        self.settings_frame = ttk.Frame(self.left_panel, padding=(10, 10, 5, 0))
+        self.settings_frame.pack(fill=X)
+        
+        # Row 0: Mode Selection
         r0 = ttk.Frame(self.settings_frame)
         r0.pack(fill=X, pady=2)
         self.mode_label = ttk.Label(r0, text=get_string("mode", self.lang))
@@ -107,57 +106,85 @@ class BorderPanel(BasePanel):
         self.digital_radio = ttk.Radiobutton(r0, text=get_string("digital", self.lang), variable=self.mode_var, value="digital", command=self.on_mode_changed)
         self.digital_radio.pack(side=LEFT, padx=(5, 2))
         
-        self.film_select_label = ttk.Label(r0, text=" | 胶片:" if self.lang == "zh" else " | Film:")
-        self.film_select_label.pack(side=LEFT, padx=(5, 2))
-        self.auto_detect_check = ttk.Checkbutton(r0, text="自动" if self.lang == "zh" else "Auto Detect", variable=self.auto_detect_var, command=self.on_auto_detect_changed, bootstyle="secondary-round-toggle")
-        self.auto_detect_check.pack(side=LEFT)
-        self.film_combo = ttk.Combobox(r0, state="disabled", width=20)
-        self.film_combo.pack(side=LEFT, padx=5, fill=X, expand=YES)
-
-        # Row 1: Folder Selection
         r1 = ttk.Frame(self.settings_frame)
         r1.pack(fill=X, pady=2)
-        ttk.Entry(r1, textvariable=self.input_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES)
-        self.browse_button = ttk.Button(r1, text="浏览" if self.lang == "zh" else "Browse", command=self.select_input_folder, width=6)
+        self.film_select_label = ttk.Label(r1, text="胶片:" if self.lang == "zh" else "Film:")
+        self.film_select_label.pack(side=LEFT)
+        self.auto_detect_check = ttk.Checkbutton(r1, text="自动" if self.lang == "zh" else "Auto Detect", variable=self.auto_detect_var, command=self.on_auto_detect_changed, bootstyle="secondary-round-toggle")
+        self.auto_detect_check.pack(side=LEFT, padx=5)
+        self.film_combo = ttk.Combobox(r1, state="readonly", width=20) # WIDER and READONLY initially
+        self.film_combo.pack(side=LEFT, padx=5, fill=X, expand=YES)
+
+        # Row 2: Folder Selection
+        r2 = ttk.Frame(self.settings_frame)
+        r2.pack(fill=X, pady=2)
+        ttk.Entry(r2, textvariable=self.input_folder_var, state="readonly", width=15).pack(side=LEFT, fill=X, expand=YES)
+        self.browse_button = ttk.Button(r2, text="浏览" if self.lang == "zh" else "Browse", command=self.select_input_folder)
         self.browse_button.pack(side=LEFT, padx=2)
-        self.refresh_button = ttk.Button(r1, text="刷新" if self.lang == "zh" else "Refresh", command=self.refresh_input_folder, width=6)
+        self.refresh_button = ttk.Button(r2, text="刷新" if self.lang == "zh" else "Refresh", command=self.refresh_input_folder)
         self.refresh_button.pack(side=LEFT)
 
-        # Row 2: Border Settings (Grid)
-        r2 = ttk.Frame(self.settings_frame)
-        r2.pack(fill=X, pady=5)
+        # Row 3: Border Settings - Line 1 (Sides & Top)
+        r3 = ttk.Frame(self.settings_frame)
+        r3.pack(fill=X, pady=2)
         
         self.param_labels = []
-        labels_zh = ["左右:", "顶部:", "底部:", "字体:"]
-        labels_en = ["Sides:", "Top:", "Bottom:", "Font:"]
-        vars = [self.side_ratio_var, self.top_ratio_var, self.bottom_ratio_var, self.font_scale_var]
-        for i, (lab_zh, lab_en, var) in enumerate(zip(labels_zh, labels_en, vars)):
-            lbl = ttk.Label(r2, text=lab_zh if self.lang == "zh" else lab_en)
+        labels_zh = ["左右:", "顶部:"]
+        labels_en = ["Sides:", "Top:"]
+        vars_line1 = [self.side_ratio_var, self.top_ratio_var]
+        for i, (lab_zh, lab_en, var) in enumerate(zip(labels_zh, labels_en, vars_line1)):
+            lbl = ttk.Label(r3, text=lab_zh if self.lang == "zh" else lab_en)
             lbl.pack(side=LEFT, padx=(5 if i==0 else 15, 2))
             self.param_labels.append(lbl)
-            ttk.Entry(r2, textvariable=var, width=8).pack(side=LEFT)
+            ttk.Entry(r3, textvariable=var, width=6).pack(side=LEFT, padx=2)
+            var.trace_add('write', lambda *args: self.on_params_changed())
+
+        # Row 4: Border Settings - Line 2 (Bottom & Font)
+        r4 = ttk.Frame(self.settings_frame)
+        r4.pack(fill=X, pady=2)
+        
+        labels_zh = ["底部:", "字体:"]
+        labels_en = ["Bottom:", "Font:"]
+        vars_line2 = [self.bottom_ratio_var, self.font_scale_var]
+        for i, (lab_zh, lab_en, var) in enumerate(zip(labels_zh, labels_en, vars_line2)):
+            lbl = ttk.Label(r4, text=lab_zh if self.lang == "zh" else lab_en)
+            lbl.pack(side=LEFT, padx=(5 if i==0 else 15, 2))
+            self.param_labels.append(lbl)
+            ttk.Entry(r4, textvariable=var, width=6).pack(side=LEFT, padx=2)
             var.trace_add('write', lambda *args: self.on_params_changed())
 
         # EN: File count label / CN: 文件计数标签
         self.file_count_label = ttk.Label(self.settings_frame, text="", font=("Segoe UI", 8), foreground="#444")
-        self.file_count_label.pack(anchor=W, pady=(2, 0))
-        
-        from utils.i18n import get_string
-        
-        # Row 1: Border Settings (Grid)
+        self.file_count_label.pack(anchor=W, pady=(2, 10))
 
-        # EN: Process button / CN: 处理按钮
-        self.btn_frame = ttk.Frame(self.left_panel)
-        self.btn_frame.pack(side=BOTTOM, fill=X, pady=10)
-        self.process_button = ttk.Button(self.left_panel, text=get_string("generate", self.lang), command=self.start_processing, bootstyle="primary", padding=10)
-        self.process_button.pack(fill=X, pady=10)
+        # EN: Process button & Progress (BOTTOM) / CN: 处理按钮和进度条（底部固定）
+        self.btn_frame = ttk.Frame(self.left_panel, padding=(10, 10, 5, 10))
+        self.btn_frame.pack(side=BOTTOM, fill=X)
+        self.process_button = ttk.Button(self.btn_frame, text=get_string("generate", self.lang), command=self.start_processing, bootstyle="primary", padding=10)
+        self.process_button.pack(fill=X, pady=(0, 5))
         
-        self.progress = ttk.Progressbar(self.left_panel, mode="determinate", bootstyle="primary-striped")
-        self.progress.pack(side=BOTTOM, fill=X, pady=(0, 5), padx=50)
-        self.progress.pack_forget()  # Hide initially
+        self.progress = ttk.Progressbar(self.btn_frame, mode="determinate", bootstyle="primary-striped")
+        self.progress.pack(fill=X)
+        self.progress.pack_forget()
 
-        # EN: Preview area (Expands to fill middle) / CN: 预览区域（填充中间）
-        self.preview_section = ttk.Frame(self.left_panel, padding=(0, 5))
+        # EN: Log area (MIDDLE - Expanding) / CN: 日志区域（中间 - 自动填满）
+        self.log_section = ttk.Frame(self.left_panel, padding=(10, 10, 5, 0))
+        self.log_section.pack(fill=BOTH, expand=YES)
+        
+        self.log_title_label = ttk.Label(self.log_section, text="", font=("Segoe UI", 8, "bold"), foreground="#666")
+        self.log_title_label.pack(anchor=W, pady=(0, 5))
+        
+        self.log_text = scrolledtext.ScrolledText(self.log_section, wrap=tk.WORD, state="disabled",
+                                                 font=("Consolas", 10), background="#101010", foreground="#A0A0A0",
+                                                 insertbackground="white", borderwidth=0)
+        self.log_text.pack(fill=BOTH, expand=YES)
+
+        # ========== RIGHT PANEL - 62% width ==========
+        self.right_panel = ttk.Frame(self.parent)
+        self.right_panel.place(relx=0.38, rely=0, relwidth=0.62, relheight=1.0)
+        
+        # EN: Preview area / CN: 预览区域
+        self.preview_section = ttk.Frame(self.right_panel, padding=(15, 10, 10, 10))
         self.preview_section.pack(fill=BOTH, expand=YES)
         
         self.preview_title_label = ttk.Label(self.preview_section, text="", font=("Segoe UI", 8, "bold"), foreground="#666")
@@ -169,22 +196,14 @@ class BorderPanel(BasePanel):
         # EN: Bind resize event / CN: 绑定缩放事件
         self.preview_label.bind("<Configure>", self.on_preview_resize)
 
-        # --- RIGHT PANEL: Logs ---
-        
-        # EN: Log output / CN: 日志输出
-        self.log_section = ttk.Frame(self.right_panel, padding=(15, 10, 0, 10))
-        self.log_section.pack(fill=BOTH, expand=YES)
-        
-        self.log_title_label = ttk.Label(self.log_section, text="", font=("Segoe UI", 8, "bold"), foreground="#666")
-        self.log_title_label.pack(anchor=W, pady=(0, 5))
-        
-        self.log_text = scrolledtext.ScrolledText(self.log_section, wrap=tk.WORD, state="disabled", width=35,
-                                                 font=("Consolas", 10), background="#101010", foreground="#A0A0A0",
-                                                 insertbackground="white", borderwidth=0)
-        self.log_text.pack(fill=BOTH, expand=YES)
-        
         # EN: Auto-detect photos_in / CN: 自动检测 photos_in
         self.auto_detect_photos_in()
+        
+        # EN: Populate film combo box / CN: 填充胶片下拉框
+        self.update_film_combo_values()
+        
+        # EN: Set initial state of film combo / CN: 设置胶片下拉框的初始状态
+        self.on_auto_detect_changed()
     
     def on_preview_resize(self, event):
         """
@@ -291,12 +310,26 @@ class BorderPanel(BasePanel):
         """
         if not self.film_list:
             return
-        
+            
         placeholder = "-- 请选择胶片 --" if self.lang == "zh" else "-- Select Film --"
         film_names = [placeholder] + [name for name, _ in self.film_list]
-        current = self.film_combo.current()
+        
+        # EN: Force state to normal to set text, then restore / CN: 强制切到 normal 以确保 set 能成功刷新文字
+        old_state = str(self.film_combo.cget('state'))
+        self.film_combo.config(state='normal')
+        
         self.film_combo['values'] = film_names
-        self.film_combo.current(current if current >= 0 else 0)
+        
+        current_idx = self.film_combo.current()
+        if current_idx < 0:
+            self.film_combo.current(0)
+            self.film_combo.set(placeholder)
+        else:
+            self.film_combo.current(current_idx)
+            val = film_names[current_idx] if current_idx < len(film_names) else placeholder
+            self.film_combo.set(val)
+            
+        self.film_combo.config(state=old_state)
     
     def on_folder_selected(self, folder):
         """
@@ -500,8 +533,9 @@ class BorderPanel(BasePanel):
         """
         if self.auto_detect_var.get():
             self.film_combo.config(state="disabled")
+            # EN: When disabled, text is still visible if set correctly
         else:
-            self.film_combo.config(state="normal")  # EN: Allow user input / CN: 允许用户输入
+            self.film_combo.config(state="readonly")  # EN: Allow selection but not manual typing
     
     def on_params_changed(self):
         """

@@ -20,9 +20,11 @@ import io
 class Renderer135(BaseFilmRenderer):
     """EN: 135 Format - Dynamic EdgeCode & Precision Positioning (v9.2)
        CN: 135 画幅 - 动态喷码修正版：解决写死字符串问题、数据后背极低位压低、手动输入复用问题。"""
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True, progress_callback=None):
         # EN: Execute 135 rendering with fixed manual input reuse
         # CN: 执行 135 渲染，修复复用手动输入的 sample_data
+        if progress_callback:
+            progress_callback("EN: Executing 135 rendering... | CN: 执行 135 渲染...")
         print("\n" + "="*65)
         print("EN: [135 9.5] Fix: Reuse manually input sample_data to avoid subsequent photo matching failure.")
         print("CN: [135 9.5] 修复：复用手动输入的 sample_data，避免后续图片匹配失败。")
@@ -89,6 +91,10 @@ class Renderer135(BaseFilmRenderer):
                 idx = r * cols + c
                 if idx >= len(img_list):
                     break
+                
+                if progress_callback:
+                    progress_callback(f"[{idx+1}/{len(img_list)}] {os.path.basename(img_list[idx])}")
+                    
                 curr_x, py = m_x + c * (photo_w + gap_w), sy + info_h
 
                 # EN: --- [Core modification] Use pre-read standard info ---

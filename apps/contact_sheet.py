@@ -16,8 +16,7 @@ class ContactSheetPro:
             "645": Renderer645(), 
             "67": Renderer67(), 
             "135": Renderer135(),
-            "MATIN_135": RendererMatin(),
-            "MATIN_120": RendererMatin()
+            "MATIN": RendererMatin()
         }
 
     def run(self):
@@ -76,7 +75,7 @@ class ContactSheetPro:
             print("-"*60)
             input("\n按回车键退出 / Press Enter to exit...")
     
-    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None, show_date=True, show_exif=True):
+    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None, show_date=True, show_exif=True, limit=None, target_w=None, preview_mode=False, overrides=None, global_l1=None, global_l2=None, font_path=None):
         """
         EN: Pure logic function for contact sheet generation (GUI-friendly).
         CN: 底片索引生成纯逻辑函数（GUI友好）。
@@ -89,6 +88,11 @@ class ContactSheetPro:
             emulsion_number: User-provided emulsion number
             orientation: For 645 format: "L" (landscape/vertical strip) or "P" (portrait/horizontal strip)
             progress_callback: Function(message) for progress updates
+            limit: Optional limit for number of photos to process
+            preview_mode: If True, uses simplified rendering for speed/clarity
+            overrides: Dict mapping filename -> {l1, l2} for custom labels
+            global_l1: Global override for Line 1
+            global_l2: Global override for Line 2
         
         Returns:
             {
@@ -100,6 +104,11 @@ class ContactSheetPro:
             }
         """
         try:
+            # EN: Force default values for GUI/API calls to avoid input() hanging the background thread
+            # CN: 强制为 GUI/API 调用提供默认值，避免 input() 挂起后台线程
+            if emulsion_number is None: emulsion_number = ""
+            if orientation is None: orientation = "L"
+
             # EN: Localized message helper / CN: 本地化消息助手
             def _t(zh_text, en_text):
                 return zh_text if lang == "zh" else en_text
@@ -121,6 +130,10 @@ class ContactSheetPro:
             
             # EN: Get image paths / CN: 获取图片路径
             img_paths = sorted([os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+            
+            if limit:
+                img_paths = img_paths[:limit]
+                
             if not img_paths:
                 return {
                     'success': False,
@@ -168,7 +181,23 @@ class ContactSheetPro:
                 orientation = "L"
             
             cfg = self.meta.get_contact_layout(layout_key)
-            renderer = self.renderers.get(layout_key, self.renderers["66"])
+            
+            # EN: --- PREVIEW OPTIMIZATION: Auto-Scale Layout ---
+            # CN: --- 预览提速：自动缩放布局 ---
+            import copy
+            if target_w:
+                scale = target_w / cfg['canvas_w']
+                cfg = copy.deepcopy(cfg)
+                # EN: Scale all length parameters / CN: 缩放所有长度参数
+                for key in ['canvas_w', 'canvas_h', 'cell_w', 'cell_h', 'inner_w', 'inner_h', 
+                            'col_gap', 'row_gap', 'margin_x', 'margin_y_top', 'margin_y_bottom']:
+                    if key in cfg:
+                        cfg[key] = int(cfg[key] * scale)
+            # EN: -------------------------------------------
+            
+            # EN: Use unified renderer for all Matin styles / CN: 所有马田风格使用统一的渲染器
+            renderer_tag = "MATIN" if layout_key.startswith("MATIN_") else layout_key
+            renderer = self.renderers.get(renderer_tag, self.renderers["66"])
             
             # EN: 3. Render canvas / CN: 3. 渲染画布
             if progress_callback:
@@ -181,18 +210,30 @@ class ContactSheetPro:
                 emulsion_number=emulsion_number
             )
             
-            # EN: Pass orientation to render for 645 format to avoid input() in GUI mode / CN: 传递方向参数给645画幅渲染器避免GUI模式下的input()
-            canvas = renderer.render(
-                canvas,
-                img_paths,
-                cfg,
-                self.meta,
-                user_emulsion,
-                sample_data=sample_data,
-                orientation=orientation,
-                show_date=show_date,
-                show_exif=show_exif
-            )
+            # EN: Check if renderer supports preview_mode / CN: 检查渲染器是否支持预览模式
+            render_kwargs = {
+                "canvas": canvas,
+                "img_list": img_paths,
+                "cfg": cfg,
+                "meta_handler": self.meta,
+                "user_emulsion": user_emulsion,
+                "sample_data": sample_data,
+                "orientation": orientation,
+                "show_date": show_date,
+                "show_exif": show_exif,
+                "progress_callback": progress_callback
+            }
+            
+            # Only pass preview_mode if it's the Matin renderer which supports it
+            if renderer_tag == "MATIN":
+                 render_kwargs["preview_mode"] = preview_mode
+                 render_kwargs["manual_format"] = layout_key
+                 render_kwargs["overrides"] = overrides # NEW
+                 render_kwargs["global_l1"] = global_l1 # NEW
+                 render_kwargs["global_l2"] = global_l2 # NEW
+                 render_kwargs["font_path"] = font_path # NEW
+            
+            canvas = renderer.render(**render_kwargs)
             
             # EN: 4. Save output / CN: 4. 保存输出
             if not os.path.exists(output_dir):
@@ -220,6 +261,50 @@ class ContactSheetPro:
                 'frames_count': 0,
                 'message': f"{_t('错误', 'Error')}: {e}\n{traceback.format_exc()}"
             }
+
+    
+    def generate_single(self, img_path, format=None, manual_film=None, orientation=None, show_date=True, show_exif=True, custom_l1=None, custom_l2=None, font_path=None):
+        """
+        EN: Generate a single high-fidelity slide image for detail preview.
+        CN: 生成单张高保真幻灯片图像用于细节预览。
+        """
+        try:
+            # 1. Get Data
+            if manual_film:
+                sample_data = self.meta.get_data(img_path, manual_film=manual_film)
+            else:
+                sample_data = self.meta.get_data(img_path)
+            
+            # 2. Detect Format & Config
+            if format:
+                layout_key = format
+            else:
+                layout_key = self.meta.detect_batch_layout([img_path])
+                format_map = {
+                    "6x6": "66", "6x7_4x5": "67", "645_6x8_43": "645", "135_6x9": "135", "PANORAMIC": "135"
+                }
+                if layout_key in format_map: layout_key = format_map[layout_key]
+                if not layout_key: layout_key = "66"
+
+            cfg = self.meta.get_contact_layout(layout_key)
+            
+            # 3. Renderer
+            renderer_tag = "MATIN" if layout_key.startswith("MATIN_") else layout_key
+            renderer = self.renderers.get(renderer_tag, self.renderers["66"])
+            
+            if hasattr(renderer, 'render_single_slide'):
+                # Matin V6 Renderer
+                # Pass manual_format to force specific layout logic
+                return renderer.render_single_slide(
+                    img_path, cfg, self.meta, 
+                    show_date=show_date, show_exif=show_exif, 
+                    manual_format=layout_key, 
+                    custom_l1=custom_l1, custom_l2=custom_l2,
+                    font_path=font_path
+                )
+        except Exception as e:
+            print(f"Generate Single Error: {e}")
+            return None
 
 if __name__ == "__main__":
     ContactSheetPro().run()

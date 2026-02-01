@@ -2,6 +2,7 @@
 # EN: Renderer for 6x6 film format with precise cropping and overflow handling
 # CN: 6x6 胶片渲染器，支持精准裁切和溢出处理
 
+import os
 import random
 from PIL import Image, ImageDraw
 from .base_renderer import BaseFilmRenderer
@@ -11,11 +12,14 @@ class Renderer66(BaseFilmRenderer):
     EN: 66 Renderer. Fixed bottom margin to match inter-frame gaps and solved overflow.
     CN: 6x6 渲染器。修正底部黑边高度使其与行间距一致，并解决喷码溢出。
     """
-    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
+    def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True, progress_callback=None):
         # EN: Execute 66 rendering with precise equal-width cropping
         # CN: 执行 66 渲染 (精准等宽裁切版)
         print("EN: [Renderer] Execute 66 rendering (precise equal-width cropping version)...")
         print("CN: [Renderer] 执行 66 渲染 (精准等宽裁切版)...")
+        
+        if progress_callback:
+            progress_callback("EN: Executing 66 rendering... | CN: 执行 66 渲染...")
         draw = ImageDraw.Draw(canvas)
         c_w, c_h = canvas.size
         bg_color = (235, 235, 235) 
@@ -91,6 +95,8 @@ class Renderer66(BaseFilmRenderer):
                 # EN: If photo exists, render it and related information
                 # CN: 如果有对应的照片，则绘制照片和相关信息
                 if idx < len(img_list):
+                    if progress_callback:
+                        progress_callback(f"[{idx+1}/{len(img_list)}] {os.path.basename(img_list[idx])}")
                     with Image.open(img_list[idx]) as img:
                         img_w, img_h = img.size
                         scale = frame_box_h / img_h
