@@ -60,7 +60,7 @@ class FilmRenderer:
 
             # EN: Ensure text fits within the available space
             # CN: 确保文本适应可用空间
-            available_width = new_w - (side_pad * 2) - 40  # 减去左右边距
+            available_width = new_w - (side_pad * 4)  # 减去左右边距和安全余量
             actual_main_size, actual_sub_size = self._adjust_font_sizes_to_fit(
                 draw, main_text, sub_text, available_width, 
                 base_main_font_size, base_sub_font_size
@@ -171,22 +171,28 @@ class FilmRenderer:
     def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
         """
         调整字体大小使其适应可用宽度
+        使用与 TypoEngine 相同的字体路径解析，确保测量准确。
         """
+        # EN: Use same path resolution as TypoEngine to ensure fonts match
+        # CN: 使用与 TypoEngine 相同的路径解析，确保字体一致
+        from .typo_engine import TypoEngine
+        resolved_main = TypoEngine._resolve_font_path(self.font_main)
+        resolved_sub  = TypoEngine._resolve_font_path(self.font_sub)
+
         # 创建临时绘图对象来测量文本宽度
         temp_img = Image.new("RGB", (1, 1))
         temp_draw = ImageDraw.Draw(temp_img)
         
         # 检查主文本宽度
-        main_font = self._get_font(self.font_main, base_main_size)
+        main_font = self._get_font(resolved_main, base_main_size)
         main_bbox = temp_draw.textbbox((0, 0), main_text, font=main_font)
         main_text_width = main_bbox[2] - main_bbox[0]
         
         main_scale_factor = min(1.0, available_width / main_text_width) if main_text_width > 0 else 1.0
         
-        # 检查副文本宽度  
-        sub_font = self._get_font(self.font_sub, base_sub_size)
-        sub_bbox = temp_draw.textbbox((0, 0), sub_text, font=sub_font)
-        sub_text_width = sub_bbox[2] - sub_bbox[0]
+        # 检查副文本宽度（使用与 TypoEngine.draw_text 相同的 textlength 累加）
+        sub_font = self._get_font(resolved_sub, base_sub_size)
+        sub_text_width = sum(temp_draw.textlength(c, font=sub_font) for c in list(sub_text))
         
         sub_scale_factor = min(1.0, available_width / sub_text_width) if sub_text_width > 0 else 1.0
         
