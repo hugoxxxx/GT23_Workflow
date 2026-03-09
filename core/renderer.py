@@ -33,7 +33,7 @@ class FilmRenderer:
                         pass
 
 
-    def process_image(self, img_path, data, output_dir, target_long_edge=3000):
+    def process_image(self, img_path, data, output_dir, target_long_edge=4500):
         try:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
