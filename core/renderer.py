@@ -280,7 +280,7 @@ class FilmRenderer:
             else:
                 img_to_save = img
 
-            img_to_save.save(save_path, "JPEG", quality=95, subsampling=0)
+            img_to_save.save(save_path, "JPEG", quality=98, subsampling=0)
         except Exception as e:
             print(f"CN: [!] JPG 保存失败，回退至 PNG: {e}")
             save_path = save_path.replace(".jpg", ".png")
@@ -288,11 +288,11 @@ class FilmRenderer:
             img.save(save_path, "PNG", optimize=True)
 
         f_size = os.path.getsize(save_path) / (1024 * 1024)
-        # EN: 10MB limit is generous for JPG, no longer need aggressive downsampling
-        # CN: 对于 JPG，10MB 限制非常充裕，不再需要激进的递归降采样
+        # EN: 10MB limit is generous for JPG, only slight adjustment if exceeded
+        # CN: 对于 JPG，10MB 限制非常充裕，若超标仅需微调质量
         if f_size > 10.0:
-            print(f"CN: [!] 文件较大 ({f_size:.1f}MB)，正尝试以稍低质量重新保存...")
-            img_to_save.save(save_path, "JPEG", quality=88, subsampling=0)
+            print(f"CN: [!] 文件较大 ({f_size:.1f}MB)，正尝试以 Quality 92 重新保存...")
+            img_to_save.save(save_path, "JPEG", quality=92, subsampling=0)
         
         # EN: Log the identified format clearly / CN: 明确记录识别出的画幅
         print(f"CN: [✔] 渲染完成: {out_name} | 画幅: {layout_name}")
