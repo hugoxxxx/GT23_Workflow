@@ -288,10 +288,11 @@ class FilmRenderer:
             img.save(save_path, "PNG", optimize=True)
 
         f_size = os.path.getsize(save_path) / (1024 * 1024)
+        # EN: 10MB limit is generous for JPG, no longer need aggressive downsampling
+        # CN: 对于 JPG，10MB 限制非常充裕，不再需要激进的递归降采样
         if f_size > 10.0:
-            new_res = current_res - 200
-            if os.path.exists(save_path): os.remove(save_path)
-            return self.process_image(original_path, data, output_dir, new_res)
+            print(f"CN: [!] 文件较大 ({f_size:.1f}MB)，正尝试以稍低质量重新保存...")
+            img_to_save.save(save_path, "JPEG", quality=88, subsampling=0)
         
         # EN: Log the identified format clearly / CN: 明确记录识别出的画幅
         print(f"CN: [✔] 渲染完成: {out_name} | 画幅: {layout_name}")

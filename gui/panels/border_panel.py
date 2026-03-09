@@ -507,10 +507,11 @@ class BorderPanel:
                     self.parent.after(0, apply_image)
 
                 except Exception as e:
-                    def apply_error():
+                    error_msg = str(e)
+                    def apply_error(msg=error_msg):
                         if job_mark != getattr(self, 'preview_job_id', None):
                             return
-                        fallback = f"预览失败: {e}" if self.lang == "zh" else f"Preview failed: {e}"
+                        fallback = f"预览失败: {msg}" if self.lang == "zh" else f"Preview failed: {msg}"
                         try:
                             # EN: Fallback to raw thumbnail if render fails / CN: 渲染失败时降级为原图缩略图
                             with Image.open(img_path) as img:
