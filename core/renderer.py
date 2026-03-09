@@ -284,6 +284,7 @@ class FilmRenderer:
         except Exception as e:
             print(f"CN: [!] JPG 保存失败，回退至 PNG: {e}")
             save_path = save_path.replace(".jpg", ".png")
+            out_name = out_name.replace(".jpg", ".png")
             img.save(save_path, "PNG", optimize=True)
 
         f_size = os.path.getsize(save_path) / (1024 * 1024)
@@ -294,7 +295,7 @@ class FilmRenderer:
         
         # EN: Log the identified format clearly / CN: 明确记录识别出的画幅
         print(f"CN: [✔] 渲染完成: {out_name} | 画幅: {layout_name}")
-        return True
+        return out_name
     
     def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
         """

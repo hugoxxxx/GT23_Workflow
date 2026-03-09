@@ -487,9 +487,8 @@ class BorderPanel:
                     
                     renderer = FilmRenderer()
                     # EN: Downscale target edge for faster preview while keeping shadow / CN: 降低分辨率加快预览同时保留阴影
-                    renderer.process_image(img_path, data, temp_dir, target_long_edge=1200)
+                    out_name = renderer.process_image(img_path, data, temp_dir, target_long_edge=1200)
 
-                    out_name = f"GT23_{os.path.splitext(os.path.basename(img_path))[0]}.png"
                     out_path = os.path.join(temp_dir, out_name)
                     if not os.path.exists(out_path):
                         raise FileNotFoundError(out_name)
