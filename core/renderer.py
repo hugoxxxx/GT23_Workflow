@@ -251,8 +251,10 @@ class FilmRenderer:
         return img.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
 
     def _apply_pro_shadow(self, canvas):
-        shadow_margin = 140
-        full_canvas = Image.new("RGBA", (canvas.width + shadow_margin, canvas.height + shadow_margin), (255, 255, 255, 0))
+        shadow_margin = 80
+        # EN: Use transparent black (0,0,0,0) to avoid white corners on compression
+        # CN: 使用透明黑 (0,0,0,0) 作为基色，防止压缩后出现白角
+        full_canvas = Image.new("RGBA", (canvas.width + shadow_margin, canvas.height + shadow_margin), (0, 0, 0, 0))
         shadow_mask = Image.new("RGBA", canvas.size, (0, 0, 0, 140))
         shadow_pos = (shadow_margin // 2, shadow_margin // 2 + 10)
         full_canvas.paste(shadow_mask, shadow_pos)
@@ -262,10 +264,28 @@ class FilmRenderer:
         return full_canvas
 
     def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name):
-        out_name = f"GT23_{os.path.splitext(os.path.basename(original_path))[0]}.png"
+        # EN: Default to JPG for better social media compatibility, fallback to PNG if requested
+        # CN: 默认输出 JPG 以获得更好的社交平台兼容性（自动硬化阴影）
+        ext = ".jpg"
+        out_name = f"GT23_{os.path.splitext(os.path.basename(original_path))[0]}{ext}"
         save_path = os.path.join(output_dir, out_name)
-        img.save(save_path, "PNG", optimize=True, compress_level=9)
         
+        try:
+            if img.mode == 'RGBA':
+                # EN: Flatten onto white background for JPEG
+                # CN: 为 JPG 复合纯白底色，强制“硬化”阴影效果
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[3]) # Use alpha channel as mask
+                img_to_save = background
+            else:
+                img_to_save = img
+
+            img_to_save.save(save_path, "JPEG", quality=95, subsampling=0)
+        except Exception as e:
+            print(f"CN: [!] JPG 保存失败，回退至 PNG: {e}")
+            save_path = save_path.replace(".jpg", ".png")
+            img.save(save_path, "PNG", optimize=True)
+
         f_size = os.path.getsize(save_path) / (1024 * 1024)
         if f_size > 10.0:
             new_res = current_res - 200

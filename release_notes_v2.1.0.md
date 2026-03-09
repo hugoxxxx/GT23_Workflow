@@ -31,6 +31,22 @@
 
 ---
 
+## 🚀 Social Media Optimization | 社交平台适配 (v2.1.0+)
+
+### [NEW] JPEG Hardened Shadows | JPEG 阴影硬化
+**EN**: v2.1.0 now defaults to high-quality JPEG output. We've implemented a "shadow hardening" logic that flattens the transparent shadow onto a solid white background before saving. This ensures your professional film look is preserved perfectly on Xiaohongshu (Red) and other platforms that don't support PNG transparency.  
+**CN**: v2.1.0 默认切换为高画质 JPEG 输出。我们实现了“阴影硬化”逻辑，在保存前将透明阴影预先复合在纯白底色上。这确保了在小红书等不支持透明 PNG 的平台上，依然能完美保留专业的胶片阴影效果。
+
+### [FIX] White Corner Artifacts | 阴影白角修复
+**EN**: Fixed a common rendering issue where white square artifacts appeared in the corners when images were compressed by social platforms.  
+**CN**: 彻底修复了图像被社交平台压缩后，四个角落可能出现的白色方块（白角）问题。
+
+### [ADJUST] Refined Shadow Margins | 衬底边框优化
+**EN**: Reduced the default shadow margin by 50% for a more compact and elegant professional look.  
+**CN**: 将默认衬底留白宽度减小了 50%，使整体排版更精致紧凑。
+
+---
+
 ## 🔧 Improvements & Fixes | 改进与修复
 
 ### Pixel-Perfect Centering | 像素级视觉对齐
