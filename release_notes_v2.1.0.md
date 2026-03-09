@@ -33,9 +33,9 @@
 
 ## 🚀 Social Media Optimization | 社交平台适配 (v2.1.0+)
 
-### [NEW] JPEG Hardened Shadows | JPEG 阴影硬化
-**EN**: v2.1.0 now defaults to high-quality JPEG output. We've implemented a "shadow hardening" logic that flattens the transparent shadow onto a solid white background before saving. This ensures your professional film look is preserved perfectly on Xiaohongshu (Red) and other platforms that don't support PNG transparency.  
-**CN**: v2.1.0 默认切换为高画质 JPEG 输出。我们实现了“阴影硬化”逻辑，在保存前将透明阴影预先复合在纯白底色上。这确保了在小红书等不支持透明 PNG 的平台上，依然能完美保留专业的胶片阴影效果。
+### [NEW] JPEG Hardened Shadows | JPEG 阴影硬化 & 性能飞跃
+**EN**: v2.1.0 now defaults to high-quality JPEG output. Beyond solving transparency issues, this shift delivers a **massive performance boost**—exporting is now significantly faster than the previous high-compression PNG workflow.  
+**CN**: v2.1.0 默认切换为高画质 JPEG 输出。除了解决透明度兼容性外，得益于 JPEG 的高效编码，**导出速度获得了质的飞跃**，相比以往的高压缩率 PNG 流程显著缩短了等待时间。
 
 ### [FIX] White Corner Artifacts | 阴影白角修复
 **EN**: Fixed a common rendering issue where white square artifacts appeared in the corners when images were compressed by social platforms.  
@@ -49,6 +49,9 @@
 
 ## 🔧 Improvements & Fixes | 改进与修复
 
+### Extreme Quality & Performance | 极端画质与性能
+**EN**: Default resolution boosted to 4500px at Quality 98. It hits the perfect balance: extreme detail while remaining under 10MB and rendering in seconds.  
+**CN**: 默认分辨率提升至 4500px，质量设为 98。在提供极端细节的同时，文件大小仍保持在 10MB 以内，且渲染速度得到了极大优化。
 ### Pixel-Perfect Centering | 像素级视觉对齐
 - **EN**: Upgraded Typography Engine with **Ink BBox** (Ink Bounding Box) algorithm. Ensures absolute horizontal centering based on visual pixels rather than character advance, aligning logos and text perfectly.
 - **CN**: 升级排版引擎，引入 **Ink BBox（墨迹包围盒）算法**。居中逻辑从“字符步进”进化为“视觉墨迹”对齐，确保 Logo 与文字在视觉中轴线上达到像素级的严丝合缝。
