@@ -17,6 +17,20 @@
 
 ---
 
+## 📸 Visual Previews | 视觉预览
+
+### Contax G2 x Zeiss T* Red Highlight
+![Contax G2 Preview](assets/preview_g2.png)
+*EN: Precision aligned Contax G2 logo with Zeiss T* red highlight on Ektachrome E100.*
+*CN: 完美对齐的 Contax G2 Logo 以及 E100 底片上的蔡司 T* 红色标识。*
+
+### Contax T3 x Zeiss T* Red Highlight
+![Contax T3 Preview](assets/preview_t3.png)
+*EN: High-fidelity Contax T3 vector logo and Sonnar T* red signature.*
+*CN: 高保真 Contax T3 矢量图标与 Sonnar T* 红色签名。*
+
+---
+
 ## 🔧 Improvements & Fixes | 改进与修复
 
 ### Pixel-Perfect Centering | 像素级视觉对齐
