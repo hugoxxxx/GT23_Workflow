@@ -81,15 +81,55 @@ class TypoEngine:
         
         # EN: Calculate total text width including kerning
         # CN: 计算包括字间距的总文本宽度
-        total_w = sum(widths) + sum(offsets)
-        curr_x = pos[0] - total_w / 2
+        total_advance = sum(widths) + sum(offsets)
         
-        # EN: Render each character with kerning and vertical adjustment
-        # CN: 逐字渲染，应用字间距和垂直微调
+        # --- EN: VISUAL CENTERING REFINEMENT / CN: 视觉居中优化 ---
+        # EN: We need to know the actual ink bounds to perfectly match the Logo's centering.
+        # CN: 我们需要知道实际墨迹边界，以完美匹配 Logo 的居中。
+        
+        # EN: Calculate character positions (relative to start)
+        # CN: 计算每个字符相对于起始点的坐标
+        relative_x_positions = []
+        curr_rel_x = 0
+        for i in range(len(chars)):
+            curr_rel_x += offsets[i]
+            relative_x_positions.append(curr_rel_x)
+            curr_rel_x += widths[i]
+            
+        # EN: Estimate actual ink bounds for the whole line
+        # CN: 预估整行文字的像素边界
+        all_lefts = []
+        all_rights = []
         for i, char in enumerate(chars):
-            curr_x += offsets[i]
-            # EN: Apply vertical offset (2% of font size)
-            # CN: 应用垂直偏移 (字体大小的 2%)
+            # EN: getmask(...).getbbox() gives (left, top, right, bottom) of glyph ink
+            # CN: getmask(...).getbbox() 提供字形的像素包围盒
+            char_bbox = pil_font.getmask(char).getbbox()
+            if char_bbox:
+                # char_bbox[0] is the ink offset from left, char_bbox[2] is ink right
+                all_lefts.append(relative_x_positions[i] + char_bbox[0])
+                all_rights.append(relative_x_positions[i] + char_bbox[2])
+        
+        if not all_lefts:
+            # EN: Fallback to basic centering if no ink found / CN: 如果无墨迹则回退到基础居中
+            start_x = pos[0] - total_advance / 2
+        else:
+            visual_left = min(all_lefts)
+            visual_right = max(all_rights)
+            visual_w = visual_right - visual_left
+            # EN: Centering based on visual width / CN: 基于视觉宽度进行居中
+            start_x = pos[0] - visual_w / 2 - visual_left
+
+        # EN: Handle per-character coloring / CN: 处理逐字着色
+        if isinstance(fill, list) and len(fill) == len(chars):
+            colors = fill
+        else:
+            colors = [fill] * len(chars)
+
+        # EN: Render each character with refined coordinates
+        # CN: 使用对齐后的坐标进行逐字渲染
+        for i, char in enumerate(chars):
+            char_x = start_x + relative_x_positions[i]
             y_offset = font_size * 0.02
-            draw.text((curr_x + widths[i]/2, pos[1]+y_offset), char, font=pil_font, fill=fill, anchor="mm")
-            curr_x += widths[i]
+            # EN: Use anchor="lm" (left middle) for individual chars to keep vertical centering
+            # CN: 对单个字符使用 "lm" 锚点，以保持垂直方向上的居中
+            draw.text((char_x, pos[1] + y_offset), char, font=pil_font, fill=colors[i], anchor="lm")

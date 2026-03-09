@@ -1,4 +1,6 @@
 import os
+import io
+import sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 class FilmRenderer:
@@ -13,6 +15,23 @@ class FilmRenderer:
         self.main_color = (26, 26, 26)   
         self.sub_color = (85, 85, 85)
         self.border_line_color = (238, 238, 238)
+        self.logo_dir = "assets/logo"
+        self._setup_cairo_dll()
+
+    def _setup_cairo_dll(self):
+        """EN: Fix for cairosvg DLL loading on Windows. / CN: 修复 Windows 上 cairosvg 的 DLL 加载。"""
+        if sys.platform == "win32":
+            # EN: Try to find cairo.dll in conda env Library/bin
+            # CN: 尝试在 conda 环境的 Library/bin 中寻找 cairo.dll
+            conda_prefix = os.environ.get("CONDA_PREFIX")
+            if conda_prefix:
+                bin_dir = os.path.join(conda_prefix, "Library", "bin")
+                if os.path.isdir(bin_dir) and hasattr(os, "add_dll_directory"):
+                    try:
+                        os.add_dll_directory(bin_dir)
+                    except:
+                        pass
+
 
     def process_image(self, img_path, data, output_dir, target_long_edge=3000):
         try:
@@ -67,7 +86,7 @@ class FilmRenderer:
             )
 
             self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
-                            main_text, sub_text, actual_main_size, actual_sub_size)
+                            main_text, sub_text, actual_main_size, actual_sub_size, data=data)
             
             # EN: Apply shadow effect for professional film look / CN: 应用阴影效果实现专业胶片感
             final_output = self._apply_pro_shadow(canvas)
@@ -124,18 +143,107 @@ class FilmRenderer:
         
         return camera_text, "  |  ".join(info_parts)
 
-    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size):
+    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None):
         # EN: Vertical center of the white area / CN: 白色区域垂直中心
         base_y = top_pad + h + (side_pad + bottom_splice) // 2
         
-        # EN: Pro-tip: offset main and sub for better visual balance
-        # CN: 专家提示：主标题微调上移，副标题微调下移，视觉更平衡
+        main_draw_pos = (new_w // 2, base_y - int(bottom_splice * 0.15))
+        sub_draw_pos = (new_w // 2, base_y + int(bottom_splice * 0.28))
+
+        # --- EN: CAMERA LOGO RENDERING / CN: 相机 LOGO 渲染 ---
+        logo_drawn = False
+        if data:
+            make = str(data.get('Make') or "").strip()
+            model = str(data.get('Model') or "").strip()
+            logo_path = self._find_logo_path(make, model)
+            
+            if logo_path:
+                try:
+                    import cairosvg
+                    from .typo_engine import TypoEngine
+                    resolved_main = TypoEngine._resolve_font_path(self.font_main)
+                    main_font = self._get_font(resolved_main, m_size)
+                    
+                    # EN: Calculate typical font height for scaling / CN: 计算典型字体高度用于缩放
+                    ascent, descent = main_font.getmetrics()
+                    target_h = ascent + descent
+                    
+                    png_data = cairosvg.svg2png(url=logo_path, output_height=target_h)
+                    logo_img = Image.open(io.BytesIO(png_data))
+                    
+                    # EN: Crop to actual content to ensure perfect centering
+                    bbox = logo_img.getbbox()
+                    if bbox:
+                        logo_img = logo_img.crop(bbox)
+
+                    # EN: Center horizontally, align vertically with text pos
+                    # CN: 水平居中，垂直与文字位置对齐
+                    logo_x = (new_w - logo_img.width) // 2
+                    logo_y = main_draw_pos[1] - logo_img.height // 2
+                    
+                    # EN: Paste with alpha mask / CN: 带透明蒙版粘贴
+                    draw._image.paste(logo_img, (logo_x, logo_y), logo_img)
+                    
+                    # DEBUG: Draw center line
+                    # draw.line([(new_w // 2, top_pad + h), (new_w // 2, new_h)], fill="red", width=2)
+
+                    logo_drawn = True
+                except Exception as e:
+                    print(f"CN: [!] Logo 渲染失败 fallback to text: {e}")
+
+        # --- EN: ZEISS T* HIGHLIGHT / CN: 蔡司 T* 红色高亮 ---
+        # Zeiss red color: #ed1f25 -> (237, 31, 37)
+        sub_colors = self.sub_color
+        if "T*" in sub_text:
+            sub_colors = [self.sub_color] * len(sub_text)
+            zeiss_red = (237, 31, 37)
+            i = 0
+            while i < len(sub_text) - 1:
+                if sub_text[i:i+2] == "T*":
+                    sub_colors[i] = zeiss_red
+                    sub_colors[i+1] = zeiss_red
+                    i += 2
+                else:
+                    i += 1
+
+        # EN: Text drawing / CN: 文字绘制
         try:
             from .typo_engine import TypoEngine
-            TypoEngine.draw_text(draw, (new_w // 2, base_y - int(bottom_splice * 0.12)), main_text, self.font_main, m_size, self.main_color)
-            TypoEngine.draw_text(draw, (new_w // 2, base_y + int(bottom_splice * 0.22)), sub_text, self.font_sub, s_size, self.sub_color)
+            if not logo_drawn:
+                TypoEngine.draw_text(draw, main_draw_pos, main_text, self.font_main, m_size, self.main_color)
+            TypoEngine.draw_text(draw, sub_draw_pos, sub_text, self.font_sub, s_size, sub_colors)
+        except Exception as e:
+            if not logo_drawn:
+                draw.text(main_draw_pos, main_text, fill="black", anchor="mm")
+            # Fallback for sub_text: just use the base sub_color as a single fill
+            draw.text(sub_draw_pos, sub_text, fill=self.sub_color, anchor="mm")
+
+
+    def _find_logo_path(self, make, model):
+        """EN: Case-insensitive logo lookup. / CN: 不区分大小写的 Logo 查找。"""
+        if not os.path.exists(self.logo_dir): return None
+        
+        # EN: Common naming patterns / CN: 常见命名匹配模式
+        search_names = []
+        if make and model:
+            search_names.append(f"{make}-{model}.svg".upper())
+            search_names.append(f"{make}_{model}.svg".upper())
+            search_names.append(f"{make}{model}.svg".upper())
+        if model:
+            search_names.append(f"{model}.svg".upper())
+        if make:
+            search_names.append(f"{make}.svg".upper())
+            
+        try:
+            files = os.listdir(self.logo_dir)
+            file_map = {f.upper(): f for f in files if f.lower().endswith(".svg")}
+            
+            for name in search_names:
+                if name in file_map:
+                    return os.path.join(self.logo_dir, file_map[name])
         except:
-            draw.text((new_w // 2, base_y), main_text, fill="black", anchor="mm")
+            pass
+        return None
 
     def _smart_resize(self, img, target):
         w, h = img.size
