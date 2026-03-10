@@ -21,6 +21,7 @@ datas = [
     ('assets/fonts/intodotmatrix.ttf', 'assets/fonts'),
     ('assets/fonts/palab.ttf', 'assets/fonts'),
     ('assets/fonts/gara.ttf', 'assets/fonts'),
+    ('assets/logo', 'assets/logo'),  # Camera logos
     ('core', 'core'),          # Core modules
     ('apps', 'apps'),          # App modules
 ]

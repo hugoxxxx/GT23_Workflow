@@ -9,14 +9,37 @@ class FilmRenderer:
     CN: 中英双语：具备动态字号层级感的高级渲染器。
     """
     def __init__(self, font_main="assets/fonts/palab.ttf", font_sub="assets/fonts/gara.ttf"):
-        self.font_main = font_main
-        self.font_sub = font_sub
+        self.font_main = self._resolve_path(font_main)
+        self.font_sub = self._resolve_path(font_sub)
         self.bg_color = (255, 255, 255)
         self.main_color = (26, 26, 26)   
         self.sub_color = (85, 85, 85)
         self.border_line_color = (238, 238, 238)
-        self.logo_dir = "assets/logo"
+        self.logo_dir = self._resolve_path("assets/logo")
         self._setup_cairo_dll()
+
+    def _resolve_path(self, relative_path):
+        """EN: Resolves relative paths for both source and bundled EXE (PyInstaller).
+           CN: 兼容源码模式与 PyInstaller 一项打包模式的路径解析。"""
+        if os.path.isabs(relative_path):
+            return relative_path
+            
+        # 1. EN: Check PyInstaller temporary extraction folder / CN: 检查 PyInstaller 临时解压目录
+        if hasattr(sys, '_MEIPASS'):
+            bundle_path = os.path.join(sys._MEIPASS, relative_path)
+            if os.path.exists(bundle_path):
+                return bundle_path
+        
+        # 2. EN: Check project root (for standard script run or onedir)
+        # CN: 检查项目根目录（标准脚本运行或单文件夹打包模式）
+        # EN: We assume renderer.py is in project_root/core/
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        source_path = os.path.join(base_dir, relative_path)
+        if os.path.exists(source_path):
+            return source_path
+            
+        # 3. EN: Fallback to relative to CWD / CN: 降级回退至 CWD 相对路径
+        return relative_path
 
     def _setup_cairo_dll(self):
         """EN: Fix for cairosvg DLL loading on Windows. / CN: 修复 Windows 上 cairosvg 的 DLL 加载。"""
