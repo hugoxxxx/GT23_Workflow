@@ -231,6 +231,12 @@ class FilmRenderer:
             search_names.append(f"{make}{model}.svg".upper())
         if model:
             search_names.append(f"{model}.svg".upper())
+            # EN: Handle short names like 'G2' or 'T3' by trying 'CONTAX-' prefix
+            # CN: 处理 'G2' 或 'T3' 等短名，自动尝试增加 'CONTAX-' 前缀
+            short_models = ["G1", "G2", "T", "T2", "T3", "TVS", "TVSII", "TVSIII"]
+            u_model = model.upper()
+            if u_model in short_models:
+                search_names.append(f"CONTAX-{u_model}.svg")
         if make:
             search_names.append(f"{make}.svg".upper())
             
