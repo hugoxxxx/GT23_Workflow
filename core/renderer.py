@@ -259,10 +259,15 @@ class FilmRenderer:
            CN: 通用的不区分大小写 Logo 检索逻辑。支持“品牌-型号”自动识别。"""
         if not os.path.exists(self.logo_dir): return None
         
-        # 1. EN: Prepare search candidates / CN: 准备搜索候选名
+        # 1. EN: Prepare and normalize search metadata / CN: 准备并正则化搜索信息
         make_u = str(make or "").upper().strip()
         model_u = str(model or "").upper().strip()
         if not model_u: return None
+
+        # EN: Function to strip non-alphanumeric for extreme fuzzy matching
+        # CN: 定义简单的正则化函数，去除空格和符号，用于极端模糊匹配
+        def _norm(s): return "".join(c for c in s if c.isalnum())
+        norm_model = _norm(model_u)
 
         search_stems = []
         if make_u:
@@ -273,8 +278,6 @@ class FilmRenderer:
             
         try:
             files = os.listdir(self.logo_dir)
-            # EN: Map of UPPERCASE_FILE_NAME to actual_file_name
-            # CN: 大写文件名到实际文件名的映射（支持多种格式）
             supported_exts = [".svg", ".png", ".jpg", ".jpeg"]
             file_map = {f.upper(): f for f in files if any(f.lower().endswith(ext) for ext in supported_exts)}
             
@@ -288,12 +291,21 @@ class FilmRenderer:
             
             # 3. EN: Second pass - Suffix matching for "BRAND-MODEL" pattern
             # CN: 第二轮：针对“品牌-型号”规则的后缀匹配
-            # EN: Useful when EXIF 'Make' is missing but the file is named 'BRAND-MODEL.svg'
-            # CN: 即使 EXIF 品牌缺失，只要文件名遵循“品牌-型号”，也能被识别（如 *-T3.svg）
             for file_key, actual_name in file_map.items():
                 name_stem = os.path.splitext(file_key)[0]
                 if name_stem.endswith(f"-{model_u}") or name_stem.endswith(f"_{model_u}"):
                     return os.path.join(self.logo_dir, actual_name)
+
+            # 4. EN: Third pass - Extreme fuzzy (Normalized) match
+            # CN: 第三轮：极端模糊（正则化）匹配，忽略空格和横杠
+            # EN: Allows "TVS II" to match "CONTAX-TVSII.svg"
+            for file_key, actual_name in file_map.items():
+                name_stem = os.path.splitext(file_key)[0]
+                # EN: If normalized model is found in normalized filename
+                # CN: 如果正则化后的型号出现在正则化后的文件名中
+                if norm_model in _norm(name_stem):
+                    return os.path.join(self.logo_dir, actual_name)
+                    
         except:
             pass
         return None
