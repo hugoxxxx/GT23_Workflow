@@ -1,6 +1,51 @@
 
 # Change Log / 变更日志
 
+## [2026-03-11] - v2.1.0 Release
+
+### Camera Logo & Typography / 相机图标与排版系统
+- **[Feature] Vector Logo Support / 矢量图标支持**:
+  - EN: Integrated high-quality SVG logos for Contax G/T/TVS series.
+  - CN: 集成了 Contax G/T/TVS 等系列的高质量矢量 SVG 图标。
+- **[Feature] PNG/Raster Logo Support / PNG 栅格图标支持**:
+  - EN: Added support for bitmap logos (e.g., Pentax 67) to enhance user-defined camera identification.
+  - CN: 增加了对位图图标（如 Pentax 67）的支持，允许用户自定义更多非矢量相机标识。
+- **[Enhancement] Smart Model Matching / 智能型号匹配**:
+  - EN: Implemented intelligence to detect popular models (G2, T3, 67, etc.) even when brand name (Make) is missing from EXIF.
+  - CN: 实现了智能型号识别，即使 EXIF 中缺失品牌信息，也能自动匹配 G2, T3, 67 等机型的图标。
+- **[Enhancement] Optical Centering (Ink BBox) / 视觉对齐 (Ink BBox)**:
+  - EN: Re-engineered text/logo centering based on actual "Ink" pixels rather than character advance for pixel-perfect balance.
+  - CN: 基于“墨迹像素”而非字符步进重构了对齐算法，确保 Logo 与文字在视觉中轴线上达到完美的物理对齐。
+- **[Enhancement] Zeiss T* Highlight / 蔡司 T* 红色标识**:
+  - EN: Automatically detects "T*" in lens models and renders it in standard Zeiss Red (#ed1f25).
+  - CN: 自动检索镜头型号中的 "T*"，并将其渲染为蔡司标准的鲜红色 (#ed1f25)。
+
+### Social Media & Performance / 社交平台与性能优化
+- **[Feature] Pro JPEG Export / 专业 JPEG 导出流程**:
+  - EN: Defaulted to ultra-high-resolution (4500px) and near-lossless (Quality 98) JPEG for maximum compatibility.
+  - CN: 默认采用 4500px 超清分辨率与 98 几乎无损质量的 JPEG 导出，确保全平台最佳兼容性。
+- **[Performance] Massive Speed Boost / 导出速度飞跃**:
+  - EN: 3x-5x faster rendering compared to legacy PNG pipeline due to highly optimized JPEG encoding.
+  - CN: 得益于优化的 JPEG 编码流程，渲染速度相比以往的 PNG 模式提升了 3-5 倍，渲染缩短至秒级。
+- **[Fix] Hardened Shadows (No More White Corners) / 阴影硬化 (彻底解决白角问题)**:
+  - EN: Pre-flattens shadows on white background to prevent artifacts when social platforms (e.g., Xiaohongshu) compress images.
+  - CN: 实现了阴影本地硬化复合，避免了小红书等平台在压缩透明底图时产生的“白色方块”或阴影丢失问题。
+- **[Adjustment] Shadow Margin Refinement / 阴影边距精修**:
+  - EN: Reduced shadow margin by 50% for a more compact and modern professional look.
+  - CN: 将衬底阴影边距缩小了一半，使整体视觉效果更紧凑、更精致。
+
+### Stability & UX / 稳定性与体验改进
+- **[Fix] GUI Preview Hang / 修复 GUI 预览卡死**:
+  - EN: Resolved hang caused by hardcoded .png extension; now dynamically tracks real output files.
+  - CN: 修复了因硬编码 .png 后缀导致的 GUI 预览卡死问题，现在支持动态追踪实际输出格式。
+- **[Fix] Logo Centering Collision / 修复 Logo 居中冲突**:
+  - EN: Fixed variable shadowing bug that caused logos to be left-aligned instead of centered.
+  - CN: 修复了一个变量名冲突导致的 Bug，该 Bug 曾导致 Logo 无法居中（靠左显示）。
+- **[Fix] GUI Error Handling / 改进 GUI 异常处理**:
+  - EN: Fixed NameError in exception dialogs to ensure error messages are properly displayed.
+  - CN: 修复了异常对话框中的变量名错误，确保在运行出错时能正确弹出提示信息。
+
+
 ## [2026-02-01]
 
 ### Matin Slide Mode Re-engineering / 马田幻灯片模式重构
