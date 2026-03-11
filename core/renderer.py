@@ -203,8 +203,8 @@ class FilmRenderer:
                         # EN: Scale to match text height / CN: 缩放至与文字高度一致
                         orig_w, orig_h = logo_img.size
                         if orig_h != target_h:
-                            new_w = int(orig_w * (target_h / orig_h))
-                            logo_img = logo_img.resize((new_w, target_h), Image.Resampling.LANCZOS)
+                            scaled_w = int(orig_w * (target_h / orig_h))
+                            logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
                     
                     # EN: Crop to actual content to ensure perfect centering
                     bbox = logo_img.getbbox()
