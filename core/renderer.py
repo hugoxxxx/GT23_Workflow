@@ -191,8 +191,20 @@ class FilmRenderer:
                     ascent, descent = main_font.getmetrics()
                     target_h = ascent + descent
                     
-                    png_data = cairosvg.svg2png(url=logo_path, output_height=target_h)
-                    logo_img = Image.open(io.BytesIO(png_data))
+                    if logo_path.lower().endswith(".svg"):
+                        # EN: Rasterize SVG to PNG data / CN: 将 SVG 栅格化为 PNG 数据
+                        png_data = cairosvg.svg2png(url=logo_path, output_height=target_h)
+                        logo_img = Image.open(io.BytesIO(png_data))
+                    else:
+                        # EN: Load PNG/other formats directly / CN: 直接加载 PNG 等其他格式
+                        logo_img = Image.open(logo_path)
+                        if logo_img.mode != "RGBA":
+                            logo_img = logo_img.convert("RGBA")
+                        # EN: Scale to match text height / CN: 缩放至与文字高度一致
+                        orig_w, orig_h = logo_img.size
+                        if orig_h != target_h:
+                            new_w = int(orig_w * (target_h / orig_h))
+                            logo_img = logo_img.resize((new_w, target_h), Image.Resampling.LANCZOS)
                     
                     # EN: Crop to actual content to ensure perfect centering
                     bbox = logo_img.getbbox()
@@ -247,29 +259,45 @@ class FilmRenderer:
         if not os.path.exists(self.logo_dir): return None
         
         # EN: Common naming patterns / CN: 常见命名匹配模式
-        search_names = []
+        search_stems = []
         if make and model:
-            search_names.append(f"{make}-{model}.svg".upper())
-            search_names.append(f"{make}_{model}.svg".upper())
-            search_names.append(f"{make}{model}.svg".upper())
+            search_stems.append(f"{make}-{model}")
+            search_stems.append(f"{make}_{model}")
+            search_stems.append(f"{make}{model}")
         if model:
-            search_names.append(f"{model}.svg".upper())
-            # EN: Handle short names like 'G2' or 'T3' by trying 'CONTAX-' prefix
-            # CN: 处理 'G2' 或 'T3' 等短名，自动尝试增加 'CONTAX-' 前缀
-            short_models = ["G1", "G2", "T", "T2", "T3", "TVS", "TVSII", "TVSIII"]
+            search_stems.append(f"{model}")
+            # EN: Handle short names by trying brand prefixes
+            # CN: 处理短名，自动尝试增加品牌前缀
             u_model = model.upper()
-            if u_model in short_models:
-                search_names.append(f"CONTAX-{u_model}.svg")
+            
+            # Contax support
+            contax_shorts = ["G1", "G2", "T", "T2", "T3", "TVS", "TVSII", "TVSIII"]
+            if u_model in contax_shorts:
+                search_stems.append(f"CONTAX-{u_model}")
+            
+            # Pentax support
+            pentax_shorts = ["67", "6X7", "67II", "645", "645N", "645NII"]
+            if u_model in pentax_shorts:
+                search_stems.append(f"PENTAX-{u_model}")
+
         if make:
-            search_names.append(f"{make}.svg".upper())
+            search_stems.append(f"{make}")
             
         try:
             files = os.listdir(self.logo_dir)
-            file_map = {f.upper(): f for f in files if f.lower().endswith(".svg")}
+            # EN: Create a map of uppercase filename to actual filename for all supported extensions
+            # CN: 为所有支持的扩展名创建“大写->实际文件名”的映射
+            supported_exts = [".svg", ".png", ".jpg", ".jpeg"]
+            file_map = {f.upper(): f for f in files if any(f.lower().endswith(ext) for ext in supported_exts)}
             
-            for name in search_names:
-                if name in file_map:
-                    return os.path.join(self.logo_dir, file_map[name])
+            for stem in search_stems:
+                stem_upper = stem.upper()
+                # EN: Try supported extensions in order of preference
+                # CN: 按优先级尝试支持的扩展名
+                for ext in [".svg", ".png", ".jpg"]:
+                    target_key = f"{stem_upper}{ext.upper()}"
+                    if target_key in file_map:
+                        return os.path.join(self.logo_dir, file_map[target_key])
         except:
             pass
         return None
