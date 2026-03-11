@@ -298,11 +298,8 @@ class FilmRenderer:
 
             # 4. EN: Third pass - Extreme fuzzy (Normalized) match
             # CN: 第三轮：极端模糊（正则化）匹配，忽略空格和横杠
-            # EN: Allows "TVS II" to match "CONTAX-TVSII.svg"
             for file_key, actual_name in file_map.items():
                 name_stem = os.path.splitext(file_key)[0]
-                # EN: If normalized model is found in normalized filename
-                # CN: 如果正则化后的型号出现在正则化后的文件名中
                 if norm_model in _norm(name_stem):
                     return os.path.join(self.logo_dir, actual_name)
                     
