@@ -255,49 +255,45 @@ class FilmRenderer:
 
 
     def _find_logo_path(self, make, model):
-        """EN: Case-insensitive logo lookup. / CN: 不区分大小写的 Logo 查找。"""
+        """EN: Universal case-insensitive logo lookup.
+           CN: 通用的不区分大小写 Logo 检索逻辑。支持“品牌-型号”自动识别。"""
         if not os.path.exists(self.logo_dir): return None
         
-        # EN: Common naming patterns / CN: 常见命名匹配模式
-        search_stems = []
-        if make and model:
-            search_stems.append(f"{make}-{model}")
-            search_stems.append(f"{make}_{model}")
-            search_stems.append(f"{make}{model}")
-        if model:
-            search_stems.append(f"{model}")
-            # EN: Handle short names by trying brand prefixes
-            # CN: 处理短名，自动尝试增加品牌前缀
-            u_model = model.upper()
-            
-            # Contax support
-            contax_shorts = ["G1", "G2", "T", "T2", "T3", "TVS", "TVSII", "TVSIII"]
-            if u_model in contax_shorts:
-                search_stems.append(f"CONTAX-{u_model}")
-            
-            # Pentax support
-            pentax_shorts = ["67", "6X7", "67II", "645", "645N", "645NII"]
-            if u_model in pentax_shorts:
-                search_stems.append(f"PENTAX-{u_model}")
+        # 1. EN: Prepare search candidates / CN: 准备搜索候选名
+        make_u = str(make or "").upper().strip()
+        model_u = str(model or "").upper().strip()
+        if not model_u: return None
 
-        if make:
-            search_stems.append(f"{make}")
+        search_stems = []
+        if make_u:
+            search_stems.append(f"{make_u}-{model_u}")
+            search_stems.append(f"{make_u}_{model_u}")
+            search_stems.append(f"{make_u}{model_u}")
+        search_stems.append(model_u)
             
         try:
             files = os.listdir(self.logo_dir)
-            # EN: Create a map of uppercase filename to actual filename for all supported extensions
-            # CN: 为所有支持的扩展名创建“大写->实际文件名”的映射
+            # EN: Map of UPPERCASE_FILE_NAME to actual_file_name
+            # CN: 大写文件名到实际文件名的映射（支持多种格式）
             supported_exts = [".svg", ".png", ".jpg", ".jpeg"]
             file_map = {f.upper(): f for f in files if any(f.lower().endswith(ext) for ext in supported_exts)}
             
+            # 2. EN: First pass - strict matching with candidate stems
+            # CN: 第一轮：基于候选名的严格匹配
             for stem in search_stems:
-                stem_upper = stem.upper()
-                # EN: Try supported extensions in order of preference
-                # CN: 按优先级尝试支持的扩展名
                 for ext in [".svg", ".png", ".jpg"]:
-                    target_key = f"{stem_upper}{ext.upper()}"
+                    target_key = f"{stem}{ext.upper()}"
                     if target_key in file_map:
                         return os.path.join(self.logo_dir, file_map[target_key])
+            
+            # 3. EN: Second pass - Suffix matching for "BRAND-MODEL" pattern
+            # CN: 第二轮：针对“品牌-型号”规则的后缀匹配
+            # EN: Useful when EXIF 'Make' is missing but the file is named 'BRAND-MODEL.svg'
+            # CN: 即使 EXIF 品牌缺失，只要文件名遵循“品牌-型号”，也能被识别（如 *-T3.svg）
+            for file_key, actual_name in file_map.items():
+                name_stem = os.path.splitext(file_key)[0]
+                if name_stem.endswith(f"-{model_u}") or name_stem.endswith(f"_{model_u}"):
+                    return os.path.join(self.logo_dir, actual_name)
         except:
             pass
         return None
