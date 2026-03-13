@@ -1,5 +1,14 @@
-
 # Change Log / 变更日志
+
+## [2026-03-13] - v2.1.1 Hotfix
+
+### Logo Recognition & Assets / 图标识别与资源修复
+- **[Fix] TVS Logo SVG Repair / 修复 TVS 图标受损**:
+  - EN: Repaired corrupted `viewBox` in `CONTAX-TVS.svg` that caused it to render as an empty image.
+  - CN: 修复了 `CONTAX-TVS.svg` 文件中损坏的 `viewBox` 属性（宽度为负值），解决了该机型图标渲染为空白的问题。
+- **[Enhancement] Extreme Fuzzy Matching / 极端模糊匹配引擎**:
+  - EN: Implemented symbol-agnostic matching that ignores spaces and hyphens (e.g., "TVS II" now correctly matches the "TVSII" asset).
+  - CN: 引入了符号无关的匹配逻辑，自动忽略空格、横杠等特殊字符（例如：让 EXIF 中的 "TVS II" 能自动对准本地的 "TVSII" 图标资源）。
 
 ## [2026-03-11] - v2.1.0 Release
 
