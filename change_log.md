@@ -6,6 +6,9 @@
 - **[Fix] TVS Logo SVG Repair / 修复 TVS 图标受损**:
   - EN: Repaired corrupted `viewBox` in `CONTAX-TVS.svg` that caused it to render as an empty image.
   - CN: 修复了 `CONTAX-TVS.svg` 文件中损坏的 `viewBox` 属性（宽度为负值），解决了该机型图标渲染为空白的问题。
+- **[Enhancement] Uniform Logo Scaling / 图标视觉尺寸统一化**:
+  - EN: Implemented "Crop-then-Scale" logic to ensure all logos have identical visual height regardless of internal whitespace in the source files.
+  - CN: 实现了“先裁剪后缩放”逻辑，通过物理剔除图标透明留白再进行等比缩放，确保了 30 余款不同品牌 Logo 在视觉上的整齐划一。
 - **[Enhancement] Extreme Fuzzy Matching / 极端模糊匹配引擎**:
   - EN: Implemented symbol-agnostic matching that ignores spaces and hyphens (e.g., "TVS II" now correctly matches the "TVSII" asset).
   - CN: 引入了符号无关的匹配逻辑，自动忽略空格、横杠等特殊字符（例如：让 EXIF 中的 "TVS II" 能自动对准本地的 "TVSII" 图标资源）。

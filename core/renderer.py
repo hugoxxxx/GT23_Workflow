@@ -192,24 +192,26 @@ class FilmRenderer:
                     target_h = ascent + descent
                     
                     if logo_path.lower().endswith(".svg"):
-                        # EN: Rasterize SVG to PNG data / CN: 将 SVG 栅格化为 PNG 数据
-                        png_data = cairosvg.svg2png(url=logo_path, output_height=target_h)
+                        # EN: Render SVG at high res first to find paths precisely
+                        # CN: 先以较高分辨率渲染 SVG 以精准获取路径边界
+                        png_data = cairosvg.svg2png(url=logo_path, output_height=target_h * 2)
                         logo_img = Image.open(io.BytesIO(png_data))
                     else:
                         # EN: Load PNG/other formats directly / CN: 直接加载 PNG 等其他格式
-                        logo_img = Image.open(logo_path)
-                        if logo_img.mode != "RGBA":
-                            logo_img = logo_img.convert("RGBA")
-                        # EN: Scale to match text height / CN: 缩放至与文字高度一致
-                        orig_w, orig_h = logo_img.size
-                        if orig_h != target_h:
-                            scaled_w = int(orig_w * (target_h / orig_h))
-                            logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
+                        logo_img = Image.open(logo_path).convert("RGBA")
                     
-                    # EN: Crop to actual content to ensure perfect centering
+                    # EN: Step 1 - Crop to actual content (Ink Area)
+                    # CN: 第一步 - 裁剪至实际墨迹区域（去除所有周围留白）
                     bbox = logo_img.getbbox()
                     if bbox:
                         logo_img = logo_img.crop(bbox)
+                    
+                    # EN: Step 2 - Scale the "Ink" to match target text height
+                    # CN: 第二步 - 将“墨迹”等比缩放至目标文字高度
+                    orig_w, orig_h = logo_img.size
+                    if orig_h > 0:
+                        scaled_w = int(orig_w * (target_h / orig_h))
+                        logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
 
                     # EN: Center horizontally, align vertically with text pos
                     # CN: 水平居中，垂直与文字位置对齐
