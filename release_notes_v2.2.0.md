@@ -15,11 +15,32 @@
 
 ---
 
-## 📷 目前支持的相机列表 (Supported Cameras)
+---
 
-只要你的照片 EXIF 信息中的 **Model (型号)** 包含下表中的关键字，软件就会自动匹配图标。匹配时不区分大小写，且会自动忽略空格和横杠（例如 `GA 645` 也能匹配 `GA645`）。
+## ⌨️ 标签对应与匹配指南 (EXIF & Label Mapping)
 
-| 品牌 (Brand) | 支持型号关键字 (Keywords / Filenames) |
+为了让图标识别更精准，或者手动覆盖信息，请参考下表：
+
+| 界面标签 (UI Label) | 手动输入示例 (Manual Input) | 自动读取 EXIF (Auto-EXIF) | 说明 (Notes) |
+| :--- | :--- | :--- | :--- |
+| **Make** | CONTAX, FUJIFILM | `Make` | 品牌名，匹配时作为次级关键字 |
+| **Model** | **G2**, **T3**, **GA645** | `Model` | **核心关键字**，匹配图标主要靠它 |
+| **Shutter** | 1/125, 1s | `ExposureTime` | 快门速度，软件会自动补全 "s" |
+| **Aperture** | 2.8, 8, 16 | `FNumber` | 光圈值，软件会自动补全 "f/" |
+| **ISO** | 100, 400, 800 | `ISOSpeedRatings` | 感光度，数码模式下非常有用 |
+| **Lens** | Planar 45mm f/2 | `LensModel` | 镜头完整型号，装饰文字的主要部分 |
+
+> **💡 重要提示 (Tips):**
+> - **Logo 匹配逻辑**：软件会基于 `Model` 进行模糊匹配。你可以填 `CONTAX` + `G2`，也可以直接在 `Model` 填 `CONTAX G2`。
+> - **手动覆盖**：只要你在界面上的输入框填了内容，软件就会**忽略**原图的 EXIF 数据，改用你的输入。
+
+---
+
+## 📷 目前支持的默认图标 (Default Supported Logos)
+
+只要 `Model` 包含以下关键字，即可自动显示官方图标：
+
+| 品牌 (Brand) | 支持型号关键字 (Keywords) |
 | :--- | :--- |
 | **CONTAX** | G1, G2, T, T2, T3, TVS, TVS II, TVS III |
 | **CANON** | A-1, AE-1, R1, R3, R5 II, R6 II, R6 III |
@@ -32,10 +53,12 @@
 | **HASSELBLAD** | 500CM |
 | **KODAK** | RETINA II |
 
-> **💡 如何添加新 Logo？**
-> 1. 准备一张透明背景的 PNG、SVG 或 JPG 图片。
-> 2. 将文件命名为 `品牌-型号.png`（例如 `NIKON-Z9.png`）。
-> 3. 放入 `logos` 文件夹，重新运行软件。
+---
+
+> **� 进阶：如何添加自己的 Logo？**
+> 1. 将文件命名为 `品牌-型号.png`（如 `LEICA-M6.png`）。
+> 2. 放入 EXE 目录下的 `logos` 文件夹。
+> 3. 重启软件，手动在 **Model** 填入 `M6` 即可！
 
 ---
 
