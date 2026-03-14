@@ -69,9 +69,9 @@
 - **[Feature] Pro JPEG Export / 专业 JPEG 导出流程**:
   - EN: Defaulted to ultra-high-resolution (4500px) and near-lossless (Quality 98) JPEG for maximum compatibility.
   - CN: 默认采用 4500px 超清分辨率与 98 几乎无损质量的 JPEG 导出，确保全平台最佳兼容性。
-- **[Performance] Massive Speed Boost / 导出速度飞跃**:
-  - EN: 3x-5x faster rendering compared to legacy PNG pipeline due to highly optimized JPEG encoding.
-  - CN: 得益于优化的 JPEG 编码流程，渲染速度相比以往的 PNG 模式提升了 3-5 倍，渲染缩短至秒级。
+- **[Performance] Rendering Engine Overhaul (PNG to JPEG) / 渲染引擎重构 (PNG 切换为 JPEG)**:
+  - EN: Switched from a high-compression PNG pipeline to an optimized JPEG workflow, delivering a **3x-5x faster rendering speed** while maintaining near-lossless quality.
+  - CN: 渲染引擎由高压缩 PNG 流程全面重构为优化的 JPEG 流程。在保持几乎无损画质的前提下，**渲染速度提升了 3-5 倍**，实现秒级导出。
 - **[Fix] Hardened Shadows (No More White Corners) / 阴影硬化 (彻底解决白角问题)**:
   - EN: Pre-flattens shadows on white background to prevent artifacts when social platforms (e.g., Xiaohongshu) compress images.
   - CN: 实现了阴影本地硬化复合，避免了小红书等平台在压缩透明底图时产生的“白色方块”或阴影丢失问题。
