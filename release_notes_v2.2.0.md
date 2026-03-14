@@ -8,13 +8,19 @@
 *   **EN:** Default window height increased to **1100px** to ensure core buttons are always visible.
 *   **CN:** 核心功能区域全面采用分列排布，窗口高度默认提升至 **1100 像素**，实现了“一眼全览，无需滚动”的目标。
 
-### 2. 无限可能：外置 Logo 管理 / Infinite Possibilities: External Logo Management
+### 2. 精致细节：手工提炼的相机 Logo / Craftsmanship: Hand-Extracted Camera Logos
+v2.2.0 带来了跨越式的图标库更新。
+*   **EN:** This version features a massive expansion of our logo library. 
+*   **EN:** **Authenticity First:** Every logo has been manually extracted and traced from **original vintage brochures and manuals** to ensure historical accuracy, from the classic Mamiya fonts to the unique Rollei scripts.
+*   **CN:** **极致还原**：现已支持 49+ 款机型图标。每一枚 Logo 都是基于**相机原始宣传册、说明书或广告资料**手工抠图与临摹而成，确保了最纯粹的品牌设计感。
+
+### 3. 无限可能：外置 Logo 管理 / Infinite Possibilities: External Logo Management
 终于，你可以无需找我改代码就能添加自己的相机 Logo 了。
 *   **EN:** Finally, you can add your own camera logos without touching a single line of code.
 *   **EN:** **External Folder:** The app now automatically generates a `logos` folder next to the EXE.
 *   **EN:** **Plug & Play:** Just drag your new logos (JPG/PNG/SVG) into the folder and restart. Default logos are automatically protected and extracted on first run.
 *   **CN:** **外置文件夹**：软件会在 EXE 同级目录下自动生成 `logos` 文件夹。
-*   **CN:** **即加即用**：只需将新图标拖进去并重启即可。默认图标会在首次运行时自动释放。
+*   **CN:** **即加即用**：只需将新图标拖进去并重启即可。
 
 ---
 
@@ -43,7 +49,7 @@
 ## 📷 目前支持的默认图标 / Default Supported Logos
 
 ![Logo Full Map](assets/LOGO_FULL_MAP.jpg)
-*Updated: 49 supported cameras with 18% Grey Neutral Reference.*
+*Updated: Comprehensive reference map with 49 supported cameras.*
 
 只要 `Model` 或 `Make` 包含以下关键字，即可自动显示官方图标：
 *   **EN:** Icons are automatically displayed if `Model` or `Make` tags include the following keywords:
