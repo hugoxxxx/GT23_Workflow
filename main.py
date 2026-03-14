@@ -10,6 +10,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from gui.main_window import MainWindow, detect_system_language
 from version import get_version_string
+from core.renderer import bootstrap_logos
 
 
 def main():
@@ -88,6 +89,9 @@ def main():
         photos_out = os.path.join(working_dir, 'photos_out')
         os.makedirs(photos_in, exist_ok=True)
         os.makedirs(photos_out, exist_ok=True)
+        
+        # EN: Bootstrap logos early / CN: 尽早引导并释放 Logo 资源
+        bootstrap_logos()
     except Exception:
         # EN: Fail silently, not critical / CN: 默认失败，不影响使用
         pass

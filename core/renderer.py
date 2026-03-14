@@ -19,7 +19,7 @@ class FilmRenderer:
         
         # EN: Handle external logos (next to EXE) vs internal assets (dev/MEIPASS)
         # CN: 处理外置 Logo 资源（EXE 同级目录）与内置资源（开发环境/MEIPASS）
-        self.logo_dir = self._init_logo_dir()
+        self.logo_dir = bootstrap_logos(self._resolve_path)
         
         self._setup_cairo_dll()
 
@@ -45,38 +45,6 @@ class FilmRenderer:
             
         # 3. EN: Fallback to relative to CWD / CN: 降级回退至 CWD 相对路径
         return relative_path
-
-    def _init_logo_dir(self):
-        """
-        EN: Setup external logo directory if running as EXE, otherwise use project assets.
-        CN: 如果作为 EXE 运行，设置外部 Logo 目录并释放默认资源。核心逻辑：外部优先。
-        """
-        internal_logo_path = self._resolve_path("assets/logo")
-        
-        if getattr(sys, 'frozen', False):
-            # EN: Packaged mode: use 'logos' folder next to the EXE
-            # CN: 打包模式：使用 EXE 同级目录下的 'logos' 文件夹
-            exe_dir = os.path.dirname(sys.executable)
-            external_logo_path = os.path.join(exe_dir, "logos")
-            
-            # EN: Bootstrap: Create external folder and copy defaults if missing
-            # CN: 引导逻辑：如果外部文件夹不存在或为空，则释放内置默认图标
-            if not os.path.exists(external_logo_path) or not os.listdir(external_logo_path):
-                os.makedirs(external_logo_path, exist_ok=True)
-                if os.path.exists(internal_logo_path):
-                    for item in os.listdir(internal_logo_path):
-                        src = os.path.join(internal_logo_path, item)
-                        dst = os.path.join(external_logo_path, item)
-                        if os.path.isfile(src):
-                            try:
-                                shutil.copy2(src, dst)
-                            except:
-                                pass
-            return external_logo_path
-        else:
-            # EN: Development mode: just use project assets directly
-            # CN: 开发模式：直接使用项目内的资源
-            return internal_logo_path
 
     def _setup_cairo_dll(self):
         """EN: Fix for cairosvg DLL loading on Windows. / CN: 修复 Windows 上 cairosvg 的 DLL 加载。"""
@@ -458,3 +426,36 @@ class FilmRenderer:
                 return ImageFont.load_default()
         except:
             return ImageFont.load_default()
+
+def bootstrap_logos(resolver_func=None):
+    """
+    EN: Setup external logo directory if running as EXE.
+    CN: 引导程序：如果作为 EXE 运行，设置外部 Logo 目录并释放默认资源。
+    """
+    if resolver_func:
+        internal_logo_path = resolver_func("assets/logo")
+    else:
+        # EN: Fallback resolver for early bootstrap in main.py
+        # CN: main.py 早期引导使用的路径解析方案
+        if hasattr(sys, '_MEIPASS'):
+            internal_logo_path = os.path.join(sys._MEIPASS, "assets/logo")
+        else:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            internal_logo_path = os.path.join(base_dir, "assets", "logo")
+
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        external_logo_path = os.path.join(exe_dir, "logos")
+        
+        if not os.path.exists(external_logo_path) or not os.listdir(external_logo_path):
+            os.makedirs(external_logo_path, exist_ok=True)
+            if os.path.exists(internal_logo_path):
+                for item in os.listdir(internal_logo_path):
+                    src = os.path.join(internal_logo_path, item)
+                    dst = os.path.join(external_logo_path, item)
+                    if os.path.isfile(src):
+                        try: shutil.copy2(src, dst)
+                        except: pass
+        return external_logo_path
+    else:
+        return internal_logo_path

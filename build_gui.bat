@@ -17,7 +17,7 @@ if errorlevel 1 (
     echo [!] Environment 'gt23' not found / 未找到环境 'gt23'
     echo [*] Please run start_gui.bat once to create it
     echo [*] 请先运行 start_gui.bat 创建环境
-    pause
+    timeout /t 5 >nul
     exit /b 1
 )
 
@@ -25,7 +25,7 @@ echo [*] Activating env 'gt23'...
 call conda activate gt23
 if errorlevel 1 (
     echo [ERROR] Failed to activate env / 激活环境失败
-    pause
+    timeout /t 5 >nul
     exit /b 1
 )
 
@@ -33,7 +33,7 @@ echo [*] Installing/refreshing GUI deps...
 pip install -r requirements-gui.txt
 if errorlevel 1 (
     echo [ERROR] Dependency installation failed / 依赖安装失败
-    pause
+    timeout /t 5 >nul
     exit /b 1
 )
 
@@ -49,7 +49,7 @@ echo [*] Building with PyInstaller...
 pyinstaller build.spec
 if errorlevel 1 (
     echo [ERROR] Build failed / 打包失败
-    pause
+    timeout /t 5 >nul
     exit /b 1
 )
 
@@ -59,4 +59,6 @@ echo      dist\GT23_Workflow\GT23_Workflow.exe
 echo.
 echo [Hint] Pin the new EXE to taskbar to update icon
 echo [提示] 将新的 EXE 固定到任务栏以更新图标
-pause
+echo [提示] 将新的 EXE 固定到任务栏以更新图标
+timeout /t 3 >nul
+exit /b 0

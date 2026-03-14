@@ -38,7 +38,9 @@
 
 ## 📷 目前支持的默认图标 (Default Supported Logos)
 
-只要 `Model` 包含以下关键字，即可自动显示官方图标：
+![Logo Full Map](assets/LOGO_FULL_MAP.jpg)
+
+只要 `Model` 或 `Make` 包含以下关键字，即可自动显示官方图标：
 
 | 品牌 (Brand) | 支持型号关键字 (Keywords) |
 | :--- | :--- |

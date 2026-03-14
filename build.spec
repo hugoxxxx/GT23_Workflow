@@ -50,6 +50,13 @@ def _find_mkl_binaries():
 # CN: 打包 MKL/OpenMP 运行库，修复 "Failed to extract entry: mkl_avx2.2.dll" 问题
 binary_overrides = _find_mkl_binaries()
 
+# EN: Explicitly include python311.dll to prevent "Failed to load Python DLL"
+# CN: 显式包含 python311.dll，防止出现“无法加载 Python DLL”的报错
+root = os.getenv("CONDA_PREFIX", sys.base_prefix)
+python_dll = os.path.join(root, "python311.dll")
+if os.path.exists(python_dll):
+    binary_overrides.append((python_dll, "."))
+
 a = Analysis(
     ['main.py'],
     pathex=[],
@@ -79,23 +86,23 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,                # EN: Disable UPX to prevent DLL load errors / CN: 禁用 UPX 防止 DLL 加载报错
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,          # EN: GUI app (no console) / CN: 图形应用（不显示控制台）
+    console=False,          
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/GT23_Icon.ico',  # EN: Windows exe icon / CN: Windows 可执行文件图标
+    icon='assets/GT23_Icon.ico',
 )
 
 # EN: Output structure:
 # CN: 输出结构：
 #
 # dist/
-#   └── GT23_Workflow.exe  (contains: config/, assets/, core/, apps/)
+#   └── GT23_Workflow.exe  (Self-contained single file)
 #
 # Root directory (user needs to create manually):
 # 根目录（用户需要手动创建）：
