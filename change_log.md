@@ -17,9 +17,9 @@
 - **[Feature] External Logo Management / Logo 资源外置化**:
   - EN: Implemented auto-bootstrapping for logos; the app now automatically creates an external `logos/` folder next to the EXE for easy user customization.
   - CN: 实现了 Logo 资源的外置引导逻辑：程序在打包后首次运行时会自动在 EXE 同级目录下生成 `logos/` 文件夹，方便用户免打包增加自定义 Logo。
-- **[Enhancement] Neutral 18% Grey Reference / 18% 中性灰视觉参考**:
-  - EN: Updated the official Logo Map to use an 18% grey (`RGB 119,119,119`) background for the photo area, providing a more professional color reference.
-  - CN: 更新了官方 Logo 全景图，将内部照片区域改为 18% 中性灰 (`RGB 119,119,119`)，为摄影师提供更专业的色彩参考。
+- **[Enhancement] Professional Neutral Reference / 专业中性预览参考**:
+  - EN: Updated the official Logo Map with a professional neutral background for a clear visual reference of border and label interactions.
+  - CN: 更新了官方 Logo 全景图，采用专业的中性背景，为摄影师提供更清晰的边框与标签交互预览参考。
 - **[Fix] EOS R1 Logo Matching / 修复 EOS R1 图标匹配**:
   - EN: Renamed `EOS R1.png` to `CANON-EOS R1.png` to ensure correct automatic brand-model matching.
   - CN: 将 `EOS R1.png` 更名为 `CANON-EOS R1.png`，确保了该机型能根据 EXIF 数据自动匹配品牌图标。
