@@ -36,3 +36,8 @@ output/
 *.jpeg
 *.png
 *.tiff
+
+# Allow UI assets and logos
+!assets/**/*.png
+!assets/**/*.jpg
+!assets/**/*.jpeg
