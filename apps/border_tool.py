@@ -104,7 +104,7 @@ def run_border_tool():
         input("\n按回车键退出 / Press Enter to exit...")
 
 
-def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None):
+def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None, manual_exif=None):
     """
     EN: Pure logic function for batch border processing (GUI-friendly).
     CN: 批量边框处理纯逻辑函数（GUI友好）。
@@ -117,6 +117,7 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
         progress_callback: Function(current, total, filename) for progress updates
         lang: Language for messages ("zh" or "en")
         custom_layout: Dict with custom params: {"side": 0.04, "top": 0.04, "bottom": 0.13, "font_scale": 0.032}
+        manual_exif: Dict with manual exif overrides (Make, Model, LensModel, ExposureTimeStr, FNumber, ISO)
     
     Returns:
         {
@@ -171,6 +172,12 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
                         data['layout'].update(custom_layout)
                     else:
                         data['layout'] = custom_layout
+                
+                # EN: Apply manual EXIF overrides / CN: 应用手动 EXIF 覆盖
+                if manual_exif:
+                    for k, v in manual_exif.items():
+                        if v:
+                            data[k] = v
                 
                 # EN: Final Rendering / CN: 最终渲染
                 renderer.process_image(img_path, data, output_dir)

@@ -1,5 +1,24 @@
 # Change Log / 变更日志
 
+## [2.2.0] - 2026-03-14
+
+### GUI & User Experience / 界面与用户体验
+- **[Feature] One-Page Layout Optimization / “一页流”布局优化**:
+  - EN: Redesigned settings panel with a wider 750px sidebar and a compact 2-column grid for Advanced Settings and EXIF Overrides.
+  - CN: 重新设计了设置面板：将侧边栏宽度增至 750px，并将高频使用的“高级设置”与“EXIF 覆盖”调整为紧凑的双列网格布局。
+- **[Enhancement] High-DPI & Visibility / 高分屏适配与可见性增强**:
+  - EN: Increased default window height to 1100px to ensure core action buttons are visible without scrolling on most displays.
+  - CN: 将默认窗口高度提升至 1100px，配合宽度调整，实现了核心功能“一眼全览”的目标，大幅减少了垂直滚动操作。
+- **[Fix] UI Stability Hotfix / 界面稳定性修复**:
+  - EN: Fixed an `AttributeError` during language switching and resolved a `TclError` caused by an invalid layout option.
+  - CN: 修复了切换语言时可能出现的属性读取报错，并解决了因非法布局参数导致的启动崩溃问题。
+
+### Assets & Customization / 资源与定制化
+- **[Feature] External Logo Management / Logo 资源外置化**:
+  - EN: Implemented auto-bootstrapping for logos; the app now automatically creates an external `logos/` folder next to the EXE for easy user customization without recompiling.
+  - CN: 实现了 Logo 资源的外置引导逻辑：程序在打包后首次运行时会自动在 EXE 同级目录下生成 `logos/` 文件夹并释放默认图标，支持用户免打包直接增删自定义 Logo。
+
+
 ## [2026-03-13] - v2.1.1 Hotfix
 
 ### Logo Recognition & Assets / 图标识别与资源修复

@@ -72,9 +72,31 @@ class BorderPanel:
         EN: Setup user interface
         CN: 设置用户界面
         """
+        # EN: Create Two-Column Layout Container using PanedWindow / CN: 使用可拖动的 PanedWindow 创建双栏布局容器
+        self.main_container = ttk.Panedwindow(self.parent, orient=tk.HORIZONTAL)
+        self.main_container.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+        
+        # EN: Left panel for scrollable settings and pinned bottom button / CN: 固定宽度的左侧容器
+        self.left_panel = ttk.Frame(self.main_container, width=750)
+        self.left_panel.pack_propagate(False) # Force width to 750px
+        self.main_container.add(self.left_panel, weight=0)
+        
+        # Bottom actions in left side
+        self.bottom_left_frame = ttk.Frame(self.left_panel)
+        self.bottom_left_frame.pack(side=BOTTOM, fill=X, pady=(10, 0))
+        
+        # Scrolled settings area inside the remaining left space
+        from ttkbootstrap.widgets.scrolled import ScrolledFrame
+        self.left_scrolled = ScrolledFrame(self.left_panel, autohide=True)
+        self.left_scrolled.pack(side=TOP, fill=BOTH, expand=YES)
+        self.left_frame = self.left_scrolled # Directly use ScrolledFrame as parent
+        
+        self.right_frame = ttk.Frame(self.main_container)
+        self.main_container.add(self.right_frame, weight=1) # weight=1 allows it to expand
+        
         # EN: Mode selection / CN: 模式选择
         mode_text = "工作模式" if self.lang == "zh" else "Working Mode"
-        self.mode_frame = ttk.Labelframe(self.parent, text=mode_text, padding=10)
+        self.mode_frame = ttk.Labelframe(self.left_frame, text=mode_text, padding=10)
         self.mode_frame.pack(fill=X, pady=(0, 10))
         
         self.mode_var = ttk.StringVar(value="film")
@@ -89,7 +111,7 @@ class BorderPanel:
         
         # EN: Input folder / CN: 输入文件夹
         folder_text = "输入文件夹" if self.lang == "zh" else "Input Folder"
-        self.folder_frame = ttk.Labelframe(self.parent, text=folder_text, padding=10)
+        self.folder_frame = ttk.Labelframe(self.left_frame, text=folder_text, padding=10)
         self.folder_frame.pack(fill=X, pady=(0, 10))
         
         input_row = ttk.Frame(self.folder_frame)
@@ -110,7 +132,7 @@ class BorderPanel:
         
         # EN: Film selection / CN: 胶片选择
         film_selection_text = "胶片选择" if self.lang == "zh" else "Film Selection"
-        self.film_selection_frame = ttk.Labelframe(self.parent, text=film_selection_text, padding=10)
+        self.film_selection_frame = ttk.Labelframe(self.left_frame, text=film_selection_text, padding=10)
         self.film_selection_frame.pack(fill=X, pady=(0, 10))
         
         self.auto_detect_var = ttk.BooleanVar(value=True)
@@ -125,77 +147,107 @@ class BorderPanel:
         manual_text = "手动选择:" if self.lang == "zh" else "Manual Select:"
         self.manual_label = ttk.Label(film_row, text=manual_text)
         self.manual_label.pack(side=LEFT, padx=(0, 10))
-        
         self.film_combo = ttk.Combobox(film_row, state="disabled")
         self.film_combo.pack(side=LEFT, fill=X, expand=YES)
 
         # EN: Advanced settings (border parameters) / CN: 高级设置（边框参数）
         advanced_text = "高级设置" if self.lang == "zh" else "Advanced Settings"
-        self.advanced_frame = ttk.Labelframe(self.parent, text=advanced_text, padding=10)
+        self.advanced_frame = ttk.Labelframe(self.left_frame, text=advanced_text, padding=10)
         self.advanced_frame.pack(fill=X, pady=(0, 10))
-        
-        # EN: Side/Left-Right ratio / CN: 左右边框比例
-        lr_row = ttk.Frame(self.advanced_frame)
-        lr_row.pack(fill=X, pady=5)
-        side_text = "左右边框" if self.lang == "zh" else "Side Margin"
-        side_width = 12 if self.lang == "zh" else 15
-        self.side_label = ttk.Label(lr_row, text=side_text, width=side_width)
-        self.side_label.pack(side=LEFT)
-        self.side_ratio_var = ttk.DoubleVar(value=0.04)
-        side_entry = ttk.Entry(lr_row, textvariable=self.side_ratio_var, width=10)
-        side_entry.pack(side=LEFT, padx=(0, 10))
-        # EN: Bind to preview refresh / CN: 绑定预览刷新
-        self.side_ratio_var.trace('w', lambda *args: self.on_params_changed())
-        
-        top_text = "顶部留白" if self.lang == "zh" else "Top Margin"
-        self.top_label = ttk.Label(lr_row, text=top_text, width=side_width)
-        self.top_label.pack(side=LEFT)
-        self.top_ratio_var = ttk.DoubleVar(value=0.04)
-        top_entry = ttk.Entry(lr_row, textvariable=self.top_ratio_var, width=10)
-        top_entry.pack(side=LEFT)
-        self.top_ratio_var.trace('w', lambda *args: self.on_params_changed())
-        
-        # EN: Bottom ratio / CN: 底部留白比例
-        bottom_row = ttk.Frame(self.advanced_frame)
-        bottom_row.pack(fill=X, pady=5)
-        bottom_text = "底部留白" if self.lang == "zh" else "Bottom Margin"
-        self.bottom_label = ttk.Label(bottom_row, text=bottom_text, width=side_width)
-        self.bottom_label.pack(side=LEFT)
-        self.bottom_ratio_var = ttk.DoubleVar(value=0.13)
-        bottom_entry = ttk.Entry(bottom_row, textvariable=self.bottom_ratio_var, width=10)
-        bottom_entry.pack(side=LEFT, padx=(0, 10))
-        self.bottom_ratio_var.trace('w', lambda *args: self.on_params_changed())
-        
-        font_text = "字体基础" if self.lang == "zh" else "Font Scale"
-        self.font_label = ttk.Label(bottom_row, text=font_text, width=side_width)
-        self.font_label.pack(side=LEFT)
-        self.font_scale_var = ttk.DoubleVar(value=0.032)
-        font_entry = ttk.Entry(bottom_row, textvariable=self.font_scale_var, width=10)
-        font_entry.pack(side=LEFT)
-        self.font_scale_var.trace('w', lambda *args: self.on_params_changed())
+        # EN: Advanced settings components - Restored to 2x2 grid
+        row1 = ttk.Frame(self.advanced_frame)
+        row1.pack(fill=X, pady=2)
+        row2 = ttk.Frame(self.advanced_frame)
+        row2.pack(fill=X, pady=2)
 
-        # EN: Preview area / CN: 预览区域
-        preview_text = "预览（显示文件夹第一张图片）" if self.lang == "zh" else "Preview (First Image in Folder)"
-        self.preview_frame = ttk.Labelframe(self.parent, text=preview_text, padding=10)
-        self.preview_frame.pack(fill=BOTH, pady=(0, 10))
-        no_preview_text = "暂无预览" if self.lang == "zh" else "No preview"
-        self.preview_label = ttk.Label(self.preview_frame, text=no_preview_text, anchor="center")
-        self.preview_label.pack(fill=BOTH, expand=YES)
-        self._preview_img_ref = None  # EN: hold reference to avoid GC / CN: 保存引用防止被回收
+        def add_setting_to_row(parent, label_text, var, side=LEFT):
+            container = ttk.Frame(parent)
+            container.pack(side=side, fill=X, expand=YES)
+            lbl = ttk.Label(container, text=label_text, width=12)
+            lbl.pack(side=LEFT)
+            ttk.Entry(container, textvariable=var, width=12).pack(side=LEFT, padx=(0, 20))
+            var.trace('w', lambda *args: self.on_params_changed())
+            return lbl
+
+        self.side_ratio_var = ttk.DoubleVar(value=0.04)
+        self.side_label = add_setting_to_row(row1, "左右边框" if self.lang == "zh" else "Side Margin", self.side_ratio_var)
         
-        # EN: Process button / CN: 处理按钮
+        self.top_ratio_var = ttk.DoubleVar(value=0.04)
+        self.top_label = add_setting_to_row(row1, "顶部留白" if self.lang == "zh" else "Top Margin", self.top_ratio_var)
+        
+        self.bottom_ratio_var = ttk.DoubleVar(value=0.13)
+        self.bottom_label = add_setting_to_row(row2, "底部留白" if self.lang == "zh" else "Bottom Margin", self.bottom_ratio_var)
+        
+        self.font_scale_var = ttk.DoubleVar(value=0.032)
+        self.font_label = add_setting_to_row(row2, "字体基础" if self.lang == "zh" else "Font Scale", self.font_scale_var)
+
+        # EN: Manual EXIF Overrides / CN: 手动 EXIF 覆盖
+        exif_text = "手动 EXIF 覆盖 (留空则读取原图)" if self.lang == "zh" else "Manual EXIF Overrides (Leave blank to use file EXIF)"
+        self.exif_frame = ttk.Labelframe(self.left_frame, text=exif_text, padding=5)
+        self.exif_frame.pack(fill=X, pady=(0, 5))
+
+        # Variables for EXIF overrides
+        self.exif_make_var = ttk.StringVar()
+        self.exif_model_var = ttk.StringVar()
+        self.exif_lens_var = ttk.StringVar()
+        self.exif_shutter_var = ttk.StringVar()
+        self.exif_aperture_var = ttk.StringVar()
+        self.exif_iso_var = ttk.StringVar()
+
+        # Layout grids - Restored to 3x2 grid
+        ex_row1 = ttk.Frame(self.exif_frame)
+        ex_row1.pack(fill=X, pady=2)
+        ex_row2 = ttk.Frame(self.exif_frame)
+        ex_row2.pack(fill=X, pady=2)
+        ex_row3 = ttk.Frame(self.exif_frame)
+        ex_row3.pack(fill=X, pady=2)
+
+        def add_exif_field_to_row(parent, label_text, var):
+            container = ttk.Frame(parent)
+            container.pack(side=LEFT, fill=X, expand=YES)
+            ttk.Label(container, text=label_text, width=8).pack(side=LEFT)
+            ttk.Entry(container, textvariable=var, width=18).pack(side=LEFT, padx=(0, 15), fill=X, expand=YES)
+            var.trace('w', lambda *args: self.on_params_changed())
+
+        add_exif_field_to_row(ex_row1, "Make:", self.exif_make_var)
+        add_exif_field_to_row(ex_row1, "Model:", self.exif_model_var)
+        add_exif_field_to_row(ex_row2, "Shutter:", self.exif_shutter_var)
+        add_exif_field_to_row(ex_row2, "Aperture:", self.exif_aperture_var)
+        add_exif_field_to_row(ex_row3, "ISO:", self.exif_iso_var)
+        
+        # Lens field gets more space
+        add_exif_field_to_row(ex_row3, "Lens:", self.exif_lens_var)
+
+        # EN: Process button / CN: 处理按钮 (Pinned to left frame bottom)
         process_text = "开始处理" if self.lang == "zh" else "Start Processing"
-        self.process_button = ttk.Button(self.parent, text=process_text, 
+        self.process_button = ttk.Button(self.bottom_left_frame, text=process_text, 
                                          command=self.start_processing, bootstyle="success", width=20)
-        self.process_button.pack(pady=10)
+        self.process_button.pack(pady=(5, 5))
         
-        self.progress = ttk.Progressbar(self.parent, mode="determinate", bootstyle="success-striped")
-        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress = ttk.Progressbar(self.bottom_left_frame, mode="determinate", bootstyle="success-striped")
+        self.progress.pack(fill=X, pady=(0, 5))
         self.progress.pack_forget()  # Hide initially
+
+        # EN: Preview area / CN: 预览区域 (Now in right_frame)
+        preview_text = "预览（显示文件夹第一张图片）" if self.lang == "zh" else "Preview (First Image in Folder)"
+        self.preview_frame = ttk.Labelframe(self.right_frame, text=preview_text, padding=10)
+        self.preview_frame.pack(fill=BOTH, expand=YES, pady=(0, 10))
         
-        # EN: Log output / CN: 日志输出
+        # EN: Responsive Canvas replacing fixed Label / CN: 响应式 Canvas 替换固定 Label
+        bg_color = ttk.Style().lookup("TFrame", "background")
+        self.preview_canvas = tk.Canvas(self.preview_frame, bg=bg_color, highlightthickness=0)
+        self.preview_canvas.pack(fill=BOTH, expand=YES)
+        self.preview_canvas.bind("<Configure>", self.on_preview_resize)
+        
+        self._current_preview_pil = None
+        self._preview_img_ref = None
+        self._is_loading_preview = False
+        self._preview_error_msg = None
+        self._last_canvas_size = (0, 0)
+        
+        # EN: Log output / CN: 日志输出 (Now in right_frame)
         log_text = "处理日志" if self.lang == "zh" else "Processing Log"
-        self.log_frame = ttk.Labelframe(self.parent, text=log_text, padding=5)
+        self.log_frame = ttk.Labelframe(self.right_frame, text=log_text, padding=5)
         self.log_frame.pack(fill=BOTH, expand=YES)
         
         self.log_text = scrolledtext.ScrolledText(self.log_frame, height=15, wrap=tk.WORD, state="disabled")
@@ -203,6 +255,37 @@ class BorderPanel:
         
         # EN: Auto-detect photos_in / CN: 自动检测 photos_in
         self.auto_detect_photos_in()
+    
+    def redraw_preview(self):
+        """EN: Redraw the preview canvas / CN: 重绘预览画布"""
+        if getattr(self, 'preview_canvas', None) is None: return
+        w = self.preview_canvas.winfo_width()
+        h = self.preview_canvas.winfo_height()
+        if w <= 10 or h <= 10: return
+        
+        self.preview_canvas.delete("all")
+        
+        if getattr(self, '_current_preview_pil', None):
+            img = self._current_preview_pil.copy()
+            # Fast downscale preserving aspect ratio
+            img.thumbnail((w, h), Image.Resampling.LANCZOS)
+            self._preview_img_ref = ImageTk.PhotoImage(img)
+            self.preview_canvas.create_image(w//2, h//2, image=self._preview_img_ref, anchor="center")
+        else:
+            txt = "暂无预览" if self.lang == "zh" else "No preview"
+            if getattr(self, '_is_loading_preview', False):
+                txt = "正在生成预览..." if self.lang == "zh" else "Rendering preview..."
+            elif getattr(self, '_preview_error_msg', None):
+                txt = self._preview_error_msg
+            self.preview_canvas.create_text(w//2, h//2, text=txt, fill="gray", anchor="center")
+
+    def on_preview_resize(self, event):
+        """EN: Handle preview area resize / CN: 处理预览区域缩放"""
+        w, h = event.width, event.height
+        if getattr(self, '_last_canvas_size', None) == (w, h):
+            return
+        self._last_canvas_size = (w, h)
+        self.redraw_preview()
     
     def update_language(self, lang):
         """
@@ -230,9 +313,9 @@ class BorderPanel:
             self.bottom_label.configure(width=12)
             self.font_label.config(text="字体基础")
             self.font_label.configure(width=12)
+            self.exif_frame.config(text="手动 EXIF 覆盖 (留空则读取原图)")
             self.preview_frame.config(text="预览（显示文件夹第一张图片）")
-            if not self._preview_img_ref:
-                self.preview_label.config(text="暂无预览")
+            self.redraw_preview()
             self.process_button.config(text="开始处理")
             self.log_frame.config(text="处理日志")
             self.update_film_combo_values()
@@ -255,9 +338,9 @@ class BorderPanel:
             self.bottom_label.configure(width=15)
             self.font_label.config(text="Font Scale")
             self.font_label.configure(width=15)
+            self.exif_frame.config(text="Manual EXIF Overrides (Leave blank to use file EXIF)")
             self.preview_frame.config(text="Preview (First Image in Folder)")
-            if not self._preview_img_ref:
-                self.preview_label.config(text="No preview")
+            self.redraw_preview()
             self.process_button.config(text="Start Processing")
             self.log_frame.config(text="Processing Log")
             self.update_film_combo_values()
@@ -439,8 +522,10 @@ class BorderPanel:
         try:
             images = sorted([f for f in os.listdir(folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
             if not images:
-                self.preview_label.config(text="暂无预览 / No preview", image="")
-                self._preview_img_ref = None
+                self._current_preview_pil = None
+                self._is_loading_preview = False
+                self._preview_error_msg = None
+                self.redraw_preview()
                 return
 
             first_img = os.path.join(folder, images[0])
@@ -462,9 +547,10 @@ class BorderPanel:
             self.preview_job_id += 1
             job_id = self.preview_job_id
 
-            loading_text = "正在生成预览..." if self.lang == "zh" else "Rendering preview..."
-            self.preview_label.config(text=loading_text, image="")
-            self._preview_img_ref = None
+            self._is_loading_preview = True
+            self._current_preview_pil = None
+            self._preview_error_msg = None
+            self.redraw_preview()
 
             def worker(img_path, job_mark, is_digital_mode, manual_film_keyword):
                 temp_dir = None
@@ -485,6 +571,19 @@ class BorderPanel:
                     else:
                         data['layout'] = custom_layout
                     
+                    # EN: Apply manual EXIF overrides / CN: 应用手动 EXIF 覆盖
+                    manual_exif = {
+                        'Make': self.exif_make_var.get().strip(),
+                        'Model': self.exif_model_var.get().strip(),
+                        'LensModel': self.exif_lens_var.get().strip(),
+                        'ExposureTimeStr': self.exif_shutter_var.get().strip(),
+                        'FNumber': self.exif_aperture_var.get().strip(),
+                        'ISO': self.exif_iso_var.get().strip()
+                    }
+                    for k, v in manual_exif.items():
+                        if v:
+                            data[k] = v
+
                     renderer = FilmRenderer()
                     # EN: Downscale target edge for faster preview while keeping shadow / CN: 降低分辨率加快预览同时保留阴影
                     out_name = renderer.process_image(img_path, data, temp_dir, target_long_edge=1200)
@@ -495,14 +594,16 @@ class BorderPanel:
 
                     with Image.open(out_path) as img:
                         img = img.convert("RGB")
-                        img.thumbnail((800, 600))
-                        tk_img = ImageTk.PhotoImage(img)
+                        # Keep high-res bounds
+                        img.thumbnail((2000, 2000))
+                        img_copy = img.copy()
 
                     def apply_image():
                         if job_mark != getattr(self, 'preview_job_id', None):
                             return
-                        self.preview_label.config(image=tk_img, text="")
-                        self._preview_img_ref = tk_img
+                        self._is_loading_preview = False
+                        self._current_preview_pil = img_copy
+                        self.redraw_preview()
 
                     self.parent.after(0, apply_image)
 
@@ -516,13 +617,16 @@ class BorderPanel:
                             # EN: Fallback to raw thumbnail if render fails / CN: 渲染失败时降级为原图缩略图
                             with Image.open(img_path) as img:
                                 img = img.convert("RGB")
-                                img.thumbnail((800, 600))
-                                tk_img = ImageTk.PhotoImage(img)
-                            self.preview_label.config(image=tk_img, text="")
-                            self._preview_img_ref = tk_img
+                                img.thumbnail((2000, 2000))
+                                img_copy = img.copy()
+                            self._is_loading_preview = False
+                            self._current_preview_pil = img_copy
+                            self.redraw_preview()
                         except Exception:
-                            self.preview_label.config(text=fallback, image="")
-                            self._preview_img_ref = None
+                            self._is_loading_preview = False
+                            self._current_preview_pil = None
+                            self._preview_error_msg = fallback
+                            self.redraw_preview()
 
                     self.parent.after(0, apply_error)
 
@@ -635,14 +739,24 @@ class BorderPanel:
             "font_scale": self.font_scale_var.get()
         }
         
+        # EN: Collect manual EXIF overrides / CN: 收集手动 EXIF 覆盖
+        manual_exif = {
+            'Make': self.exif_make_var.get().strip(),
+            'Model': self.exif_model_var.get().strip(),
+            'LensModel': self.exif_lens_var.get().strip(),
+            'ExposureTimeStr': self.exif_shutter_var.get().strip(),
+            'FNumber': self.exif_aperture_var.get().strip(),
+            'ISO': self.exif_iso_var.get().strip()
+        }
+        
         self.worker_thread = threading.Thread(
             target=self.process_worker,
-            args=(input_folder, output_folder, is_digital, manual_film, custom_layout),
+            args=(input_folder, output_folder, is_digital, manual_film, custom_layout, manual_exif),
             daemon=True
         )
         self.worker_thread.start()
     
-    def process_worker(self, input_dir, output_dir, is_digital, manual_film, custom_layout=None):
+    def process_worker(self, input_dir, output_dir, is_digital, manual_film, custom_layout=None, manual_exif=None):
         """
         EN: Worker thread for processing
         CN: 处理工作线程
@@ -655,7 +769,8 @@ class BorderPanel:
                 self.parent.after(0, lambda p=percent: self.progress.config(value=p))
                 self.parent.after(0, lambda c=current, t=total, f=filename: self.log(f"[{c}/{t}] {f}"))
             
-            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback, lang=self.lang, custom_layout=custom_layout)
+            # Note: We added manual_exif to apps/border_tool.py in a subsequent step
+            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback, lang=self.lang, custom_layout=custom_layout, manual_exif=manual_exif)
             self.parent.after(0, lambda r=result: self.on_processing_complete(r))
         except Exception as e:
             import traceback

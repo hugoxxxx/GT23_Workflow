@@ -43,8 +43,30 @@ class ContactPanel:
         EN: Setup user interface
         CN: 设置用户界面
         """
+        # EN: Create Two-Column Layout Container using PanedWindow / CN: 使用可拖动的 PanedWindow 创建双栏布局容器
+        self.main_container = ttk.Panedwindow(self.parent, orient=tk.HORIZONTAL)
+        self.main_container.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+        
+        # EN: Left panel for scrollable settings and pinned bottom button / CN: 固定宽度的左侧容器
+        self.left_panel = ttk.Frame(self.main_container, width=750)
+        self.left_panel.pack_propagate(False)
+        self.main_container.add(self.left_panel, weight=0)
+        
+        # Bottom actions in left side
+        self.bottom_left_frame = ttk.Frame(self.left_panel)
+        self.bottom_left_frame.pack(side=BOTTOM, fill=X, pady=(10, 0))
+
+        # Scrolled settings area inside the remaining left space
+        from ttkbootstrap.widgets.scrolled import ScrolledFrame
+        self.left_scrolled = ScrolledFrame(self.left_panel, autohide=True)
+        self.left_scrolled.pack(side=TOP, fill=BOTH, expand=YES)
+        self.left_frame = self.left_scrolled # Directly use ScrolledFrame as parent
+        
+        self.right_frame = ttk.Frame(self.main_container)
+        self.main_container.add(self.right_frame, weight=1)
+
         # EN: Create a container for format and orientation side-by-side / CN: 创建格式和方向的并排容器
-        top_container = ttk.Frame(self.parent)
+        top_container = ttk.Frame(self.left_frame)
         top_container.pack(fill=X, pady=(0, 10))
         
         # EN: Format display (auto-detected, read-only) / CN: 画幅显示（自动检测，只读）
@@ -62,6 +84,7 @@ class ContactPanel:
         # EN: 645 orientation selection (show only when 645 is detected) / CN: 645方向选择（仅在检测到645时显示）
         orient_text = "645 方向" if self.lang == "zh" else "645 Orientation"
         self.orientation_frame = ttk.Labelframe(top_container, text=orient_text, padding=10)
+        self.orientation_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 0))
         self.orientation_frame.pack_forget()  # Hide initially / 初始隐藏
         
         self.orientation_var = ttk.StringVar(value="L")
@@ -80,7 +103,7 @@ class ContactPanel:
         
         # EN: Input folder / CN: 输入文件夹
         folder_text = "输入文件夹" if self.lang == "zh" else "Input Folder"
-        self.folder_frame = ttk.Labelframe(self.parent, text=folder_text, padding=10)
+        self.folder_frame = ttk.Labelframe(self.left_frame, text=folder_text, padding=10)
         self.folder_frame.pack(fill=X, pady=(0, 10))
         
         input_row = ttk.Frame(self.folder_frame)
@@ -107,7 +130,7 @@ class ContactPanel:
         
         # EN: Film selection / CN: 胶片选择
         film_info_text = "胶片信息" if self.lang == "zh" else "Film Information"
-        self.film_info_frame = ttk.Labelframe(self.parent, text=film_info_text, padding=10)
+        self.film_info_frame = ttk.Labelframe(self.left_frame, text=film_info_text, padding=10)
         self.film_info_frame.pack(fill=X, pady=(0, 10))
         
         self.auto_detect_var = ttk.BooleanVar(value=True)
@@ -150,18 +173,18 @@ class ContactPanel:
         
         # EN: Generate button / CN: 生成按钮
         generate_text = "全卷缩略图" if self.lang == "zh" else "Contact Sheet"
-        self.generate_button = ttk.Button(self.parent, text=generate_text, 
+        self.generate_button = ttk.Button(self.bottom_left_frame, text=generate_text, 
                                          command=self.start_generation, bootstyle="success", width=30)
-        self.generate_button.pack(pady=10)
+        self.generate_button.pack(pady=(5, 5))
         
-        self.progress = ttk.Progressbar(self.parent, mode="indeterminate", bootstyle="success-striped")
-        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress = ttk.Progressbar(self.bottom_left_frame, mode="indeterminate", bootstyle="success-striped")
+        self.progress.pack(fill=X, pady=(0, 5))
         self.progress.pack_forget()  # Hide initially
         
-        # EN: Log output / CN: 日志输出
+        # EN: Log output / CN: 日志输出 (Now in right_frame)
         log_text = "生成日志" if self.lang == "zh" else "Generation Log"
-        self.log_frame = ttk.Labelframe(self.parent, text=log_text, padding=5)
-        self.log_frame.pack(fill=BOTH, expand=YES, pady=(10, 0))
+        self.log_frame = ttk.Labelframe(self.right_frame, text=log_text, padding=5)
+        self.log_frame.pack(fill=BOTH, expand=YES, pady=(0, 10))
         
         # EN: Set minimum height for log area / CN: 设置日志区域最小高度
         self.log_text = scrolledtext.ScrolledText(self.log_frame, height=25, wrap=tk.WORD, state="disabled")

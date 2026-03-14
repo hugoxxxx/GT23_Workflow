@@ -26,7 +26,7 @@ def main():
     app = ttk.Window(
         title=_title,
         themename="cosmo",  # Modern theme (others: darkly, superhero, solar, cyborg, vapor, journal)
-        size=(1100, 1600),  # EN: Further increase window height for preview / CN: 增大窗口高度方便预览
+        size=(1400, 1100),   # EN: Default window size (scalable) / CN: 默认窗口大小（支持自适应缩放）
         resizable=(True, True)
     )
     
