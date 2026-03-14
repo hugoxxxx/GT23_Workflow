@@ -15,8 +15,22 @@
 
 ### Assets & Customization / 资源与定制化
 - **[Feature] External Logo Management / Logo 资源外置化**:
-  - EN: Implemented auto-bootstrapping for logos; the app now automatically creates an external `logos/` folder next to the EXE for easy user customization without recompiling.
-  - CN: 实现了 Logo 资源的外置引导逻辑：程序在打包后首次运行时会自动在 EXE 同级目录下生成 `logos/` 文件夹并释放默认图标，支持用户免打包直接增删自定义 Logo。
+  - EN: Implemented auto-bootstrapping for logos; the app now automatically creates an external `logos/` folder next to the EXE for easy user customization.
+  - CN: 实现了 Logo 资源的外置引导逻辑：程序在打包后首次运行时会自动在 EXE 同级目录下生成 `logos/` 文件夹，方便用户免打包增加自定义 Logo。
+- **[Enhancement] Neutral 18% Grey Reference / 18% 中性灰视觉参考**:
+  - EN: Updated the official Logo Map to use an 18% grey (`RGB 119,119,119`) background for the photo area, providing a more professional color reference.
+  - CN: 更新了官方 Logo 全景图，将内部照片区域改为 18% 中性灰 (`RGB 119,119,119`)，为摄影师提供更专业的色彩参考。
+- **[Fix] EOS R1 Logo Matching / 修复 EOS R1 图标匹配**:
+  - EN: Renamed `EOS R1.png` to `CANON-EOS R1.png` to ensure correct automatic brand-model matching.
+  - CN: 将 `EOS R1.png` 更名为 `CANON-EOS R1.png`，确保了该机型能根据 EXIF 数据自动匹配品牌图标。
+
+### Build & Deployment / 构建与部署
+- **[Feature] Versioned EXE Naming / EXE 文件名自动化版本管理**:
+  - EN: Output executable now automatically includes version suffixes (e.g., `GT23_Workflow_v2.2.0.exe`).
+  - CN: 生成的可执行文件现在会自动包含版本号后缀（如 `GT23_Workflow_v2.2.0.exe`），方便用户管理不同版本的安装包。
+- **[Enhancement] Streamlined Build Script / 优化打包批处理**:
+  - EN: Removed blocking `pause` commands in `build_gui.bat` for smoother automation and cleared file locks before building.
+  - CN: 移除了 `build_gui.bat` 中的阻塞性 `pause` 命令，并在构建前自动清理文件占用，提升了打包过程的连贯性。
 
 
 ## [2026-03-13] - v2.1.1 Hotfix

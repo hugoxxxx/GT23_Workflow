@@ -5,6 +5,11 @@ import os
 import sys
 import glob
 
+# EN: Add current directory to path to allow importing version
+# CN: 将当前目录添加到路径以允许导入 version 模块
+sys.path.append(os.getcwd())
+import version
+
 block_cipher = None
 
 # EN: Data files to bundle into exe (config, assets, etc.)
@@ -82,7 +87,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='GT23_Workflow',
+    name=f'GT23_Workflow_{version.get_version_string()}',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

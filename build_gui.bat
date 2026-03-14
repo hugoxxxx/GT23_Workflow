@@ -39,9 +39,9 @@ if errorlevel 1 (
 
 echo [*] Cleaning previous build outputs...
 echo [*] Checking running instance and unlocking files...
-taskkill /F /IM GT23_Workflow.exe >nul 2>&1
+taskkill /F /IM GT23_Workflow*.exe >nul 2>&1
 timeout /t 1 >nul
-if exist dist\GT23_Workflow.exe del /F /Q dist\GT23_Workflow.exe
+if exist dist\GT23_Workflow*.exe del /F /Q dist\GT23_Workflow*.exe
 if exist build rmdir /S /Q build
 if exist dist rmdir /S /Q dist
 
@@ -55,10 +55,9 @@ if errorlevel 1 (
 
 echo.
 echo [OK] Build completed. Output:
-echo      dist\GT23_Workflow\GT23_Workflow.exe
+echo      dist\GT23_Workflow\GT23_Workflow_*.exe
 echo.
 echo [Hint] Pin the new EXE to taskbar to update icon
-echo [提示] 将新的 EXE 固定到任务栏以更新图标
 echo [提示] 将新的 EXE 固定到任务栏以更新图标
 timeout /t 3 >nul
 exit /b 0
