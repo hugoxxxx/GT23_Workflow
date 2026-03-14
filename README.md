@@ -140,6 +140,8 @@ Steps | 步骤：
 - [x] **v1.0 - v1.8**: Basic layout, Dynamic EXIF, Auto‑rotation | 完成基础排版、动态 EXIF、自动旋转
 - [x] **v1.9 - v2.0**: Multi‑format (66/645/67/135), film library expansion, sprocket rendering, EXE packaging | 多画幅、胶片库扩展、齿孔渲染、EXE 封包
 - [x] **v2.0.0**: Ship GUI desktop app with real-time preview, EXIF/date controls | 正式发布 GUI 桌面版，支持实时预览、EXIF/日期控制
+- [x] **v2.1.x**: Vector Logo engine, Zeiss T* red highlight, Ink BBox alignment, 5x performance boost | 矢量图标引擎、蔡司 T* 红色高亮、像素级对齐及 5 倍渲染提速
+- [x] **v2.2.0**: Hand-extracted logo library (49+), Redesigned UI, External logo folder | 49+ 机型手工提炼图标库、全新双列布局、外置 Logo 文件夹
 - [ ] **Future**: No further plans at this time | 远期暂无规划
 
 ---
