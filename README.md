@@ -74,7 +74,11 @@ Notes | 说明:
 * **Fixed Frame Count Indicator | 固定张数黑条提示**:
     * EN: The black film leader strip is **always generated** according to film format spec (135: 36 frames, 645: 16 frames, 66: 12 frames, 67: 10 frames), **even if fewer photos are merged**. This serves as a visual reminder of how many frames were wasted or not exposed. | CN: 黑色胶片领导条严格按照胶片规格生成（135：36张、645：16张、66：12张、67：10张），**即使合并的照片数量不足也会完整显示**。这可以直观地提醒摄影师一卷有多少张废片或未曝光的底片。
 
-* **Auto-Rotation**: Intelligent orientation handling for consistent visual flow. | CN: **自动旋转**：智能处理图像方向，确保版面流畅。
+* **High-Performance Rendering Engine (v2.1+) | 高性能渲染引擎**:
+    - EN: **PNG-to-JPEG Transition**: Revolutionized rendering speed (up to 5x faster) by switching to an optimized JPEG pipeline. Specifically hardened for social platforms (e.g., Xiaohongshu) to eliminate "white corner" artifacts. Defaulted to ultra-high-resolution (4500px) at near-lossless quality (98).
+    - CN: **从 PNG 转向 JPEG**：通过重构渲染引擎实现了 5 倍左右的性能飞跃。针对小红书等平台完成了“阴影硬化”处理，彻底杜绝压缩白角问题。默认 4500px 超清分辨率与 98 几乎无损质量。
+
+* **Auto-Rotation**: Intelligent orientation handling for consistent visual flow. | **自动旋转**：智能处理图像方向，确保版面流畅。
 
 ---
 
