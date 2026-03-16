@@ -12,7 +12,7 @@
 v2.2.0 带来了跨越式的图标库更新。
 *   **EN:** This version features a massive expansion of our logo library. 
 *   **EN:** **Authenticity First:** Every logo has been manually extracted and traced from **original vintage brochures and manuals** to ensure historical accuracy, from the classic Mamiya fonts to the unique Rollei scripts.
-*   **CN:** **极致还原**：现已支持 49+ 款机型图标。每一枚 Logo 都是基于**相机原始宣传册、说明书或广告资料**手工抠图与临摹而成，确保了最纯粹的品牌设计感。
+*   **CN:** **极致还原**：现已支持 80+ 款机型图标。每一枚 Logo 都是基于**相机原始宣传册、说明书或广告资料**手工抠图与临摹而成，确保了最纯粹的品牌设计感。
 
 ### 3. 无限可能：外置 Logo 管理 / Infinite Possibilities: External Logo Management
 终于，你可以无需找我改代码就能添加自己的相机 Logo 了。
@@ -49,7 +49,7 @@ v2.2.0 带来了跨越式的图标库更新。
 ## 📷 目前支持的默认图标 / Default Supported Logos
 
 ![Logo Full Map](assets/LOGO_FULL_MAP.jpg)
-*Updated: Comprehensive reference map with 49 supported cameras.*
+*Updated: Comprehensive reference map with 80+ supported cameras.*
 
 只要 `Model` 或 `Make` 包含以下关键字，即可自动显示官方图标：
 *   **EN:** Icons are automatically displayed if `Model` or `Make` tags include the following keywords:
