@@ -3,6 +3,9 @@
 ## [2.2.0] - 2026-03-14
 
 ### GUI & User Experience / 界面与用户体验
+- **[Documentation] Android Migration Master Spec / Android 移植终极规范**:
+  - EN: Consolidated all migration guides into a single, granular, bilingual master specification.
+  - CN: 将所有迁移指南整合为一份详尽的中英双语终极规范，涵盖所有 120/135 画幅渲染逻辑。
 - **[Feature] One-Page Layout Optimization / “一页流”布局优化**:
   - EN: Redesigned settings panel with a wider 750px sidebar and a compact 2-column grid for Advanced Settings and EXIF Overrides.
   - CN: 重新设计了设置面板：将侧边栏宽度增至 750px，并将高频使用的“高级设置”与“EXIF 覆盖”调整为紧凑的双列网格布局。
