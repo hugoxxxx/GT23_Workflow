@@ -8,6 +8,20 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
+## 🔥 What's New — v2.2.0 (Handmade Logo Edition)
+
+- **Hand-Extracted Logo Library (80+) | 手工提炼机型图标库**
+   - EN: Every logo has been manually extracted and traced from **original vintage brochures and manuals** to ensure historical accuracy and "handmade" craftsmanship.
+   - CN: 现已支持 80+ 款机型图标。每一枚 Logo 都是从**相机原始宣传册、说明书或广告资料**中手工抠图与临摹而成，追求极致的时代还原感。
+
+- **Redesigned GUI Sidebar (750px) | 全新 750px 宽侧边栏布局**
+   - EN: Sidebar widened to 750px with a full-grid layout. 90% of settings are now visible in a single frame, eliminating the need for scrolling.
+   - CN: 控制侧边栏拓宽至 750 像素并引入全网格布局，实现“一眼全览，无需滚动”的高效交互体验。
+
+- **External Logo Management | 外置 Logo 文件夹管理**
+   - EN: Automatically generates a `logos` folder next to the EXE. Add your own logos (JPG/PNG/SVG) without modifying code.
+   - CN: 自动在 EXE 同级目录生成 `logos` 文件夹，支持即加即用的自定义图标扩展。
+
 ## 🔥 What's New — v2.0.0 (GUI Edition)
 
 - **GUI Released | 正式发布 GUI**
@@ -63,6 +77,10 @@ Notes | 说明:
 
 * **Dynamic DataBack | 动态背印**:
     * EN: Automatically reads EXIF (Date, Aperture, Shutter, Film stock) for **each individual frame**. Simulated glowing orange LED/Segment font styles. | CN: 自动读取每一帧的 EXIF 信息（日期、光圈、快门、胶片型号）。采用仿真 LED 橙色七段数码管字体。
+
+* **Hand-Extracted Logo Library | 手工提炼图标库 (v2.2)**:
+    - EN: **Authenticity First**: A massive expansion to 80+ logos. Unlike generic fonts, these are meticulously traced from **original vintage documentation** (Mamiya, Rollei, Contax, etc.) to capture the soul of each camera brand.
+    - CN: **极致还原**：跨越式更新至 80+ 款机型。不同于通用的电脑字体，每一格图标都来自**相机原始时代的纸质说明书与宣传册**，手工勾勒，留住每一份品牌灵魂。
 
 * **Expanded Film Library | 扩展胶片库**:
     * EN: Now supports a significantly larger film database, covering more film stock variants and brands with accurate EdgeCode and color profiles. | CN: 现已支持更大规模的胶片库，涵盖更多胶片品牌与型号，包含准确的喷码与视觉颜色配置。
@@ -145,7 +163,7 @@ Steps | 步骤：
 - [x] **v1.9 - v2.0**: Multi‑format (66/645/67/135), film library expansion, sprocket rendering, EXE packaging | 多画幅、胶片库扩展、齿孔渲染、EXE 封包
 - [x] **v2.0.0**: Ship GUI desktop app with real-time preview, EXIF/date controls | 正式发布 GUI 桌面版，支持实时预览、EXIF/日期控制
 - [x] **v2.1.x**: PNG-to-JPEG transition (5x speed boost), Vector Logo engine, Zeiss T* red highlight, Ink BBox alignment | 切换为 JPEG 渲染（提速 5 倍）、矢量图标引擎、蔡司 T* 红色高亮、像素级对齐
-- [x] **v2.2.0**: Hand-extracted logo library (49+), Redesigned UI, External logo folder | 49+ 机型手工提炼图标库、全新双列布局、外置 Logo 文件夹
+- [x] **v2.2.0**: Hand-extracted logo library (80+), Redesigned UI, External logo folder | 80+ 机型手工提炼图标库、全新双列布局、外置 Logo 文件夹
 - [ ] **Future**: No further plans at this time | 远期暂无规划
 
 ---
