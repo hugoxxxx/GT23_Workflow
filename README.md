@@ -10,9 +10,9 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ## 🔥 What's New — v2.2.0 (Handmade Logo Edition)
 
-- **Hand-Extracted Logo Library- 📸 **120+ 张全手工临摹相机 Logo**：深度还原经典型号视觉特征。
+- 📸 **120+ 张全手工临摹相机 Logo**：深度还原经典型号视觉特征。
    - EN: Every logo has been manually extracted and traced from **original vintage brochures and manuals** to ensure historical accuracy and "handmade" craftsmanship.
-   - CN: 现已支持 80+ 款机型图标。每一枚 Logo 都是从**相机原始宣传册、说明书或广告资料**中手工抠图与临摹而成，追求极致的时代还原感。
+   - CN: 现已支持 120+ 款机型图标。每一枚 Logo 都是从**相机原始宣传册、说明书或广告资料**中手工抠图与临摹而成，追求极致的时代还原感。
 
 - **Redesigned GUI Sidebar (750px) | 全新 750px 宽侧边栏布局**
    - EN: Sidebar widened to 750px with a full-grid layout. 90% of settings are now visible in a single frame, eliminating the need for scrolling.
