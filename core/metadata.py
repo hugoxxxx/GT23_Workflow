@@ -5,6 +5,7 @@ import json
 import exifread
 from fractions import Fraction
 from PIL import Image
+from utils.config_manager import config_manager
 
 class MetadataHandler:
     def __init__(self, layout_config='layouts.json', films_config='films.json', contact_config='contact_layouts.json'):
@@ -59,6 +60,12 @@ class MetadataHandler:
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
         candidates = []
+
+        # 0. EN: Check User-Defined Path first / CN: 极高优先级：用户自定义路径
+        custom_base = config_manager.get("custom_asset_path")
+        if custom_base and os.path.exists(custom_base):
+            candidates.append(os.path.join(custom_base, "films", filename))
+            candidates.append(os.path.join(custom_base, filename))
 
         # 1. EN: Check in decoupled Assets Repo / CN: 检查解耦的资产仓库 (GT23_Assets/films)
         # Note: The 'films' subfolder is specific to film configs, other configs might be directly under GT23_Assets

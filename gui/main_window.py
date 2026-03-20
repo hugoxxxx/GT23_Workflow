@@ -16,7 +16,11 @@ from ttkbootstrap.constants import *
 
 from gui.panels.border_panel import BorderPanel
 from gui.panels.contact_panel import ContactPanel
-from version import get_version_string
+from utils.asset_sync import sync_assets_async
+from version import get_version_string, __version__, __author__, __email__
+import tkinter.messagebox as messagebox
+from tkinter import filedialog
+from utils.config_manager import config_manager
 
 
 def detect_system_language():
@@ -107,7 +111,10 @@ class MainWindow:
         
         open_label = "打开工作目录" if self.lang == "zh" else "Open Folder"
         exit_label = "退出" if self.lang == "zh" else "Exit"
+        settings_label = "设置" if self.lang == "zh" else "Settings"
+        
         self.file_menu.add_command(label=open_label, command=self.open_working_folder)
+        self.file_menu.add_command(label=settings_label, command=self.show_settings)
         self.file_menu.add_separator()
         self.file_menu.add_command(label=exit_label, command=self.root.quit)
         
@@ -125,6 +132,10 @@ class MainWindow:
         
         about_label = "关于" if self.lang == "zh" else "About"
         github_label = "GitHub 仓库" if self.lang == "zh" else "GitHub Repository"
+        sync_label = "同步边框资源" if self.lang == "zh" else "Sync Border Assets"
+        
+        self.help_menu.add_command(label=sync_label, command=self.sync_assets_command)
+        self.help_menu.add_separator()
         self.help_menu.add_command(label=about_label, command=self.show_about)
         self.help_menu.add_command(label=github_label, command=self.open_github)
     
@@ -143,10 +154,12 @@ class MainWindow:
             self.menubar.entryconfig(2, label="帮助")
             
             self.file_menu.entryconfig(0, label="打开工作目录")
-            self.file_menu.entryconfig(2, label="退出")
+            self.file_menu.entryconfig(1, label="设置")
+            self.file_menu.entryconfig(3, label="退出")
             
-            self.help_menu.entryconfig(0, label="关于")
-            self.help_menu.entryconfig(1, label="GitHub 仓库")
+            self.help_menu.entryconfig(0, label="同步边框资源")
+            self.help_menu.entryconfig(2, label="关于")
+            self.help_menu.entryconfig(3, label="GitHub 仓库")
             
             self.notebook.tab(0, text="边框工具")
             self.notebook.tab(1, text="底片索引")
@@ -157,10 +170,12 @@ class MainWindow:
             self.menubar.entryconfig(2, label="Help")
             
             self.file_menu.entryconfig(0, label="Open Folder")
-            self.file_menu.entryconfig(2, label="Exit")
+            self.file_menu.entryconfig(1, label="Settings")
+            self.file_menu.entryconfig(3, label="Exit")
             
-            self.help_menu.entryconfig(0, label="About")
-            self.help_menu.entryconfig(1, label="GitHub Repository")
+            self.help_menu.entryconfig(0, label="Sync Border Assets")
+            self.help_menu.entryconfig(2, label="About")
+            self.help_menu.entryconfig(3, label="GitHub Repository")
             
             self.notebook.tab(0, text="Border Tool")
             self.notebook.tab(1, text="Contact Sheet")
@@ -203,29 +218,161 @@ class MainWindow:
         EN: Show about dialog
         CN: 显示关于对话框
         """
+        version_str = f"v{__version__}"
         if self.lang == "zh":
             title = "关于 GT23"
-            about_text = """GT23 胶片工作流
-
-版本: 2.0.0
-作者: Hugo
-邮箱: xjames007@gmail.com
+            about_text = f"""GT23 胶片工作流
+            
+版本: {__version__}
+作者: {__author__}
+邮箱: {__email__}
 
 专为胶片摄影师设计的数字全卷缩略图与底片边框处理工具。
 
 灵感来自 Contax G2 & T3 📷"""
         else:
             title = "About GT23"
-            about_text = """GT23 Film Workflow
+            about_text = f"""GT23 Film Workflow
 
-Version: 2.0.0
-Author: Hugo
-Email: xjames007@gmail.com
+Version: {__version__}
+Author: {__author__}
+Email: {__email__}
 
 A dedicated tool for film photographers to generate
 digital contact sheets and professionally processed film borders.
 
 Inspired by Contax G2 & T3 📷"""
         
-        tk.messagebox.showinfo(title, about_text)
+        messagebox.showinfo(title, about_text)
 
+    def show_settings(self):
+        """EN: Show settings dialog / CN: 显示设置对话框"""
+        SettingsDialog(self.root, self.lang)
+
+    def sync_assets_command(self):
+        """
+        EN: Trigger asset synchronization with a progress dialog
+        CN: 带有进度条的资源同步触发器
+        """
+        dialog = SyncProgressDialog(self.root, self.lang)
+        
+        def on_complete(success, message):
+            dialog.stop(success, message)
+                
+        sync_assets_async(on_complete)
+
+class SettingsDialog(tk.Toplevel):
+    def __init__(self, parent, lang):
+        super().__init__(parent)
+        self.lang = lang
+        self.title("设置 Settings" if lang == "zh" else "Settings")
+        
+        # EN: Robust default size / CN: 稳健的默认尺寸
+        self.geometry("650x480")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        
+        self._setup_ui()
+        
+        # EN: Center relative to main window / CN: 相对于主窗口居中
+        self.update_idletasks()
+        w, h = 650, 480
+        x = parent.winfo_x() + (parent.winfo_width() - w) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - h) // 2
+        self.geometry(f"+{x}+{y}")
+
+    def _setup_ui(self):
+        container = ttk.Frame(self, padding=30)
+        container.pack(fill=BOTH, expand=YES)
+
+        # --- Section 1: Asset Path ---
+        path_label = "自定义资产路径" if self.lang == "zh" else "Custom Asset Path"
+        header_font = ("Microsoft YaHei", 11, "bold") if self.lang == "zh" else ("Segoe UI", 11, "bold")
+        ttk.Label(container, text=path_label, font=header_font).pack(anchor=W, pady=(0, 10))
+        
+        path_frame = ttk.Frame(container)
+        path_frame.pack(fill=X, pady=5)
+        
+        self.path_var = tk.StringVar(value=config_manager.get("custom_asset_path", ""))
+        self.path_entry = ttk.Entry(path_frame, textvariable=self.path_var)
+        self.path_entry.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10), ipady=3)
+        
+        browse_btn = "浏览..." if self.lang == "zh" else "Browse..."
+        ttk.Button(path_frame, text=browse_btn, command=self._browse_path, width=12, bootstyle="outline-secondary").pack(side=RIGHT)
+        
+        hint = "注：留空则使用程序默认目录" if self.lang == "zh" else "Note: Leave empty to use default directories."
+        hint_font = ("Microsoft YaHei", 9) if self.lang == "zh" else ("Segoe UI", 9)
+        ttk.Label(container, text=hint, font=hint_font, foreground="#888").pack(anchor=W, pady=(5, 0))
+
+        # --- Divider ---
+        ttk.Separator(container, orient="horizontal").pack(fill=X, pady=25)
+        
+        # --- Section 2: Sync Source ---
+        source_label = "优先同步源" if self.lang == "zh" else "Preferred Sync Source"
+        ttk.Label(container, text=source_label, font=header_font).pack(anchor=W, pady=(0, 15))
+        
+        self.source_var = tk.StringVar(value=config_manager.get("preferred_sync_source", "gitee"))
+        source_frame = ttk.Frame(container)
+        source_frame.pack(fill=X)
+        
+        # EN: Use vertical layout to avoid clipping / CN: 使用纵向布局避免长文本截断
+        ttk.Radiobutton(source_frame, text="Gitee (国内推荐)" if self.lang == "zh" else "Gitee (CN Recommended)", 
+                        variable=self.source_var, value="gitee", bootstyle="info").pack(anchor=W, pady=5)
+        ttk.Radiobutton(source_frame, text="GitHub (全球/加速)" if self.lang == "zh" else "GitHub (Global/Proxy)", 
+                        variable=self.source_var, value="github", bootstyle="info").pack(anchor=W, pady=5)
+
+        # --- Footer: Actions ---
+        footer = ttk.Frame(container)
+        footer.pack(side=BOTTOM, fill=X, pady=(20, 0))
+        
+        save_btn = "保存并关闭" if self.lang == "zh" else "Save & Close"
+        ttk.Button(footer, text=save_btn, style="primary", command=self._save).pack(side=RIGHT, padx=5)
+
+    def _browse_path(self):
+        path = filedialog.askdirectory()
+        if path:
+            self.path_var.set(path)
+
+    def _save(self):
+        config_manager.set("custom_asset_path", self.path_var.get())
+        config_manager.set("preferred_sync_source", self.source_var.get())
+        messagebox.showinfo("Success" if self.lang == "en" else "成功", 
+                            "设置已保存成功！某些更改可能需要重启程序生效。\nSettings saved! Some changes may require restart." if self.lang == "zh" else "Settings saved successfully!")
+        self.destroy()
+
+class SyncProgressDialog(tk.Toplevel):
+    def __init__(self, parent, lang="en"):
+        super().__init__(parent)
+        self.lang = lang
+        self.title("同步中 Syncing..." if lang == "zh" else "Syncing...")
+        
+        self.geometry("480x200")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        
+        container = ttk.Frame(self, padding=35)
+        container.pack(fill=BOTH, expand=YES)
+
+        label_text = "正在同步边框资源库，请耐心等待...\nSyncing assets, please wait..."
+        ttk.Label(container, text=label_text, justify=CENTER, font=("", 10)).pack(pady=(0, 20))
+        
+        self.progress = ttk.Progressbar(container, mode='indeterminate', length=350, bootstyle="success-striped")
+        self.progress.pack()
+        self.progress.start(10)
+
+        # Center
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 480) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 200) // 2
+        self.geometry(f"+{x}+{y}")
+
+    def stop(self, success, message):
+        self.progress.stop()
+        self.destroy()
+        title = "同步结果 Sync Result" if self.lang == "zh" else "Sync Result"
+        if success:
+            messagebox.showinfo(title, message)
+        else:
+            messagebox.showerror(title, message)

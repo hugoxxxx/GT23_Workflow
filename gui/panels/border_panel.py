@@ -19,7 +19,7 @@ from tkinter import filedialog, messagebox
 from tkinter import scrolledtext
 from PIL import Image, ImageTk
 from core.metadata import MetadataHandler
-from core.renderer import FilmRenderer
+from core.renderer import FilmRenderer, bootstrap_logos
 
 
 class BorderPanel:
@@ -38,6 +38,7 @@ class BorderPanel:
         self.worker_thread = None
         self.preview_thread = None
         self.preview_job_id = 0  # EN: Preview job marker / CN: 预览任务标记
+        self.preview_after_id = None # EN: Debounce timer ID / CN: 防抖计时器 ID
         self.film_list = []
         self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
         
@@ -353,8 +354,7 @@ class BorderPanel:
             self.log_text.config(state="normal")
             self.log_text.delete(1.0, tk.END)
             self.log_text.config(state="disabled")
-            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
-            self.log(msg)
+            self.log(self.get_asset_status_msg())
     
     def update_film_combo_values(self):
         """
@@ -391,12 +391,30 @@ class BorderPanel:
             
             self.film_list.sort()
             self.update_film_combo_values()
+            self.log(self.get_asset_status_msg())
             
-            msg = f"✓ 已加载 {len(self.film_list)} 种胶片" if self.lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
-            self.log(msg)
+            # EN: Force UI update / CN: 强制 UI 刷新
+            self.parent.update_idletasks()
+                
         except Exception as e:
-            msg = f"✗ 胶片库加载失败: {e}" if self.lang == "zh" else f"✗ Film library load failed: {e}"
+            msg = f"✗ 胶片/资源库加载失败: {e}" if self.lang == "zh" else f"✗ Asset library load failed: {e}"
             self.log(msg)
+
+    def get_asset_status_msg(self):
+        """EN: Generate unified asset status message / CN: 生成统一的资产状态消息"""
+        logo_count = 0
+        try:
+            logo_dir = bootstrap_logos()
+            if os.path.exists(logo_dir):
+                files = os.listdir(logo_dir)
+                logo_count = len([f for f in files if f.lower().endswith(('.svg', '.png'))])
+        except Exception:
+            pass
+
+        msg_film = f"✓ 已加载 {len(self.film_list)} 种胶片" if self.lang == "zh" else f"✓ Loaded {len(self.film_list)} films"
+        msg_logo = f"✓ 已加载 {logo_count} 种相机边框" if self.lang == "zh" else f"✓ Loaded {logo_count} camera logos"
+        
+        return f"{msg_film}\n{msg_logo}"
     
     def auto_detect_photos_in(self):
         """
@@ -516,9 +534,19 @@ class BorderPanel:
 
     def update_preview(self, folder):
         """
-        EN: Render first image in folder and show bordered preview.
-        CN: 渲染文件夹中第一张图片并展示带边框的预览。
+        EN: Render first image in folder and show bordered preview (with debouncing).
+        CN: 渲染文件夹中第一张图片并展示带边框的预览（带防抖）。
         """
+        # EN: Cancel pending preview jobs / CN: 取消尚未开始的预览任务
+        if self.preview_after_id:
+            self.parent.after_cancel(self.preview_after_id)
+            self.preview_after_id = None
+
+        # EN: Schedule new preview / CN: 排期新的预览任务 (300ms 安定期)
+        self.preview_after_id = self.parent.after(300, lambda: self._do_update_preview(folder))
+
+    def _do_update_preview(self, folder):
+        """EN: Actual render logic / CN: 实际的渲染逻辑"""
         try:
             images = sorted([f for f in os.listdir(folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
             if not images:

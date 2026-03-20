@@ -1,10 +1,45 @@
 # Change Log / 变更日志
 
+## [2.2.1] - 2026-03-20
+
+### GUI & Stability / 界面与稳定性
+- **[Fix] UI Stability Hotfix / 界面稳定性大修复**:
+  - EN: Resolved `TclError` (pady/padx) and `NameError` in Settings and Sync dialogs by refactoring the core GUI logic and geometry management.
+  - CN: 通过重构 GUI 核心逻辑与几何管理器，彻底解决了设置和同步对话框中的 `TclError`（pady/padx 参数错误）及 `NameError` 崩溃问题。
+- **[Enhancement] Polished Settings UI / 深度优化设置界面**:
+  - EN: Implemented a foolproof vertical layout for sync sources and adopted high-quality system fonts ("Microsoft YaHei" & "Segoe UI") to ensure crisp rendering and prevent text clipping in English mode.
+  - CN: 引入了防呆式纵向同步源布局，并采用系统级原生字体（微软雅黑与 Segoe UI），确保了在高分屏下文字渲染精密且英文文本不再被截断。
+- **[Feature] Dynamic "About" Dialog / 动态“关于”窗口**:
+  - EN: Refactored the About dialog to dynamically pull version, author, and email info from `version.py`, ensuring data consistency across the app.
+  - CN: 重构了“关于”对话框，使其版本、作者及联系信息自动与 `version.py` 同步，消灭了硬编码导致的数据滞后。
+- **[Performance] Preview Debouncing Engine / 预览渲染防抖引擎**:
+  - EN: Implemented a 300ms debounce timer for preview renders; successfully reduced redundant startup "Render Complete" logs from 5 lines to 1.
+  - CN: 为预览渲染引入了 300ms 防抖机制，成功将启动时因初始化触发的冗余“渲染完成”日志从 5 条降至 1 条，显著优化了性能感。
+
+### Assets & Synchronization / 资产与同步
+- **[Architecture] Asset Decoupling (GT23_Assets) / 资产库彻底分离**:
+  - EN: Decoupled 121+ camera logos into a standalone repository (`GT23_Assets`) and integrated it as a Git Submodule, significantly reducing main repository size and improving asset maintenance.
+  - CN: 将 121+ 款相机图标彻底从主仓库剥离，建立独立的 `GT23_Assets` 资源库并以 Git Submodule 形式集成，大幅精简了主仓库体积并提升了资源维护效率。
+- **[Feature] Dual-Remote Sync Strategy / 双源远程同步策略**:
+  - EN: Implemented a robust dual-target synchronization system (GitHub + Gitee) with automatic failover, ensuring reliable asset updates regardless of network conditions in different regions.
+  - CN: 实现了 GitHub + Gitee 双目标远程同步系统，支持自动故障切换，确保国内外用户在不同网络环境下都能稳定更新资源。
+- **[Feature] "Sync Border Assets" One-Click Update / 一键资源同步功能**:
+  - EN: Added a user-friendly sync feature in the Help menu that supports automatic ZIP download and extraction for users without a local Git environment.
+  - CN: 在帮助菜单中新增了“同步边框资源”功能，支持在无 Git 环境下自动下载 ZIP 包并完成静默解压归位。
+- **[Feature] Real-time Asset Statistics / 实时资产加载统计**:
+  - EN: The Processing Log now displays the exact count of loaded camera logos (SVG+PNG) alongside the film count on startup.
+  - CN: 程序启动日志现在会同步展示已加载的相机边框（SVG+PNG）实时总数，让资产库规模一目了然。
+- **[Fix] Non-Git Sync Reliability / 修复 Git 环境缺失下的同步中断**:
+  - EN: Resolved crashes in `asset_sync.py` by adding missing `os/sys` imports and refining the Web/ZIP fallback download sequence.
+  - CN: 补全了 `asset_sync.py` 中缺失的 `os/sys` 导入，并优化了 Web/ZIP 模式下的降级下载流程，确保非开发环境下也能一键同步。
+
+
 ## [2.2.0] - 2026-03-14
 
 ### GUI & User Experience / 界面与用户体验
 - [v2.2.0] Consolidate Android Migration Master Spec (Bilingual/Detailed)
-- [v2.2.0] Massive logo library expansion (121 models) and asset regeneration
+- [v2.2.0] Massive logo library expansion (121 models) and asset decoupling via GT23_Assets submodule
+- [v2.2.0] [GUI] Added "Sync Border Assets" feature in Help menu for one-click library updates
 - **[Feature] One-Page Layout Optimization / “一页流”布局优化**:
   - EN: Redesigned settings panel with a wider 750px sidebar and a compact 2-column grid for Advanced Settings and EXIF Overrides.
   - CN: 重新设计了设置面板：将侧边栏宽度增至 750px，并将高频使用的“高级设置”与“EXIF 覆盖”调整为紧凑的双列网格布局。

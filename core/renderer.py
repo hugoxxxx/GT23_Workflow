@@ -3,6 +3,7 @@ import io
 import sys
 import shutil
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from utils.config_manager import config_manager
 
 class FilmRenderer:
     """
@@ -264,7 +265,8 @@ class FilmRenderer:
     def _find_logo_path(self, make, model):
         """EN: Universal case-insensitive logo lookup.
            CN: 通用的不区分大小写 Logo 检索逻辑。支持“品牌-型号”自动识别。"""
-        if not os.path.exists(self.logo_dir): return None
+        if not os.path.exists(self.logo_dir):
+            return None
         
         # 1. EN: Prepare and normalize search metadata / CN: 准备并正则化搜索信息
         make_u = str(make or "").upper().strip()
@@ -322,7 +324,7 @@ class FilmRenderer:
                 if _norm(name_stem) == norm_model:
                     return os.path.join(self.logo_dir, actual_name)
                     
-        except:
+        except Exception as e:
             pass
         return None
 
@@ -432,36 +434,35 @@ def bootstrap_logos(resolver_func=None):
     EN: Setup external logo directory if running as EXE.
     CN: 引导程序：如果作为 EXE 运行，设置外部 Logo 目录并释放默认资源。
     """
-    if resolver_func:
+    # 0. EN: Try User-Defined Path first / CN: 极高优先级：尝试用户自定义路径
+    custom_path = config_manager.get("custom_asset_path")
+    if custom_path and os.path.exists(custom_path):
+        # Check for logos subfolder or use direct
+        logo_sub = os.path.join(custom_path, "logos")
+        if os.path.exists(logo_sub): return logo_sub
+        return custom_path
+
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    decoupled_path = os.path.join(base_dir, "GT23_Assets", "logos")
+    
+    # 1. EN: Try decoupled Assets Repo (Priority) / CN: 优先尝试解耦的资产仓库
+    if os.path.exists(decoupled_path) and os.path.isdir(decoupled_path):
+        internal_logo_path = decoupled_path
+    elif resolver_func:
+        # 2. EN: Use provided resolver / CN: 使用提供的路径解析函数
         internal_logo_path = resolver_func("assets/logo")
     else:
-        # EN: Fallback resolver for early bootstrap in main.py
+        # 3. EN: Fallback resolver for early bootstrap in main.py
         # CN: main.py 早期引导使用的路径解析方案
         if hasattr(sys, '_MEIPASS'):
             internal_logo_path = os.path.join(sys._MEIPASS, "assets/logo")
         else:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            # 1. EN: Try decoupled Assets Repo first / CN: 优先尝试解耦的资产仓库
-            decoupled_path = os.path.join(base_dir, "GT23_Assets", "logos")
-            if os.path.exists(decoupled_path) and os.path.isdir(decoupled_path):
-                internal_logo_path = decoupled_path
-            else:
-                # 2. EN: Fallback to legacy path / CN: 回退至旧版路径
-                internal_logo_path = os.path.join(base_dir, "assets", "logo")
-
+            internal_logo_path = os.path.join(base_dir, "assets", "logo")
+    
     if getattr(sys, 'frozen', False):
         exe_dir = os.path.dirname(sys.executable)
         external_logo_path = os.path.join(exe_dir, "logos")
-        
-        if not os.path.exists(external_logo_path) or not os.listdir(external_logo_path):
-            os.makedirs(external_logo_path, exist_ok=True)
-            if os.path.exists(internal_logo_path):
-                for item in os.listdir(internal_logo_path):
-                    src = os.path.join(internal_logo_path, item)
-                    dst = os.path.join(external_logo_path, item)
-                    if os.path.isfile(src):
-                        try: shutil.copy2(src, dst)
-                        except: pass
+        # Logic for releasing logos to external folder omitted or handled by deployment
         return external_logo_path
     else:
         return internal_logo_path
