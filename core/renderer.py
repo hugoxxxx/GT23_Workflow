@@ -441,7 +441,13 @@ def bootstrap_logos(resolver_func=None):
             internal_logo_path = os.path.join(sys._MEIPASS, "assets/logo")
         else:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            internal_logo_path = os.path.join(base_dir, "assets", "logo")
+            # 1. EN: Try decoupled Assets Repo first / CN: 优先尝试解耦的资产仓库
+            decoupled_path = os.path.join(base_dir, "GT23_Assets", "logos")
+            if os.path.exists(decoupled_path) and os.path.isdir(decoupled_path):
+                internal_logo_path = decoupled_path
+            else:
+                # 2. EN: Fallback to legacy path / CN: 回退至旧版路径
+                internal_logo_path = os.path.join(base_dir, "assets", "logo")
 
     if getattr(sys, 'frozen', False):
         exe_dir = os.path.dirname(sys.executable)

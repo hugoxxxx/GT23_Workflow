@@ -57,11 +57,31 @@ class MetadataHandler:
         if os.path.isabs(filename):
             return filename
 
+        base_dir = os.path.dirname(os.path.abspath(__file__))
         candidates = []
-        # 1) CWD/config
+
+        # 1. EN: Check in decoupled Assets Repo / CN: 检查解耦的资产仓库 (GT23_Assets/films)
+        # Note: The 'films' subfolder is specific to film configs, other configs might be directly under GT23_Assets
+        # For now, we assume 'films' is part of the path for film-related configs, and direct for others.
+        # A more robust solution might check GT23_Assets directly for non-film configs.
+        decoupled_path_films = os.path.join(os.path.dirname(base_dir), "GT23_Assets", "films", filename)
+        decoupled_path_general = os.path.join(os.path.dirname(base_dir), "GT23_Assets", filename)
+        candidates.append(decoupled_path_films)
+        candidates.append(decoupled_path_general)
+
+
+        # 2. EN: Check in internal assets / CN: 检查内置资源 (assets/config)
+        internal_path = os.path.join(os.path.dirname(base_dir), "assets", "config", filename)
+        candidates.append(internal_path)
+        
+        # 3. EN: Check in legacy sub-folder / CN: 检查旧版配置目录 (config)
+        legacy_path = os.path.join(os.path.dirname(base_dir), "config", filename)
+        candidates.append(legacy_path)
+
+        # 4. CWD/config (for development)
         candidates.append(os.path.join(os.getcwd(), 'config', filename))
 
-        # 2) Frozen exe dir /config and /_internal/config
+        # 5. Frozen exe dir /config and /_internal/config (for packaged apps)
         if getattr(sys, 'frozen', False):
             exe_dir = os.path.dirname(sys.executable)
             candidates.append(os.path.join(exe_dir, 'config', filename))
