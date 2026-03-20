@@ -257,7 +257,18 @@ Inspired by Contax G2 & T3 📷"""
         dialog = SyncProgressDialog(self.root, self.lang)
         
         def on_complete(success, message):
-            dialog.stop(success, message)
+            # EN: Filter bilingual message / CN: 过滤双语消息
+            final_msg = message
+            if "CN:" in message:
+                parts = message.split("CN:")
+                en_part = parts[0].replace("EN:", "").strip()
+                zh_part = parts[1].strip()
+                final_msg = zh_part if self.lang == "zh" else en_part
+            
+            dialog.stop(success, final_msg)
+            if success:
+                # EN: Refresh library to show new counts / CN: 刷新资源库以显示最新计数
+                self.border_panel.load_film_library()
                 
         sync_assets_async(on_complete)
 

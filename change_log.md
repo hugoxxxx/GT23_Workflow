@@ -1,6 +1,20 @@
 # Change Log / 变更日志
 
-## [2.2.1] - 2026-03-20
+## [2.2.2] - 2026-03-21
+
+### Core & Efficiency / 核心与效率
+- **[Feature] Smart Incremental Web Sync / 智能增量 Web 同步**:
+  - EN: Implemented remote commit hash validation via Gitee/GitHub APIs; the app now skips redundant ZIP downloads if the asset library is already up to date.
+  - CN: 引入了基于 Gitee/GitHub API 的远程 Commit Hash 校验机制；当资源库已是最新时，程序会自动跳过全量 ZIP 下载，极大节省了流量与同步时间。
+- **[Enhancement] Granular Sync Reporting / 细粒度同步报告**:
+  - EN: The sync result dialog now parses and displays a specific list of updated logos (e.g., "Updated: Canon-R5.svg...").
+  - CN: 同步结果对话框现在会细化展示具体更新的图标名称（如：更新了 FUJIFILM-KLASSE.png 等），让同步过程透明可见。
+
+### GUI & User Experience / 界面与用户体验
+- **[Enhancement] Bilingual Sync Feedback Polish / 同步反馈双语优化**:
+  - EN: Optimized the sync result dialog to display only the relevant language (EN or CN) based on current user settings, eliminating cluttered dual-language presentation.
+  - CN: 优化了同步结果对话框的显示逻辑，根据用户当前语言设置精准展示单一语言（中文或英文），解决了之前“中英双语堆叠”导致的视觉凌乱。
+
 
 ### GUI & Stability / 界面与稳定性
 - **[Fix] UI Stability Hotfix / 界面稳定性大修复**:
