@@ -8,19 +8,23 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
-## 🔥 What's New — v2.2.0 (Handmade Logo Edition)
+## 🔥 What's New — v2.2.2 (Smart Assets Edition)
 
-- 📸 **120+ 张全手工临摹相机 Logo**：深度还原经典型号视觉特征。
-   - EN: Every logo has been manually extracted and traced from **original vintage brochures and manuals** to ensure historical accuracy and "handmade" craftsmanship.
-   - CN: 现已支持 120+ 款机型图标。每一枚 Logo 都是从**相机原始宣传册、说明书或广告资料**中手工抠图与临摹而成，追求极致的时代还原感。
+- **Smart Incremental Sync | 智能增量同步 (v2.2.2)**
+   - EN: Implemented remote hash validation via Gitee/GitHub APIs. The app now skips redundant ZIP downloads if your local library is already up to date, saving bandwidth and time.
+   - CN: 引入了基于 Gitee/GitHub API 的远程哈希校验。当本地资源库已是最新时，程序会自动跳过 ZIP 下载，极大地节省了流量与时间。
 
-- **Redesigned GUI Sidebar (750px) | 全新 750px 宽侧边栏布局**
-   - EN: Sidebar widened to 750px with a full-grid layout. 90% of settings are now visible in a single frame, eliminating the need for scrolling.
-   - CN: 控制侧边栏拓宽至 750 像素并引入全网格布局，实现“一眼全览，无需滚动”的高效交互体验。
+- **Flexible Asset Management (GT23_Assets) | 灵活资产管理 (v2.2.1-v2.2.2)**
+   - EN: Decoupled 121+ logos into a standalone `GT23_Assets` repo. Users can now set a **Custom Asset Path** and sync via the GUI menu (Help -> Sync Border Assets) with automatic Gitee/GitHub failover.
+   - CN: 将 121+ 款相机图标剥离至独立的 `GT23_Assets` 库。用户现可自定义资产路径，并通过 GUI 菜单（帮助 -> 同步边框资源）进行一键同步，支持 Gitee/GitHub 双源自动切换。
 
-- **External Logo Management | 外置 Logo 文件夹管理**
-   - EN: Automatically generates a `logos` folder next to the EXE. Add your own logos (JPG/PNG/SVG) without modifying code.
-   - CN: 自动在 EXE 同级目录生成 `logos` 文件夹，支持即加即用的自定义图标扩展。
+- **Polished UI & Native Typography | UI 细节打磨与原生字体支持**
+   - EN: Adopted high-quality system fonts ("Microsoft YaHei" & "Segoe UI") and a foolproof vertical layout for sync settings to ensure crisp rendering and zero text clipping in bilingual modes.
+   - CN: 采用了系统原生的高质量字体（微软雅黑与 Segoe UI），并优化了同步设置的纵向布局，确保界面渲染精密且英文文本不再被截断。
+
+- **Hand-Extracted Logo Library (121+ Models) | 121+ 款手工提炼图标库**
+   - EN: Massive library expansion covering Leica, Canon, Nikon, Pentax, and more, all manually traced from vintage brochures.
+   - CN: 图标库大规模扩容，涵盖徕卡、佳能、尼康、宾得等 121+ 款机型，全部由原始说明书手工临摹而成。
 
 ## 🔥 What's New — v2.0.0 (GUI Edition)
 
@@ -163,7 +167,7 @@ Steps | 步骤：
 - [x] **v1.9 - v2.0**: Multi‑format (66/645/67/135), film library expansion, sprocket rendering, EXE packaging | 多画幅、胶片库扩展、齿孔渲染、EXE 封包
 - [x] **v2.0.0**: Ship GUI desktop app with real-time preview, EXIF/date controls | 正式发布 GUI 桌面版，支持实时预览、EXIF/日期控制
 - [x] **v2.1.x**: PNG-to-JPEG transition (5x speed boost), Vector Logo engine, Zeiss T* red highlight, Ink BBox alignment | 切换为 JPEG 渲染（提速 5 倍）、矢量图标引擎、蔡司 T* 红色高亮、像素级对齐
-- [x] **v2.2.0**: Hand-extracted logo library (80+), Redesigned UI, External logo folder | 80+ 机型手工提炼图标库、全新双列布局、外置 Logo 文件夹
+- [x] **v2.2.x**: Asset decoupling (GT23_Assets), Smart Incremental Sync, Custom Asset Path, Native Typography (YaHei/Segoe UI) | 资产库分库、智能增量同步、自定义资产路径、原生字体支持 (微软雅黑/Segoe UI)
 - [ ] **Future**: No further plans at this time | 远期暂无规划
 
 ---
