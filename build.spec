@@ -63,6 +63,10 @@ a = Analysis(
     noarchive=False,
 )
 
+# EN: Manual Binary Filtering - Stripping MKL/OpenMP bloat (150MB+)
+# CN: 手动二进制过滤 - 剥离 MKL/OpenMP 冗余（可缩减 150MB+）
+a.binaries = [x for x in a.binaries if not any(bloat in x[0].lower() for bloat in ['mkl_', 'libiomp', 'mkl_rt'])]
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
