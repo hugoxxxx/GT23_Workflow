@@ -12,9 +12,9 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 - **Extreme Optimization | 极简架构 (v2.2.2)**
    - EN: Slashed EXE size from ~200MB to **38.8 MB** (80% reduction!) by manual binary filtering.
    - CN: 通过极致的二进制过滤技术，将 EXE 体积从约 200MB 暴减至 **38.8 MB**，减重达 80%！
-- **Smart Asset Sync | 智能云端同步 (v2.2.2)**
-   - EN: Standalone EXE now comes "Zero-Asset" for speed; prompts for **One-Click Sync** (121+ logos) on first launch with robust GitHub/Gitee failover.
-   - CN: 独立版 EXE 采用“码资分离”架构；首次运行时将引导**一键同步**（121+ 款相机图标），支持 GitHub/Gitee 双向自动切换。
+- **Smart Asset Sync | 智能云端更新 (v2.2.2)**
+   - EN: Asset updates are now independent of the app version! Standalone EXE comes "Zero-Asset" for speed; prompts for **One-Click Sync** (121+ logos) to fetch the latest cloud library instantly without waiting for an EXE update.
+   - CN: **图标库实时更新**：图标库与软件版本完全解耦。只需一键同步，即可瞬间获取云端最新的相机适配，无需等待软件版本更新，实现真正的“无限扩容”。
 - **Failover & Validation | 容错同步与校验 (v2.2.2)**
    - EN: Implemented ZIP signature validation (`PK\x03\x04`) and automatic fallback between remotes to ensure rock-solid updates in any region.
    - CN: 实现了 ZIP 签名校验机制与多源重试逻辑，确保在不同网络环境下都能稳定拉取资源包。

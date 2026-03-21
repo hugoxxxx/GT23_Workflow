@@ -7,10 +7,11 @@
 *   **EN:** Slashed EXE size from ~200MB to **38.8 MB** (80% reduction!) by surgically purging unused MKL/OpenMP math libraries.
 *   **CN:** 彻底解决了以往“小工具大包体”的痛点，启动更快，分发更便捷。
 
-### 2. 智能云端同步：码资分离 / Smart Asset Sync: Code-Asset Separation
-现在，独立版 EXE 不再强行塞入图标。
-*   **EN:** Standalone EXE now comes "Zero-Asset" for maximum speed. It prompts for **One-Click Sync** (121+ logos) on first launch.
-*   **CN:** 采用全新的“码资分离”架构。首次启动时将引导**一键同步** 121+ 款相机图标，并在 EXE 旁自动建立 `GT23_Assets` 资源库。
+### 2. 图标库在线更新：无限扩容 / Online Asset Updates: Infinite Expansion
+现在，图标库的更新已全面脱离软件版本。
+*   **EN:** Asset updates are now independent of the app version. You can get the latest camera logos instantly via the **Sync** button without waiting for an EXE update.
+*   **CN:** **即时同步**：图标库的扩容不再依赖软件版本更新。只需点击“同步”按钮，即可瞬间拉取云端最新的相机图标，实现真正的“无限扩容”。
+*   **CN:** **码资分离**：独立版 EXE 采用轻量化架构，首次启动时将引导**一键同步** 121+ 款相机图标，并在本地自动建立 `GT23_Assets` 资源库。
 
 ### 3. 硬核容错：GitHub/Gitee 双向切换 / Robust Failover: Dual-Remote Strategy
 *   **EN:** Implemented automatic failover between GitHub and Gitee. Added mandatory ZIP signature validation (`PK\x03\x04`) to prevent crashes from network redirects or 404 HTML pages.
