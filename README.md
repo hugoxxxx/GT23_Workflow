@@ -91,54 +91,61 @@ Notes | 说明:
 <details>
 <summary><b>Click to view the full list of supported camera models / 点击展开查看完整支持机型列表</b></summary>
 
+> [!NOTE]
+> All models listed below correspond to manually extracted high-resolution logos in the asset library. / 以下机型均对应资源库中手工提炼的高分辨率图标。
+
 **BRONICA**
 > C, EC, EC-TL, ETRS, ETRSi, GS-1, RF645, S, S2, SQ-A, SQ-B
 
 **CANON / 佳能**
-> A-1, AE-1, EOS 6D, EOS 6DII, EOS R1, EOS R3, EOS R5II, EOS R6II, EOS R6III, Autoboy 180, Autoboy S, Autoboy SII, QL17
+> A-1, AE-1, Autoboy180, AutoboyS, AutoboySII, EOS 6D, EOS R1, EOS6DII, QL17, R3, R5II, R6II, R6III
 
 **CONTAX / 康泰时**
 > G1, G2, T, T2, T3, TVS, TVSII, TVSIII
 
 **FUJIFILM / 富士**
-> GA645, GA645i, GA645wi, GA645zi, GF670, GS645, GS645S, GS645W, KLASSE, KLASSE S, KLASSE W, TX-1, TX-2
+> GA645, GA645i, GA645wi, GA645zi, GF670, GS645, GS645S, GS645W, KLASSE, KLASSE-S, KLASSE-W
 
 **HASSELBLAD / 哈苏**
-> 202FA, 203FE, 205FCC, 205TCC, 500C, 500CM, 501CM, 503CW, 503CX, 553ELX, 903SWC, SWC, SWCM
+> 202FA, 203FE, 205FCC, 205TCC, 500C, 500CM, 501CM, 503CW
 
-**KYOCERA / 京瓷**
-> T-PROOF, TD, Yanagi
+**KODAK / 柯达**
+> RETINAII, RETINAIIa
 
-**LEICA / 徕卡**
-> M1, M2, M3, M4, M4-2, M4-P, M5, M6, M7, M8, M9, M10, M11, M-A, M-P, M-Monochrom, Q, Q2, Q3
+**KONICA / 柯尼卡**
+> BIGMINI, BIGMINI-F, HEXAR, HEXAR-RF, RECORDER
 
 **MAMIYA / 玛米亚**
-> 6, 7, 7II, 645, 645Pro, C220, C330, RB67, RZ67, M645
+> 645AFD, 645E, 645PRO, 645PROTL, 645SUPER, 6MF, 7II, C330, RB67PROS, RB67PROSD, RZ67, RZ67PROIID
 
 **MINOLTA / 美能达**
-> TC-1, X-700, CLE
+> A7, A7000, A9, A9000, AUTOCORD, TC-1, X700
 
 **NIKON / 尼康**
-> F, F2, F3, F3HP, F4, F5, F6, FM2, FM3A, FE, FE2, Z6, Z7, Z8, Z9, Zf, 35Ti, 28Ti
+> 35Ti, F, F100, F2, F2S, F2SB, F3, F4, F4S, F5, F6, F70, F70D, F80, F80D, F80S, FE, FM3A
 
 **OLYMPUS / 奥林巴斯**
-> OM-1, OM-2, OM-3, OM-4, XA, XA2, Pen-F, Mju-II
+> PEN-EED, UII, XA, XA2, XA3, XA4
 
 **PENTAX / 宾得**
-> 67, 67II, 645, 645N, 645NII, K1000, LX, MX, ME, Pentax17
-
-**RICOH / 理光**
-> GR1, GR1s, GR1v, GR10, GR21, GR3
+> 645, 645N, 645NII, 67, 67ii, 6X7, ESPIO, ESPIO-MINI, KX, ME, MEF, MESUPER, MX
 
 **ROLLEI / 禄来**
-> Rolleiflex 2.8F, 3.5F, Rollei 35, Rollei 35S
+> 35, 35QZ, 35S, 35T
+
+**ROLLEIFLEX / 禄来双反**
+> 3.5F
+
+**SEAGULL / 海鸥**
+> 4A, 4B, 4B_bak
 
 **YASHICA / 雅西卡**
-> Electro 35, T4, T5
+> T4, T4D, T5, T5D
 
-*And many more... / 以及更多持续更新中...*
+*More models coming soon... / 更多型号持续更新中...*
 
 </details>
+
 
 
 * **Expanded Film Library | 扩展胶片库**:
