@@ -376,6 +376,3 @@ MIT License - See LICENSE file for details. | MIT 许可证 - 详见 LICENSE 文
 EN: Thanks to all film photographers who provided feedback and inspiration for this tool.
 
 CN: 感谢所有胶片摄影师提供的反馈和灵感。
-```
- 
- 
