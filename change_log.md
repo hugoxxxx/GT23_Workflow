@@ -3,12 +3,18 @@
 ## [2.2.2] - 2026-03-21
 
 ### Core & Efficiency / 核心与效率
+- **[Performance] Extreme EXE Size Optimization / 极致 EXE 体积优化**:
+  - EN: Slashed EXE size from ~200MB to **38.84 MB** (80% reduction) by purging 150MB+ of unused MKL/OpenMP binaries via manual `build.spec` filtering.
+  - CN: 通过在 `build.spec` 中实施手动二进制过滤，彻底剔除 150MB+ 的冗余 MKL/OpenMP 库，将 EXE 体积从约 200MB 降至 **38.84 MB**，减重达 80%！
+- **[Stability] Robust Sync Failover & Validation / 容错同步与签名校验**:
+  - EN: Implemented automatic failover between GitHub and Gitee remotes. Added `PK\x03\x04` ZIP signature validation to prevent crashes from HTML error pages (404/Login redirects).
+  - CN: 实现了 GitHub 与 Gitee 双源自动切换机制。新增了 `PK\x03\x04` ZIP 签名强制校验，有效防止因网络重定向或 404 HTML 页面导致的同步崩溃。
+- **[Architecture] Triple-Path Logic Alignment / 三位一体路径对齐**:
+  - EN: Standardized asset pathing across Sync Engine, Renderer, and MetadataHandler to use a consistent `GT23_Assets` folder next to the EXE.
+  - CN: 统一了同步引擎、渲染器与元数据处理器三方的路径逻辑，确保一键同步后图标与配置文件能立刻被软件精准识别。
 - **[Feature] Smart Incremental Web Sync / 智能增量 Web 同步**:
   - EN: Implemented remote commit hash validation via Gitee/GitHub APIs; the app now skips redundant ZIP downloads if the asset library is already up to date.
   - CN: 引入了基于 Gitee/GitHub API 的远程 Commit Hash 校验机制；当资源库已是最新时，程序会自动跳过全量 ZIP 下载，极大节省了流量与同步时间。
-- **[Enhancement] Granular Sync Reporting / 细粒度同步报告**:
-  - EN: The sync result dialog now parses and displays a specific list of updated logos (e.g., "Updated: Canon-R5.svg...").
-  - CN: 同步结果对话框现在会细化展示具体更新的图标名称（如：更新了 FUJIFILM-KLASSE.png 等），让同步过程透明可见。
 
 ### GUI & User Experience / 界面与用户体验
 - **[Enhancement] Bilingual Sync Feedback Polish / 同步反馈双语优化**:

@@ -461,8 +461,13 @@ def bootstrap_logos(resolver_func=None):
     
     if getattr(sys, 'frozen', False):
         exe_dir = os.path.dirname(sys.executable)
-        external_logo_path = os.path.join(exe_dir, "logos")
-        # Logic for releasing logos to external folder omitted or handled by deployment
+        # EN: Prioritize GT23_Assets folder next to EXE / CN: 优先使用 EXE 旁的 GT23_Assets 目录
+        external_logo_path = os.path.join(exe_dir, "GT23_Assets", "logos")
+        # EN: Fallback to simple 'logos' for backward compatibility / CN: 备选：直接在 EXE 旁的 'logos' 目录
+        if not os.path.exists(external_logo_path):
+            legacy_path = os.path.join(exe_dir, "logos")
+            if os.path.exists(legacy_path):
+                return legacy_path
         return external_logo_path
     else:
         return internal_logo_path

@@ -91,6 +91,11 @@ class MetadataHandler:
         # 5. Frozen exe dir /config and /_internal/config (for packaged apps)
         if getattr(sys, 'frozen', False):
             exe_dir = os.path.dirname(sys.executable)
+            # EN: Check in synchronized Assets folder / CN: 检查同步来的资产文件夹
+            candidates.append(os.path.join(exe_dir, 'GT23_Assets', 'films', filename))
+            candidates.append(os.path.join(exe_dir, 'GT23_Assets', filename))
+            
+            # EN: Standard packaged paths / CN: 标准打包路径
             candidates.append(os.path.join(exe_dir, 'config', filename))
             candidates.append(os.path.join(exe_dir, '_internal', 'config', filename))
             if hasattr(sys, '_MEIPASS'):

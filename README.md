@@ -8,45 +8,27 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
-## 🔥 What's New — v2.2.2 (Smart Assets Edition)
+## 🔥 What's New — v2.2.2 (Slim & Smart Edition)
+- **Extreme Optimization | 极简架构 (v2.2.2)**
+   - EN: Slashed EXE size from ~200MB to **38.8 MB** (80% reduction!) by manual binary filtering.
+   - CN: 通过极致的二进制过滤技术，将 EXE 体积从约 200MB 暴减至 **38.8 MB**，减重达 80%！
+- **Smart Asset Sync | 智能云端同步 (v2.2.2)**
+   - EN: Standalone EXE now comes "Zero-Asset" for speed; prompts for **One-Click Sync** (121+ logos) on first launch with robust GitHub/Gitee failover.
+   - CN: 独立版 EXE 采用“码资分离”架构；首次运行时将引导**一键同步**（121+ 款相机图标），支持 GitHub/Gitee 双向自动切换。
+- **Failover & Validation | 容错同步与校验 (v2.2.2)**
+   - EN: Implemented ZIP signature validation (`PK\x03\x04`) and automatic fallback between remotes to ensure rock-solid updates in any region.
+   - CN: 实现了 ZIP 签名校验机制与多源重试逻辑，确保在不同网络环境下都能稳定拉取资源包。
 
-- **Smart Incremental Sync | 智能增量同步 (v2.2.2)**
-   - EN: Implemented remote hash validation via Gitee/GitHub APIs. The app now skips redundant ZIP downloads if your local library is already up to date, saving bandwidth and time.
-   - CN: 引入了基于 Gitee/GitHub API 的远程哈希校验。当本地资源库已是最新时，程序会自动跳过 ZIP 下载，极大地节省了流量与时间。
+## 🚀 How to Use (EXE Users) | 使用指南 (独立版用户)
+1. **Download & Launch**: Grab the `GT23_Workflow_v2.2.2.exe` (~39MB).
+2. **One-Click Sync**: On first run, a prompt will appear asking to sync assets. Click **Yes**.
+3. **Full Library Restored**: The app will automatically download and install 121+ icons and film profiles into the `GT23_Assets/` folder alongside the EXE.
+4. **Ready to Roll**: Your workflow is now fully populated and ready for professional output!
 
-- **Flexible Asset Management (GT23_Assets) | 灵活资产管理 (v2.2.1-v2.2.2)**
-   - EN: Decoupled 121+ logos into a standalone `GT23_Assets` repo. Users can now set a **Custom Asset Path** and sync via the GUI menu (Help -> Sync Border Assets) with automatic Gitee/GitHub failover.
-   - CN: 将 121+ 款相机图标剥离至独立的 `GT23_Assets` 库。用户现可自定义资产路径，并通过 GUI 菜单（帮助 -> 同步边框资源）进行一键同步，支持 Gitee/GitHub 双源自动切换。
-
-- **Polished UI & Native Typography | UI 细节打磨与原生字体支持**
-   - EN: Adopted high-quality system fonts ("Microsoft YaHei" & "Segoe UI") and a foolproof vertical layout for sync settings to ensure crisp rendering and zero text clipping in bilingual modes.
-   - CN: 采用了系统原生的高质量字体（微软雅黑与 Segoe UI），并优化了同步设置的纵向布局，确保界面渲染精密且英文文本不再被截断。
-
-- **Hand-Extracted Logo Library (121+ Models) | 121+ 款手工提炼图标库**
-   - EN: Massive library expansion covering Leica, Canon, Nikon, Pentax, and more, all manually traced from vintage brochures.
-   - CN: 图标库大规模扩容，涵盖徕卡、佳能、尼康、宾得等 121+ 款机型，全部由原始说明书手工临摹而成。
-
-## 🔥 What's New — v2.0.0 (GUI Edition)
-
-- **GUI Released | 正式发布 GUI**
-   - EN: Brand‑new desktop app built with `tkinter + ttkbootstrap`. Two panels: Border Tool and Contact Sheet, bilingual UI with auto language detection.
-   - CN: 基于 `tkinter + ttkbootstrap` 的全新桌面版，提供「边框工具 / 底片索引」两大面板，内置中英双语并自动识别系统语言。
-
-- **MKL Runtime Included | 内置 MKL 运行库**
-   - EN: Bundle Intel MKL/OpenMP DLLs from Conda env to resolve "Failed to extract entry: mkl_avx2.2.dll".
-   - CN: 自动打包 Conda 环境中的 MKL/OpenMP DLL，修复 “mkl_avx2.2.dll 解包失败”。
-
-- **Dev/Build Streamlined | 开发/打包流程简化**
-   - EN: Single Conda env name `gt23`; UTF‑8 batch outputs; safer clean‑build with process unlock.
-   - CN: 统一环境名 `gt23`，批处理改为 UTF‑8，打包前自动清理并解锁旧进程。
-
-- **Consistency & Maintainability | 一致性与可维护性**
-   - EN: Centralized version in `version.py`; window titles auto‑sync. Dependencies aligned to `ttkbootstrap` (removed unused PySide6).
-   - CN: 版本集中到 `version.py` 并自动同步窗口标题；依赖切换为 `ttkbootstrap`（移除未使用的 PySide6）。
-
-Notes | 说明:
-- EN: CLI is paused for this release — GUI is the primary distribution.
-- CN: 本次发布暂停维护 CLI，主推 GUI 桌面版。
+1. **下载并运行**: 获取 `GT23_Workflow_v2.2.2.exe`（仅约 39MB）。
+2. **一键同步**: 首次启动时，程序会提示是否同步资源库，点击**是**。
+3. **满血归位**: 程序会自动将 121+ 款图标与胶片配置拉取至 EXE 旁的 `GT23_Assets/` 目录。
+4. **正式使用**: 至此，您的工具已完全就绪，可享受丝滑的专业胶片排版流程。
 
 ## 📷 About the Name | 项目名称由来
 

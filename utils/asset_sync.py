@@ -116,22 +116,41 @@ def _sync_via_web(remote_name=None):
                 raise ValueError("Downloaded data is not a valid ZIP file (Might be HTML).")
             
             # 3. EN: Extract / CN: 解压
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # EN: Determine real target base (next to EXE or custom path)
+            # CN: 确定真实的解压根目录（EXE 旁或自定义路径）
             custom_path = config_manager.get("custom_asset_path")
-            target_dir = custom_path if custom_path and os.path.exists(custom_path) else os.path.join(base_dir, "GT23_Assets")
-            os.makedirs(target_dir, exist_ok=True)
+            if custom_path and os.path.exists(custom_path):
+                target_base = custom_path
+            else:
+                if getattr(sys, 'frozen', False):
+                    exe_dir = os.path.dirname(sys.executable)
+                    target_base = os.path.join(exe_dir, "GT23_Assets")
+                else:
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    target_base = os.path.join(base_dir, "GT23_Assets")
+            
+            os.makedirs(target_base, exist_ok=True)
             
             updated_logos = []
             with zipfile.ZipFile(io.BytesIO(res.content)) as z:
-                root_in_zip = z.namelist()[0].split('/')[0]
+                # GitHub/Gitee ZIPs usually have a single root folder like 'GT23_Assets-main'
+                namelist = z.namelist()
+                if not namelist: raise ValueError("Empty ZIP file.")
+                root_in_zip = namelist[0].split('/')[0]
+                
                 for member in z.infolist():
                     if member.filename.startswith(root_in_zip + '/'):
                         member.filename = member.filename[len(root_in_zip)+1:]
                         if not member.filename: continue
-                        if "logos/" in member.filename and (member.filename.endswith(".svg") or member.filename.endswith(".png")):
-                            logo_name = os.path.basename(member.filename)
-                            if logo_name: updated_logos.append(logo_name)
-                        z.extract(member, target_dir)
+                        
+                        # EN: Extract relevant asset folders / CN: 仅解压相关资源文件夹
+                        if member.filename.startswith(("logos/", "films/", "config/")):
+                            # Track logo changes for UI feedback
+                            if "logos/" in member.filename and (member.filename.endswith(".svg") or member.filename.endswith(".png")):
+                                logo_name = os.path.basename(member.filename)
+                                if logo_name: updated_logos.append(logo_name)
+                                
+                            z.extract(member, target_base)
             
             if remote_hash:
                 config_manager.set(f"last_asset_hash_{source_key}", remote_hash)
