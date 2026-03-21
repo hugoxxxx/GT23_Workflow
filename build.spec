@@ -26,7 +26,6 @@ datas = [
     ('assets/fonts/intodotmatrix.ttf', 'assets/fonts'),
     ('assets/fonts/palab.ttf', 'assets/fonts'),
     ('assets/fonts/gara.ttf', 'assets/fonts'),
-    ('assets/logo', 'assets/logo'),  # Camera logos
     ('core', 'core'),          # Core modules
     ('apps', 'apps'),          # App modules
 ]
@@ -36,28 +35,10 @@ datas = [
 hiddenimports = []
 
 
-def _find_mkl_binaries():
-    """
-    EN: Collect Intel MKL/OpenMP runtime DLLs from the conda env so numpy can unpack safely.
-    CN: 从 conda 环境收集 MKL/OpenMP 运行时 DLL，避免 numpy 解包时报缺失。
-    """
-    root = os.getenv("CONDA_PREFIX", sys.base_prefix)
-    bin_dir = os.path.join(root, "Library", "bin")
-    patterns = ["mkl_*.dll", "mkl_rt*.dll", "libiomp5md.dll"]
-    dlls = []
-    for pat in patterns:
-        dlls.extend(glob.glob(os.path.join(bin_dir, pat)))
-    # Dedup and map to (src, dest)
-    return list({dll: (dll, ".") for dll in dlls}.values())
-
-
-# EN: Bundle MKL/OpenMP binaries to fix "Failed to extract entry: mkl_avx2.2.dll"
-# CN: 打包 MKL/OpenMP 运行库，修复 "Failed to extract entry: mkl_avx2.2.dll" 问题
-binary_overrides = _find_mkl_binaries()
-
 # EN: Explicitly include python311.dll to prevent "Failed to load Python DLL"
 # CN: 显式包含 python311.dll，防止出现“无法加载 Python DLL”的报错
 root = os.getenv("CONDA_PREFIX", sys.base_prefix)
+binary_overrides = []
 python_dll = os.path.join(root, "python311.dll")
 if os.path.exists(python_dll):
     binary_overrides.append((python_dll, "."))
@@ -71,7 +52,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'matplotlib', 'scipy', 'pandas', 'PySide6', 'PyQt5', 'PyQt6',
+        'IPython', 'notebook', 'jedi', 'psutil', 'pytest', 'sqlite3',
+        'libcrypto', 'mkl', 'mkl_rt', 'libiomp5md'
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -83,6 +68,7 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
+    # a.binaries,  # Manual override if needed
     a.binaries,
     a.zipfiles,
     a.datas,
@@ -91,7 +77,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=False,                # EN: Disable UPX to prevent DLL load errors / CN: 禁用 UPX 防止 DLL 加载报错
+    upx=True,                 # EN: ENABLE UPX to compress the executable / CN: 开启 UPX 压缩
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,          
