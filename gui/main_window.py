@@ -95,7 +95,31 @@ class MainWindow:
         # EN: Apply detected language to panels immediately / CN: 立刻应用系统语言到面板
         self.border_panel.update_language(self.lang)
         self.contact_panel.update_language(self.lang)
+
+        # EN: Check for missing assets on first run / CN: 首次启动检查是否缺少资源
+        self.root.after(500, self.check_missing_assets)
     
+    def check_missing_assets(self):
+        """EN: Prompt user to sync if logos are missing. / CN: 如果缺少图标，提示用户进行同步。"""
+        from core.renderer import bootstrap_logos
+        try:
+            logo_dir = bootstrap_logos()
+            logo_count = 0
+            if os.path.exists(logo_dir):
+                files = os.listdir(logo_dir)
+                logo_count = len([f for f in files if f.lower().endswith(('.svg', '.png'))])
+            
+            if logo_count == 0:
+                title = "首次运行提示" if self.lang == "zh" else "First Run Hint"
+                msg = ("检测到本地图标库为空。\n\n本版本为轻量化版（不打包 126+ 款相机图标）。\n"
+                       "是否现在从云端仓库同步图标资源？") if self.lang == "zh" else \
+                      ("No camera logos detected.\n\nThis is a lightweight version (logos not bundled).\n"
+                       "Would you like to sync asset library from cloud now?")
+                
+                if messagebox.askyesno(title, msg):
+                    self.sync_assets_command()
+        except Exception:
+            pass
     def setup_menu(self):
         """
         EN: Create menu bar
