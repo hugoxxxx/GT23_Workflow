@@ -82,9 +82,64 @@ Notes | 说明:
 * **Dynamic DataBack | 动态背印**:
     * EN: Automatically reads EXIF (Date, Aperture, Shutter, Film stock) for **each individual frame**. Simulated glowing orange LED/Segment font styles. | CN: 自动读取每一帧的 EXIF 信息（日期、光圈、快门、胶片型号）。采用仿真 LED 橙色七段数码管字体。
 
-* **Hand-Extracted Logo Library | 手工提炼图标库 (v2.2)**:
-    - EN: **Authenticity First**: A massive expansion to 80+ logos. Unlike generic fonts, these are meticulously traced from **original vintage documentation** (Mamiya, Rollei, Contax, etc.) to capture the soul of each camera brand.
-    - CN: **极致还原**：跨越式更新至 80+ 款机型。不同于通用的电脑字体，每一格图标都来自**相机原始时代的纸质说明书与宣传册**，手工勾勒，留住每一份品牌灵魂。
+* **Hand-Extracted Logo Library | 手工提炼图标库 (v2.2+)**:
+    - EN: **Authenticity First**: A massive expansion to 121+ logos. Meticulously traced from **original vintage documentation** (Mamiya, Rollei, Contax, etc.) to capture the soul of each camera brand.
+    - CN: **极致还原**：跨越式更新至 121+ 款机型。每一格图标都来自**相机原始时代的纸质说明书与宣传册**，手工勾勒，留住每一份品牌灵魂。
+
+### 🏛️ Museum of Logos / 图标博物馆 (121+ Models)
+
+<details>
+<summary><b>Click to view the full list of supported camera models / 点击展开查看完整支持机型列表</b></summary>
+
+**BRONICA**
+> C, EC, EC-TL, ETRS, ETRSi, GS-1, RF645, S, S2, SQ-A, SQ-B
+
+**CANON / 佳能**
+> A-1, AE-1, EOS 6D, EOS 6DII, EOS R1, EOS R3, EOS R5II, EOS R6II, EOS R6III, Autoboy 180, Autoboy S, Autoboy SII, QL17
+
+**CONTAX / 康泰时**
+> G1, G2, T, T2, T3, TVS, TVSII, TVSIII
+
+**FUJIFILM / 富士**
+> GA645, GA645i, GA645wi, GA645zi, GF670, GS645, GS645S, GS645W, KLASSE, KLASSE S, KLASSE W, TX-1, TX-2
+
+**HASSELBLAD / 哈苏**
+> 202FA, 203FE, 205FCC, 205TCC, 500C, 500CM, 501CM, 503CW, 503CX, 553ELX, 903SWC, SWC, SWCM
+
+**KYOCERA / 京瓷**
+> T-PROOF, TD, Yanagi
+
+**LEICA / 徕卡**
+> M1, M2, M3, M4, M4-2, M4-P, M5, M6, M7, M8, M9, M10, M11, M-A, M-P, M-Monochrom, Q, Q2, Q3
+
+**MAMIYA / 玛米亚**
+> 6, 7, 7II, 645, 645Pro, C220, C330, RB67, RZ67, M645
+
+**MINOLTA / 美能达**
+> TC-1, X-700, CLE
+
+**NIKON / 尼康**
+> F, F2, F3, F3HP, F4, F5, F6, FM2, FM3A, FE, FE2, Z6, Z7, Z8, Z9, Zf, 35Ti, 28Ti
+
+**OLYMPUS / 奥林巴斯**
+> OM-1, OM-2, OM-3, OM-4, XA, XA2, Pen-F, Mju-II
+
+**PENTAX / 宾得**
+> 67, 67II, 645, 645N, 645NII, K1000, LX, MX, ME, Pentax17
+
+**RICOH / 理光**
+> GR1, GR1s, GR1v, GR10, GR21, GR3
+
+**ROLLEI / 禄来**
+> Rolleiflex 2.8F, 3.5F, Rollei 35, Rollei 35S
+
+**YASHICA / 雅西卡**
+> Electro 35, T4, T5
+
+*And many more... / 以及更多持续更新中...*
+
+</details>
+
 
 * **Expanded Film Library | 扩展胶片库**:
     * EN: Now supports a significantly larger film database, covering more film stock variants and brands with accurate EdgeCode and color profiles. | CN: 现已支持更大规模的胶片库，涵盖更多胶片品牌与型号，包含准确的喷码与视觉颜色配置。
