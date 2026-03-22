@@ -13,9 +13,17 @@
 *   **CN:** **即时同步**：图标库的扩容不再依赖软件版本更新。只需点击“同步”按钮，即可瞬间拉取云端最新的相机图标，实现真正的“无限扩容”。
 *   **CN:** **码资分离**：独立版 EXE 采用轻量化架构，首次启动时将引导**一键同步** 121+ 款相机图标，并在本地自动建立 `GT23_Assets` 资源库。
 
-### 3. 硬核容错：GitHub/Gitee 双向切换 / Robust Failover: Dual-Remote Strategy
+### 3. 硬核容错：GitHub/Gitee 双源切换 / Robust Failover: Dual-Remote Strategy
 *   **EN:** Implemented automatic failover between GitHub and Gitee. Added mandatory ZIP signature validation (`PK\x03\x04`) to prevent crashes from network redirects or 404 HTML pages.
 *   **CN:** 实现了 GitHub 与 Gitee 双源自动切换逻辑。新增了 ZIP 签名强制校验，彻底杜绝了因网络环境波动或 HTML 报错页导致的同步崩溃。
+
+---
+
+## 🎨 手动旋转：掌控全局方向 / Pro Feature: Manual Rotation
+*   **EN**: Added ↺ Left and ↻ Right 90-degree rotation buttons to the Preview Panel. 
+*   **EN**: Rotations applied to the preview are perfectly mirrored in the final batch output, ensuring "What You See Is What You Get."
+*   **CN**: **一键纠偏**：在预览面板顶部新增了 ↺ 左旋与 ↻ 右旋按钮。
+*   **CN**: **所见即所得**：预览中应用的旋转角度将完美映射至最终的批量导出结果，彻底解决 EXIF 方向识别不准的问题。
 
 ---
 

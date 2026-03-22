@@ -41,6 +41,7 @@ class BorderPanel:
         self.preview_after_id = None # EN: Debounce timer ID / CN: 防抖计时器 ID
         self.film_list = []
         self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
+        self.rotation_var = tk.IntVar(value=0) # EN: Manual rotation state / CN: 手动旋转状态
         
         # EN: Load layout config for parameter initialization / CN: 加载布局配置用于参数初始化
         self.layout_config = {}
@@ -233,6 +234,21 @@ class BorderPanel:
         preview_text = "预览（显示文件夹第一张图片）" if self.lang == "zh" else "Preview (First Image in Folder)"
         self.preview_frame = ttk.Labelframe(self.right_frame, text=preview_text, padding=10)
         self.preview_frame.pack(fill=BOTH, expand=YES, pady=(0, 10))
+
+        # EN: Rotation controls / CN: 旋转控制
+        self.rotation_frame = ttk.Frame(self.preview_frame)
+        self.rotation_frame.pack(fill=X, pady=(0, 5))
+        
+        rotate_left_text = "↺ 左旋 90°" if self.lang == "zh" else "↺ Rotate Left"
+        rotate_right_text = "↻ 右旋 90°" if self.lang == "zh" else "↻ Rotate Right"
+        
+        self.rotate_left_btn = ttk.Button(self.rotation_frame, text=rotate_left_text, 
+                                          command=self.rotate_left, bootstyle="secondary-outline")
+        self.rotate_left_btn.pack(side=LEFT, padx=5)
+        
+        self.rotate_right_btn = ttk.Button(self.rotation_frame, text=rotate_right_text, 
+                                           command=self.rotate_right, bootstyle="secondary-outline")
+        self.rotate_right_btn.pack(side=LEFT)
         
         # EN: Responsive Canvas replacing fixed Label / CN: 响应式 Canvas 替换固定 Label
         bg_color = ttk.Style().lookup("TFrame", "background")
@@ -376,18 +392,13 @@ class BorderPanel:
         CN: 从配置文件加载胶片库
         """
         try:
-            # EN: Use MetadataHandler resolver to locate films.json in dev/onefile/_MEIPASS
-            # CN: 通过 MetadataHandler 的路径解析器定位 films.json（开发/单文件/_MEIPASS 均可）
-            config_path = MetadataHandler._resolve_config_path('films.json')
-            
-            with open(config_path, 'r', encoding='utf-8') as f:
-                films_data = json.load(f)
-            
             self.film_list = []
-            for brand, films in films_data.items():
-                for film_name in films.keys():
-                    display_name = f"{brand} {film_name}"
-                    self.film_list.append((display_name, film_name))
+            meta = MetadataHandler()
+            if hasattr(meta, 'films_map'):
+                for brand, films in meta.films_map.items():
+                    for film_name in films.keys():
+                        display_name = f"[{brand}] {film_name}"
+                        self.film_list.append((display_name, film_name))
             
             self.film_list.sort()
             self.update_film_combo_values()
@@ -397,8 +408,17 @@ class BorderPanel:
             self.parent.update_idletasks()
                 
         except Exception as e:
-            msg = f"✗ 胶片/资源库加载失败: {e}" if self.lang == "zh" else f"✗ Asset library load failed: {e}"
-            self.log(msg)
+            self.log(f"CN: 加载胶片库失败: {e} / EN: Failed to load film library: {e}")
+
+    def rotate_left(self):
+        """EN: Rotate preview left / CN: 向左旋转预览"""
+        self.rotation_var.set((self.rotation_var.get() - 90) % 360)
+        self.on_params_changed()
+
+    def rotate_right(self):
+        """EN: Rotate preview right / CN: 向右旋转预览"""
+        self.rotation_var.set((self.rotation_var.get() + 90) % 360)
+        self.on_params_changed()
 
     def get_asset_status_msg(self):
         """EN: Generate unified asset status message / CN: 生成统一的资产状态消息"""
@@ -599,6 +619,9 @@ class BorderPanel:
                     else:
                         data['layout'] = custom_layout
                     
+                    # EN: Apply manual rotation / CN: 应用手动旋转
+                    data['manual_rotation'] = self.rotation_var.get()
+                    
                     # EN: Apply manual EXIF overrides / CN: 应用手动 EXIF 覆盖
                     manual_exif = {
                         'Make': self.exif_make_var.get().strip(),
@@ -614,7 +637,9 @@ class BorderPanel:
 
                     renderer = FilmRenderer()
                     # EN: Downscale target edge for faster preview while keeping shadow / CN: 降低分辨率加快预览同时保留阴影
-                    out_name = renderer.process_image(img_path, data, temp_dir, target_long_edge=1200)
+                    out_name = renderer.process_image(img_path, data, temp_dir, 
+                                                     target_long_edge=1200, 
+                                                     manual_rotation=data.get('manual_rotation', 0))
 
                     out_path = os.path.join(temp_dir, out_name)
                     if not os.path.exists(out_path):

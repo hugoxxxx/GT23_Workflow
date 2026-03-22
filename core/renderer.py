@@ -2,7 +2,7 @@ import os
 import io
 import sys
 import shutil
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 from utils.config_manager import config_manager
 
 class FilmRenderer:
@@ -62,12 +62,21 @@ class FilmRenderer:
                         pass
 
 
-    def process_image(self, img_path, data, output_dir, target_long_edge=4500):
+    def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0):
         try:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
 
             img = Image.open(img_path)
+            
+            # EN: Handle EXIF orientation automatically / CN: 自动处理 EXIF 旋转信息
+            img = ImageOps.exif_transpose(img)
+            
+            # EN: Apply manual rotation (0, 90, 180, 270) / CN: 应用手动旋转
+            if manual_rotation != 0:
+                # PIL rotate is CCW, so we use -angle for CW
+                img = img.rotate(-manual_rotation, expand=True)
+
             if img.mode != "RGB": img = img.convert("RGB")
             img = self._smart_resize(img, target_long_edge)
             w, h = img.size

@@ -9,6 +9,9 @@
 - **[Stability] Robust Sync Failover & Validation / 容错同步与签名校验**:
   - EN: Implemented automatic failover between GitHub and Gitee remotes. Added `PK\x03\x04` ZIP signature validation to prevent crashes from HTML error pages (404/Login redirects).
   - CN: 实现了 GitHub 与 Gitee 双源自动切换机制。新增了 `PK\x03\x04` ZIP 签名强制校验，有效防止因网络重定向或 404 HTML 页面导致的同步崩溃。
+- **[Feature] Manual Image Rotation / 手动图像旋转**:
+  - EN: Added ↺ and ↻ rotation buttons to the Preview Panel. Implemented automatic EXIF orientation fixing via `ImageOps.exif_transpose`.
+  - CN: 在预览面板新增了 ↺ 与 ↻ 旋转按钮。引入了 `ImageOps.exif_transpose` 自动修复 EXIF 方向信息。
 - **[Architecture] Triple-Path Logic Alignment / 三位一体路径对齐**:
   - EN: Standardized asset pathing across Sync Engine, Renderer, and MetadataHandler to use a consistent `GT23_Assets` folder next to the EXE.
   - CN: 统一了同步引擎、渲染器与元数据处理器三方的路径逻辑，确保一键同步后图标与配置文件能立刻被软件精准识别。
