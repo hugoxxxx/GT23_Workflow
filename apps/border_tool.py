@@ -104,7 +104,7 @@ def run_border_tool():
         input("\n按回车键退出 / Press Enter to exit...")
 
 
-def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None, manual_exif=None):
+def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None, manual_exif=None, manual_rotation=0):
     """
     EN: Pure logic function for batch border processing (GUI-friendly).
     CN: 批量边框处理纯逻辑函数（GUI友好）。
@@ -112,26 +112,26 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
     Args:
         input_dir: Input directory path
         output_dir: Output directory path
-        is_digital: Digital mode flag
-        manual_film: Manual film selection (keyword)
-        progress_callback: Function(current, total, filename) for progress updates
-        lang: Language for messages ("zh" or "en")
-        custom_layout: Dict with custom params: {"side": 0.04, "top": 0.04, "bottom": 0.13, "font_scale": 0.032}
-        manual_exif: Dict with manual exif overrides (Make, Model, LensModel, ExposureTimeStr, FNumber, ISO)
-    
+        is_digital: Boolean for digital mode
+        manual_film: String for film keyword
+        progress_callback: function(current, total, filename)
+        lang: UI language ("zh" or "en")
+        custom_layout: dict of overrides
+        manual_exif: dict of manual EXIF data (Make, Model, etc.)
+        manual_rotation: int (0, 90, 180, 270)
+        
     Returns:
-        {
-            'success': bool,
-            'processed': int,
+        dict: {
+            'success': int,
             'failed': list[(filename, error)],
             'message': str
         }
     """
-    try:
-        # EN: Localized message helper / CN: 本地化消息助手
-        def _t(zh_text, en_text):
-            return zh_text if lang == "zh" else en_text
+    # EN: Localized message helper / CN: 本地化消息助手
+    def _t(zh_text, en_text):
+        return zh_text if lang == "zh" else en_text
 
+    try:
         # EN: Initialization / CN: 初始化
         meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
         renderer = FilmRenderer()
@@ -141,17 +141,17 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
         
         # EN: File scanning / CN: 扫描文件
         images = [f for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-        if not images:
-            return {
-                'success': False,
-                'processed': 0,
-                'failed': [],
-                'message': _t("文件夹中没有图片", "No images in folder")
-            }
-        
         total = len(images)
-        processed = 0
-        failed = []
+        
+        results = {
+            'success': 0,
+            'failed': [],
+            'message': ""
+        }
+        
+        if total == 0:
+            results['message'] = _t("未找到图片", "No images found")
+            return results
         
         # EN: Batch processing / CN: 批量处理
         for idx, img_name in enumerate(images, 1):
@@ -159,12 +159,7 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
             
             try:
                 # EN: Extract metadata / CN: 提取元数据
-                if manual_film:
-                    # EN: Use manual film selection / CN: 使用手动胶片选择
-                    data = meta.get_data(img_path, is_digital_mode=is_digital, manual_film=manual_film)
-                else:
-                    # EN: Auto-detect / CN: 自动检测
-                    data = meta.get_data(img_path, is_digital_mode=is_digital)
+                data = meta.get_data(img_path, is_digital_mode=is_digital, manual_film=manual_film)
                 
                 # EN: Apply custom layout params if provided / CN: 如果提供了自定义布局参数则应用
                 if custom_layout:

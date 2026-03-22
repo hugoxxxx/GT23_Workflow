@@ -234,27 +234,28 @@ class BorderPanel:
         preview_text = "预览（显示文件夹第一张图片）" if self.lang == "zh" else "Preview (First Image in Folder)"
         self.preview_frame = ttk.Labelframe(self.right_frame, text=preview_text, padding=10)
         self.preview_frame.pack(fill=BOTH, expand=YES, pady=(0, 10))
-
-        # EN: Rotation controls / CN: 旋转控制
-        self.rotation_frame = ttk.Frame(self.preview_frame)
-        self.rotation_frame.pack(fill=X, pady=(0, 5))
-        
-        rotate_left_text = "↺ 左旋 90°" if self.lang == "zh" else "↺ Rotate Left"
-        rotate_right_text = "↻ 右旋 90°" if self.lang == "zh" else "↻ Rotate Right"
-        
-        self.rotate_left_btn = ttk.Button(self.rotation_frame, text=rotate_left_text, 
-                                          command=self.rotate_left, bootstyle="secondary-outline")
-        self.rotate_left_btn.pack(side=LEFT, padx=5)
-        
-        self.rotate_right_btn = ttk.Button(self.rotation_frame, text=rotate_right_text, 
-                                           command=self.rotate_right, bootstyle="secondary-outline")
-        self.rotate_right_btn.pack(side=LEFT)
         
         # EN: Responsive Canvas replacing fixed Label / CN: 响应式 Canvas 替换固定 Label
         bg_color = ttk.Style().lookup("TFrame", "background")
         self.preview_canvas = tk.Canvas(self.preview_frame, bg=bg_color, highlightthickness=0)
         self.preview_canvas.pack(fill=BOTH, expand=YES)
         self.preview_canvas.bind("<Configure>", self.on_preview_resize)
+
+        # EN: Rotation controls (Minimalist Icons, No Background) / CN: 旋转控制 (极简图标，无背景)
+        self.rotation_frame = ttk.Frame(self.preview_frame)
+        self.rotation_frame.pack(side=BOTTOM, pady=(2, 0))
+        
+        # Pro look: Clickable Labels as buttons for zero-background look
+        icon_font = ("Segoe UI", 14, "bold") if platform.system() == "Windows" else ("Helvetica", 14, "bold")
+        primary_color = ttk.Style().colors.primary
+        
+        self.rotate_left_btn = ttk.Label(self.rotation_frame, text="↺", font=icon_font, foreground=primary_color, cursor="hand2")
+        self.rotate_left_btn.pack(side=LEFT, padx=15)
+        self.rotate_left_btn.bind("<Button-1>", lambda e: self.rotate_left())
+        
+        self.rotate_right_btn = ttk.Label(self.rotation_frame, text="↻", font=icon_font, foreground=primary_color, cursor="hand2")
+        self.rotate_right_btn.pack(side=LEFT, padx=15)
+        self.rotate_right_btn.bind("<Button-1>", lambda e: self.rotate_right())
         
         self._current_preview_pil = None
         self._preview_img_ref = None
@@ -802,14 +803,17 @@ class BorderPanel:
             'ISO': self.exif_iso_var.get().strip()
         }
         
+        # EN: Collect manual rotation / CN: 收集手动旋转
+        manual_rotation = self.rotation_var.get()
+        
         self.worker_thread = threading.Thread(
             target=self.process_worker,
-            args=(input_folder, output_folder, is_digital, manual_film, custom_layout, manual_exif),
+            args=(input_folder, output_folder, is_digital, manual_film, custom_layout, manual_exif, manual_rotation),
             daemon=True
         )
         self.worker_thread.start()
     
-    def process_worker(self, input_dir, output_dir, is_digital, manual_film, custom_layout=None, manual_exif=None):
+    def process_worker(self, input_dir, output_dir, is_digital, manual_film, custom_layout=None, manual_exif=None, manual_rotation=0):
         """
         EN: Worker thread for processing
         CN: 处理工作线程
@@ -823,7 +827,8 @@ class BorderPanel:
                 self.parent.after(0, lambda c=current, t=total, f=filename: self.log(f"[{c}/{t}] {f}"))
             
             # Note: We added manual_exif to apps/border_tool.py in a subsequent step
-            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback, lang=self.lang, custom_layout=custom_layout, manual_exif=manual_exif)
+            # Note: Added manual_rotation to bridge the gap
+            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback, lang=self.lang, custom_layout=custom_layout, manual_exif=manual_exif, manual_rotation=manual_rotation)
             self.parent.after(0, lambda r=result: self.on_processing_complete(r))
         except Exception as e:
             import traceback
