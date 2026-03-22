@@ -19,11 +19,12 @@
 
 ---
 
-## 🎨 手动旋转：掌控全局方向 / Pro Feature: Manual Rotation
-*   **EN**: Added ↺ Left and ↻ Right 90-degree rotation buttons to the Preview Panel. 
-*   **EN**: Rotations applied to the preview are perfectly mirrored in the final batch output, ensuring "What You See Is What You Get."
-*   **CN**: **一键纠偏**：在预览面板顶部新增了 ↺ 左旋与 ↻ 右旋按钮。
-*   **CN**: **所见即所得**：预览中应用的旋转角度将完美映射至最终的批量导出结果，彻底解决 EXIF 方向识别不准的问题。
+## 🎨 手动旋转：掌控全局方向 / Pro- **[NEW] Manual Image Rotation / 手动图像旋转**:
+  - EN: Introduced minimalist, zero-background rotation icons (↺/↻) centered below the preview. Achieve perfect "What You See Is What You Get" for both single and batch processing.
+  - CN: 引入了预览图下方的极简、无背景旋转图标（↺/↻）。实现了单张与批量转换的“所见即所得”完美同步。
+- **[FIX] Batch Engine & UI Stability / 批量引擎与界面稳定性**:
+  - EN: Fixed a critical `NameError` crash in batch mode and resolved the "0 photos processed" display glitch.
+  - CN: 修复了批量处理中的报错及“显示处理 0 张照片”的统计 Bug。
 
 ---
 

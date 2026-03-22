@@ -10,8 +10,14 @@
   - EN: Implemented automatic failover between GitHub and Gitee remotes. Added `PK\x03\x04` ZIP signature validation to prevent crashes from HTML error pages (404/Login redirects).
   - CN: 实现了 GitHub 与 Gitee 双源自动切换机制。新增了 `PK\x03\x04` ZIP 签名强制校验，有效防止因网络重定向或 404 HTML 页面导致的同步崩溃。
 - **[Feature] Manual Image Rotation / 手动图像旋转**:
-  - EN: Added ↺ and ↻ rotation buttons to the Preview Panel. Implemented automatic EXIF orientation fixing via `ImageOps.exif_transpose`.
-  - CN: 在预览面板新增了 ↺ 与 ↻ 旋转按钮。引入了 `ImageOps.exif_transpose` 自动修复 EXIF 方向信息。
+  - EN: Added minimalist, zero-background rotation icons (↺/↻) with 14pt primary color styling. Implemented automatic EXIF orientation fixing via `ImageOps.exif_transpose`.
+  - CN: 新增了极简、无背景的旋转图标（↺/↻），采用 14pt 品牌色设计。引入了 `ImageOps.exif_transpose` 自动修复 EXIF 方向信息。
+- **[Fix] Unified Rotation Logic / 统一旋转逻辑**:
+  - EN: Fixed a critical bug where preview rotation was not passed to the batch engine. Now "What You See Is What You Get" is fully implemented for both single and batch renders.
+  - CN: 修复了预览旋转角度未传递至批量引擎的 Bug，实现了单张预览与批量导出结果的完全一致。
+- **[Fix] Batch Engine Stability / 批量引擎稳定性修复**:
+  - EN: Resolved `NameError` and `UnboundLocalError` in `apps/border_tool.py` and fixed a UI bug where the completion dialog showed "0 photos processed".
+  - CN: 解决了批量处理引擎中的变量定义报错，并修复了处理完成后弹窗错误显示“已处理 0 张照片”的统计 Bug。
 - **[Architecture] Triple-Path Logic Alignment / 三位一体路径对齐**:
   - EN: Standardized asset pathing across Sync Engine, Renderer, and MetadataHandler to use a consistent `GT23_Assets` folder next to the EXE.
   - CN: 统一了同步引擎、渲染器与元数据处理器三方的路径逻辑，确保一键同步后图标与配置文件能立刻被软件精准识别。

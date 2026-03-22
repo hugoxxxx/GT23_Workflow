@@ -108,31 +108,11 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
     """
     EN: Pure logic function for batch border processing (GUI-friendly).
     CN: 批量边框处理纯逻辑函数（GUI友好）。
-    
-    Args:
-        input_dir: Input directory path
-        output_dir: Output directory path
-        is_digital: Boolean for digital mode
-        manual_film: String for film keyword
-        progress_callback: function(current, total, filename)
-        lang: UI language ("zh" or "en")
-        custom_layout: dict of overrides
-        manual_exif: dict of manual EXIF data (Make, Model, etc.)
-        manual_rotation: int (0, 90, 180, 270)
-        
-    Returns:
-        dict: {
-            'success': int,
-            'failed': list[(filename, error)],
-            'message': str
-        }
     """
-    # EN: Localized message helper / CN: 本地化消息助手
     def _t(zh_text, en_text):
         return zh_text if lang == "zh" else en_text
 
     try:
-        # EN: Initialization / CN: 初始化
         meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
         renderer = FilmRenderer()
         
@@ -163,10 +143,8 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
                 
                 # EN: Apply custom layout params if provided / CN: 如果提供了自定义布局参数则应用
                 if custom_layout:
-                    if 'layout' in data:
-                        data['layout'].update(custom_layout)
-                    else:
-                        data['layout'] = custom_layout
+                    if 'layout' not in data: data['layout'] = {}
+                    data['layout'].update(custom_layout)
                 
                 # EN: Apply manual EXIF overrides / CN: 应用手动 EXIF 覆盖
                 if manual_exif:
@@ -174,26 +152,28 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
                         if v:
                             data[k] = v
                 
-                # EN: Final Rendering / CN: 最终渲染
-                renderer.process_image(img_path, data, output_dir)
-                processed += 1
+                # EN: Final Rendering / CN: 最终渲染 (PASS manual_rotation)
+                success = renderer.process_image(img_path, data, output_dir, manual_rotation=manual_rotation)
+                
+                if success:
+                    results['success'] += 1
+                else:
+                    results['failed'].append((img_name, _t("渲染程序返回空", "Renderer returned False")))
                 
                 # EN: Report progress / CN: 报告进度
                 if progress_callback:
                     progress_callback(idx, total, img_name)
                     
             except Exception as e:
-                failed.append((img_name, str(e)))
+                results['failed'].append((img_name, str(e)))
                 if progress_callback:
                     progress_callback(idx, total, _t(f"{img_name}（失败: {e}）", f"{img_name} (Failed: {e})"))
         
         # EN: Return result / CN: 返回结果
-        return {
-            'success': len(failed) < total,  # Success if at least one processed
-            'processed': processed,
-            'failed': failed,
-            'message': _t(f"已处理 {processed}/{total} 张照片", f"Processed {processed}/{total} photos")
-        }
+        results['processed'] = results['success']
+        results['success'] = results['success'] > 0  # Logic success if at least one OK
+        results['message'] = _t(f"已完成！成功 {results['processed']}/{total}", f"Done! Success {results['processed']}/{total}")
+        return results
         
     except Exception as e:
         import traceback
