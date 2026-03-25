@@ -9,8 +9,8 @@ Externalized configuration files to provide users with greater flexibility.
 - **用户编辑优先 / User-Edit Priority**: 程序优先读取外部 JSON 文件。您可以直接修改边框比例或新增胶片型号。
 (External JSON files are prioritized. You can now modify border ratios or add film models without re-compiling.)
 
-### 2. 2026 品牌图标更新 / 2026 Brand Icon
-- **视觉焕新 / Visual Refresh**: 集成了高清 2026 版 GT23 品牌图标（assets/GT23_Icon.png）。
+### 2. 2026 图标更新 / 2026 Brand Icon
+- **视觉焕新 / Visual Refresh**: 集成了高清 2026 版 GT23 图标（assets/GT23_Icon.png）。
 - **多尺寸支持 / Multi-Size Support**: 为 Windows 同步更新了多尺寸 `.ico` 资源，确保各个比例下的显示清晰。
 (Integrated high-resolution logic and professional multi-size .ico for sharp rendering across all scales.)
 
