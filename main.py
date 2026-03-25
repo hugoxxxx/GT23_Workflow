@@ -33,7 +33,11 @@ def main():
         resizable=(True, True)
     )
     
-    # EN: Set window icon (Original PNG only) / CN: 设置窗口图标（仅使用原始 PNG）
+    # EN: Center window on screen / CN: 居中显示窗口
+    app.place_window_center()
+
+    # EN: Set window icon (Original PNG source, System-compliant buffer scale)
+    # CN: 设置窗口图标（坚持原始 PNG 源，仅在内存中进行系统级兼容性缩放）
     try:
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             base_path = sys._MEIPASS  # type: ignore[attr-defined]
@@ -47,38 +51,37 @@ def main():
         if os.path.exists(png_path):
             try:
                 from PIL import Image, ImageTk
-                # EN: Let the system handle the original resolution as requested
-                # CN: 遵照用户要求，不进行手动缩放，将原图直接交给系统处理
+                # EN: Windows GDI+ requires a standard buffer size (max 256px) for title bar display.
+                # CN: Windows GDI+ 子系统要求标题栏图标缓冲区不大于 256px，否则会导致静默加载失败。
                 img_pil = Image.open(png_path)
-                img = ImageTk.PhotoImage(img_pil)
+                # EN: Only scale in memory for the display buffer, never modify the original file.
+                # CN: 仅在内存中进行显示缓冲区的适配缩放，绝不修改原始 2400px 素材文件。
+                img_buff = img_pil.resize((256, 256), Image.Resampling.LANCZOS)
+                img = ImageTk.PhotoImage(img_buff)
                 
-                # EN: Try multiple protocols for maximum compatibility
-                # CN: 尝试多种协议以确保在不同版本的 Tk/Windows 下均能显示
+                # EN: Force update the window with the compatibility buffer
+                # CN: 强制以系统兼容的缓冲区更新窗口图标
                 app.iconphoto(True, img)
                 try:
                     app.wm_iconphoto(True, img) # type: ignore[attr-defined]
                 except Exception:
                     pass
                 
-                # EN: Critical - persist reference to avoid GC / CN: 必须保持硬引用防止 GC
+                # EN: Critical - persist reference / CN: 必须保持硬引用防止 GC
                 app._icon_photo = img # type: ignore[attr-defined]
-                print(f"CN: [✔] 已加载原始图标资产: {os.path.basename(png_path)} ({img_pil.size[0]}x{img_pil.size[1]})")
+                print(f"CN: [✔] 已成功激活原始图标 (系统兼容模式): {img_pil.size[0]}px -> 256px")
             except Exception as e:
-                print(f"CN: [!] 图标加载失败 (PIL): {e}")
+                print(f"CN: [!] 兼容性加载失败 (PIL): {e}")
                 try:
                     img = tk.PhotoImage(file=png_path)
                     app.iconphoto(True, img)
                     app._icon_photo = img # type: ignore[attr-defined]
-                    print(f"CN: [✔] 已加载原始图标资产 (Native): {os.path.basename(png_path)}")
-                except Exception as e2:
-                    print(f"CN: [!] 图标加载失败 (Native): {e2}")
+                except Exception:
+                    pass
         else:
             print(f"CN: [!] 未找到图标文件: {png_path}")
     except Exception as e:
-        print(f"CN: [!] 图标模块运行异常: {e}")
-    
-    # EN: Center window on screen / CN: 居中显示窗口
-    app.place_window_center()
+        print(f"CN: [!] 图标子系统异常: {e}")
     
     # EN: Ensure working folders exist / CN: 确保工作文件夹存在
     try:
