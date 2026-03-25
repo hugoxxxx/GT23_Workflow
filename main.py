@@ -20,6 +20,18 @@ def main():
     EN: Main function - initialize and run GUI application
     CN: 主程序 - 初始化并运行 GUI 应用程序
     """
+    # EN: Enable DPI Awareness for high-resolution displays (Windows only)
+    # CN: 针对高分辨率屏幕启用 DPI 感知（仅限 Windows），防止图标与文字模糊
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        try:
+            from ctypes import windll
+            windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
     # EN: Detect system language / CN: 检测系统语言
     _lang = detect_system_language()
     ver = get_version_string()
@@ -28,8 +40,8 @@ def main():
     # EN: Create application window / CN: 创建应用窗口
     app = ttk.Window(
         title=_title,
-        themename="cosmo",  # Modern theme (others: darkly, superhero, solar, cyborg, vapor, journal)
-        size=(1400, 1100),   # EN: Default window size (scalable) / CN: 默认窗口大小（支持自适应缩放）
+        themename="cosmo",  # Modern theme
+        size=(1400, 1100),   # EN: Default window size
         resizable=(True, True)
     )
     
@@ -59,21 +71,26 @@ def main():
         
         if os.path.exists(png_path):
             try:
-                # EN: Method 2: High-resolution PNG based icon for titlebar
-                # This often looks sharper on modern Windows 10/11 High-DPI
+                # EN: Method 2: Multi-size icon stack for titlebar and high-DPI
+                # CN: 多尺度图标栈：提供全套尺寸，确保高分屏下的像素级清晰度
                 from PIL import Image, ImageTk
                 img_pil = Image.open(png_path).convert("RGBA")
-                # EN: Create a reasonable-sized icon for the PhotoImage to avoid heavy scaling
-                img_small = img_pil.resize((256, 256), Image.Resampling.LANCZOS)
-                photo = ImageTk.PhotoImage(img_small)
-                app.iconphoto(True, photo)
-                # Keep reference
-                app._icon_photo = photo # type: ignore[attr-defined]
+                icon_sizes = [16, 32, 48, 64, 128, 256]
+                
+                # EN: Keep references to avoid garbage collection / CN: 必须保留引用防止 GC
+                app._icon_photos = [] # type: ignore[attr-defined]
+                for s in icon_sizes:
+                    resized = img_pil.resize((s, s), Image.Resampling.LANCZOS)
+                    photo = ImageTk.PhotoImage(resized)
+                    app._icon_photos.append(photo) # type: ignore[attr-defined]
+                
+                # EN: Apply the best match for each context / CN: 应用最佳匹配
+                app.iconphoto(True, *app._icon_photos) # type: ignore[attr-defined]
             except Exception:
-                # Fallback to standard tk.PhotoImage if PIL fails
                 try:
                     photo = tk.PhotoImage(file=png_path)
                     app.iconphoto(True, photo)
+                    app._icon_photo = photo # type: ignore[attr-defined]
                 except Exception:
                     pass
     except Exception:
