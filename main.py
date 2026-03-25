@@ -43,29 +43,39 @@ def main():
             base_path = os.path.dirname(os.path.abspath(__file__))
         
         png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
+        
         if os.path.exists(png_path):
-            # EN: Windows title bars have a technical limit (usually 256px).
-            # We must downsample our 2400px source to ensure it actually shows up.
-            # CN: Windows 标题栏有技术尺寸上限（通常为 256px），必须对原图进行等比降采样才能正常显示。
             try:
                 from PIL import Image, ImageTk
+                # EN: Let the system handle the original resolution as requested
+                # CN: 遵照用户要求，不进行手动缩放，将原图直接交给系统处理
                 img_pil = Image.open(png_path)
-                # EN: High-fidelity resize to system's maximum standard icon size
-                # CN: 使用 LANCZOS 滤镜进行高清缩放至系统最大标准图标尺寸
-                img_resized = img_pil.resize((256, 256), Image.Resampling.LANCZOS)
-                img = ImageTk.PhotoImage(img_resized)
+                img = ImageTk.PhotoImage(img_pil)
+                
+                # EN: Try multiple protocols for maximum compatibility
+                # CN: 尝试多种协议以确保在不同版本的 Tk/Windows 下均能显示
                 app.iconphoto(True, img)
+                try:
+                    app.wm_iconphoto(True, img) # type: ignore[attr-defined]
+                except Exception:
+                    pass
+                
+                # EN: Critical - persist reference to avoid GC / CN: 必须保持硬引用防止 GC
                 app._icon_photo = img # type: ignore[attr-defined]
-            except Exception:
-                # Fallback to tk.PhotoImage if PIL fails
+                print(f"CN: [✔] 已加载原始图标资产: {os.path.basename(png_path)} ({img_pil.size[0]}x{img_pil.size[1]})")
+            except Exception as e:
+                print(f"CN: [!] 图标加载失败 (PIL): {e}")
                 try:
                     img = tk.PhotoImage(file=png_path)
                     app.iconphoto(True, img)
                     app._icon_photo = img # type: ignore[attr-defined]
-                except Exception:
-                    pass
-    except Exception:
-        pass
+                    print(f"CN: [✔] 已加载原始图标资产 (Native): {os.path.basename(png_path)}")
+                except Exception as e2:
+                    print(f"CN: [!] 图标加载失败 (Native): {e2}")
+        else:
+            print(f"CN: [!] 未找到图标文件: {png_path}")
+    except Exception as e:
+        print(f"CN: [!] 图标模块运行异常: {e}")
     
     # EN: Center window on screen / CN: 居中显示窗口
     app.place_window_center()
