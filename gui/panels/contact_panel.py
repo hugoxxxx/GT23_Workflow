@@ -210,7 +210,7 @@ class ContactPanel:
         CN: 打开文件夹选择对话框
         """
         folder = filedialog.askdirectory(
-            title="选择输入文件夹 Select Input Folder",
+            title="选择输入文件夹" if self.lang == "zh" else "Select Input Folder",
             initialdir=self.input_folder_var.get() or os.path.expanduser("~")
         )
         if folder:
@@ -444,14 +444,14 @@ class ContactPanel:
         input_folder = self.input_folder_var.get()
         if not input_folder or not os.path.exists(input_folder):
             title = "警告" if self.lang == "zh" else "Warning"
-            msg = "请先选择输入文件夹\nPlease select input folder" if self.lang == "zh" else "Please select input folder first"
+            msg = "请先选择输入文件夹" if self.lang == "zh" else "Please select input folder"
             messagebox.showwarning(title, msg)
             return
         
         files = [f for f in os.listdir(input_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
         if not files:
             title = "警告" if self.lang == "zh" else "Warning"
-            msg = "输入文件夹中没有图片\nNo images in input folder" if self.lang == "zh" else "No images in input folder"
+            msg = "输入文件夹中没有图片" if self.lang == "zh" else "No images in input folder"
             messagebox.showwarning(title, msg)
             return
         

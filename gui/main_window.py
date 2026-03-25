@@ -235,7 +235,9 @@ class MainWindow:
             else:  # Linux and others
                 subprocess.run(["xdg-open", working_dir])
         except Exception as e:
-            tk.messagebox.showerror("错误 Error", f"无法打开目录 Failed to open folder:\n{e}")
+            title = "错误" if self.lang == "zh" else "Error"
+            msg = f"无法打开目录:\n{e}" if self.lang == "zh" else f"Failed to open folder:\n{e}"
+            tk.messagebox.showerror(title, msg)
     
     def show_about(self):
         """
@@ -372,15 +374,15 @@ class SettingsDialog(tk.Toplevel):
     def _save(self):
         config_manager.set("custom_asset_path", self.path_var.get())
         config_manager.set("preferred_sync_source", self.source_var.get())
-        messagebox.showinfo("Success" if self.lang == "en" else "成功", 
-                            "设置已保存成功！某些更改可能需要重启程序生效。\nSettings saved! Some changes may require restart." if self.lang == "zh" else "Settings saved successfully!")
+        messagebox.showinfo("成功" if self.lang == "zh" else "Success", 
+                            "设置已保存成功！某些更改可能需要重启程序生效。" if self.lang == "zh" else "Settings saved successfully! Some changes may require restart.")
         self.destroy()
 
 class SyncProgressDialog(tk.Toplevel):
     def __init__(self, parent, lang="en"):
         super().__init__(parent)
         self.lang = lang
-        self.title("同步中 Syncing..." if lang == "zh" else "Syncing...")
+        self.title("正在同步..." if lang == "zh" else "Syncing...")
         
         self.geometry("480x200")
         self.resizable(False, False)
@@ -390,7 +392,7 @@ class SyncProgressDialog(tk.Toplevel):
         container = ttk.Frame(self, padding=35)
         container.pack(fill=BOTH, expand=YES)
 
-        label_text = "正在同步边框资源库，请耐心等待...\nSyncing assets, please wait..."
+        label_text = "正在同步边框资源库，请耐心等待..." if self.lang == "zh" else "Syncing assets, please wait..."
         ttk.Label(container, text=label_text, justify=CENTER, font=("", 10)).pack(pady=(0, 20))
         
         self.progress = ttk.Progressbar(container, mode='indeterminate', length=350, bootstyle="success-striped")
@@ -406,7 +408,7 @@ class SyncProgressDialog(tk.Toplevel):
     def stop(self, success, message):
         self.progress.stop()
         self.destroy()
-        title = "同步结果 Sync Result" if self.lang == "zh" else "Sync Result"
+        title = "同步结果" if self.lang == "zh" else "Sync Result"
         if success:
             messagebox.showinfo(title, message)
         else:

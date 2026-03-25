@@ -745,12 +745,16 @@ class BorderPanel:
         # EN: Validate inputs / CN: 验证输入
         input_folder = self.input_folder_var.get()
         if not input_folder or not os.path.exists(input_folder):
-            messagebox.showwarning("警告 Warning", "请先选择输入文件夹\nPlease select input folder")
+            title = "警告" if self.lang == "zh" else "Warning"
+            msg = "请先选择输入文件夹" if self.lang == "zh" else "Please select input folder"
+            messagebox.showwarning(title, msg)
             return
         
         files = [f for f in os.listdir(input_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
         if not files:
-            messagebox.showwarning("警告 Warning", "输入文件夹中没有图片\nNo images in input folder")
+            title = "警告" if self.lang == "zh" else "Warning"
+            msg = "输入文件夹中没有图片" if self.lang == "zh" else "No images in input folder"
+            messagebox.showwarning(title, msg)
             return
         
         # EN: Get manual film / CN: 获取手动胶片
@@ -886,7 +890,8 @@ class BorderPanel:
             msg = "\n✗ 处理失败" if self.lang == "zh" else "\n✗ Processing failed"
             self.log(msg)
             self.log(f"✗ {result.get('message', 'Unknown error')}")
-            messagebox.showerror("错误 Error", result.get('message', 'Unknown error'))
+            title = "错误" if self.lang == "zh" else "Error"
+            messagebox.showerror(title, result.get('message', 'Unknown error'))
     
     def on_processing_error(self, error_msg):
         """
@@ -898,8 +903,10 @@ class BorderPanel:
         
         msg = f"\n✗ 发生错误\n{error_msg}" if self.lang == "zh" else f"\n✗ Error occurred\n{error_msg}"
         self.log(msg)
-        messagebox.showerror("错误 Error", 
-                           f"处理过程中发生错误 Error during processing:\n\n{error_msg[:200]}...\n\n如需帮助请联系\nFor help contact: xjames007@gmail.com")
+        title = "错误" if self.lang == "zh" else "Error"
+        msg = (f"处理过程中发生错误：\n\n{error_msg[:200]}...\n\n如需帮助请联系：xjames007@gmail.com") if self.lang == "zh" else \
+              (f"Error during processing:\n\n{error_msg[:200]}...\n\nFor help contact: xjames007@gmail.com")
+        messagebox.showerror(title, msg)
     
     def log(self, message):
         """
