@@ -44,12 +44,16 @@ def main():
         
         png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
         if os.path.exists(png_path):
-            # EN: Use PIL for more robust loading of high-res PNGs
-            # CN: 使用 PIL 提高超大分辨率 PNG 的加载稳定性
+            # EN: Windows title bars have a technical limit (usually 256px).
+            # We must downsample our 2400px source to ensure it actually shows up.
+            # CN: Windows 标题栏有技术尺寸上限（通常为 256px），必须对原图进行等比降采样才能正常显示。
             try:
                 from PIL import Image, ImageTk
                 img_pil = Image.open(png_path)
-                img = ImageTk.PhotoImage(img_pil)
+                # EN: High-fidelity resize to system's maximum standard icon size
+                # CN: 使用 LANCZOS 滤镜进行高清缩放至系统最大标准图标尺寸
+                img_resized = img_pil.resize((256, 256), Image.Resampling.LANCZOS)
+                img = ImageTk.PhotoImage(img_resized)
                 app.iconphoto(True, img)
                 app._icon_photo = img # type: ignore[attr-defined]
             except Exception:
