@@ -20,18 +20,6 @@ def main():
     EN: Main function - initialize and run GUI application
     CN: 主程序 - 初始化并运行 GUI 应用程序
     """
-    # EN: Enable DPI Awareness for high-resolution displays (Windows only)
-    # CN: 针对高分辨率屏幕启用 DPI 感知（仅限 Windows），防止图标与文字模糊
-    try:
-        from ctypes import windll
-        windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
-        try:
-            from ctypes import windll
-            windll.user32.SetProcessDPIAware()
-        except Exception:
-            pass
-
     # EN: Detect system language / CN: 检测系统语言
     _lang = detect_system_language()
     ver = get_version_string()
@@ -40,15 +28,13 @@ def main():
     # EN: Create application window / CN: 创建应用窗口
     app = ttk.Window(
         title=_title,
-        themename="cosmo",  # Modern theme
-        size=(1400, 1100),   # EN: Default window size
+        themename="cosmo",
+        size=(1400, 1100),
         resizable=(True, True)
     )
     
-    # EN: Set window icon (if exists) / CN: 设置窗口图标（如果存在）
+    # EN: Set window icon (Original PNG only) / CN: 设置窗口图标（仅使用原始 PNG）
     try:
-        # EN: Resolve asset base (supports PyInstaller onefile via _MEIPASS)
-        # CN: 解析资源基础路径（支持 PyInstaller 单文件的 _MEIPASS 目录）
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             base_path = sys._MEIPASS  # type: ignore[attr-defined]
         elif getattr(sys, 'frozen', False):
@@ -56,24 +42,13 @@ def main():
         else:
             base_path = os.path.dirname(os.path.abspath(__file__))
         
-        ico_path = os.path.join(base_path, 'assets', 'GT23_Icon.ico')
         png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
-
-        # EN: Set window icons / CN: 设置窗口图标
-        if os.path.exists(ico_path):
-            try:
-                app.iconbitmap(default=ico_path)
-                app.iconbitmap(ico_path)
-            except Exception:
-                pass
-        
         if os.path.exists(png_path):
-            try:
-                photo = tk.PhotoImage(file=png_path)
-                app.iconphoto(True, photo)
-                app._icon_photo = photo # type: ignore[attr-defined]
-            except Exception:
-                pass
+            # EN: Use original PNG and let the system handle scaling
+            # CN: 仅使用原始 PNG，将缩放交给系统处理
+            img = tk.PhotoImage(file=png_path)
+            app.iconphoto(True, img)
+            app._icon_photo = img # type: ignore[attr-defined]
     except Exception:
         pass
     
