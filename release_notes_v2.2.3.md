@@ -1,39 +1,30 @@
-# GT23 Film Workflow v2.2.3 Release Notes (Robust & Open)
+# GT23 Film Workflow v2.2.3 Release Notes
 
-## 🛡️ 强力同步与配置开放 / Robust Sync & Open Config
+## 🎞️ 功能更新 / Functional Updates
 
-### 1. 强力多源同步：彻底告别“空包” / Robust Multi-Source Sync
-针对部分网络环境下“显示同步成功但文件夹为空”的问题，我们进行了底层重构。
-*   **Gitee Token 绕过**: 引入 API Token 机制，彻底绕过 Gitee 网页下载时的验证码拦截。
-*   **物理文件校验**: 增加“资产存在性”物理检测。即便云端 Hash 匹配，若本地 `logos` 文件夹为空，也将强制触发重新下载，确保资源万无一失。
-*   **智能路径识别**: 优化了对 Gitee/GitHub 压缩包根目录的自动搜索，适配各种下载源的层级差异。
+### 1. 配置全解耦：开放参数自定义 / Config Decoupling
+现在程序实现了配置文件的“外挂化”，赋予用户更高的自由度。
+- **自动释放**: 首次运行会自动将 `layouts.json` 和 `films.json` 释放至 `GT23_Assets/config/`。
+- **用户编辑优先**: 程序优先读取外部 JSON 文件。您可以直接修改边框比例或新增胶片型号，重启即可生效，无需重新打包。
 
-### 2. 配置文件全解耦：参数自由修改 / Config Decoupling
-为了让资深用户和 EXE 用户能更灵活地调整参数，我们实现了配置文件的“外挂化”。
-*   **自动释放 (Bootstrap)**: 首次运行程序时，会自动将内置的布局、胶片、索引页配置释放到 `GT23_Assets/config/` 目录。
-*   **用户编辑优先**: 现在程序会优先读取 `GT23_Assets/config/` 下的外部 JSON 文件。您可以直接修改边框比例 (`layouts.json`) 或新增胶片型号 (`films.json`)，重启即可生效。
-
----
-
-## 🎞️ 细节打磨：体验更专业 / Refined Experience
-
-### 3. 手动胶卷名称锁定 / Manual Film Name Preservation
-*   **EN:** Fixed an issue where manual film inputs were overwritten by standard database names; manual strings are now strictly preserved.
-*   **CN:** 满足专业需求：现在手动输入的胶卷型号（如 KODAK 5207）将不再被数据库标准名中途覆盖，真正实现“所写即所得”。
-
-### 4. 135 乳剂号显示修复 / 135 Emulsion Display Fix
-*   **EN:** Resolved a bug in the 135 renderer where the emulsion number was hidden; it now displays correctly alongside the film name.
-*   **CN:** 处理 135 画幅时，胶卷名旁的乳剂号现在能正常拼接并显示，细节更丰富。
-
-### 5. 灵活图片排序 / Flexible Image Sorting
-*   **EN:** Added support for sorting contact sheet images by Filename or EXIF Date, with an optional Reverse toggle.
-*   **CN:** 索引页工具新增排序功能：支持按“文件名”或“拍摄时间”排序，配合“倒序”开关，让排版更随心。
+### 2. 多项细节优化 / Refined Experience
+- **手动胶卷名锁定**: 手动输入的胶卷型号（如 KODAK 5207）将不再被数据库标准名覆盖，实现“所见即所得”。
+- **135 乳剂号修复**: 修复了 135 画幅渲染时乳剂号被隐藏的问题，细节展示更完整。
+- **图片排序增强**: 索引页工具新增“文件名”与“拍摄时间”排序功能，并支持“倒序”切换。
 
 ---
 
-## 🎨 界面优化 / UI Polish
-*   **等宽格栅布局**: 重构了高级设置面板，解决了不同语言下标签挤压和对不齐的问题。
+## 🛡️ 稳定性增强 / Stability Improvements
+
+### 3. 底层同步重构：告别“空包” / Robust Sync Engine
+针对特定网络环境下的同步失效问题，我们进行了深度加固：
+- **API Token 引入**: 绕过 Gitee 网页端的验证码拦截，提高下载稳定性。
+- **物理文件校验**: 新增资产存在性检测。即便 Hash 匹配，若本地文件夹为空也将强制触发重新下载。
+- **路径自适识别**: 优化了不同下载源压缩包目录层级的自动搜索逻辑。
+
+### 4. 界面布局修正 / UI Polish
+- **等宽格栅布局**: 重构了高级设置面板，解决了多语言标签挤压与对齐不准的问题。
 
 ---
-*Enjoy your film workflow with GT23 V2.2.3!* 🎞️✨
-*Optimized by Antigravity — Robust, Open, Professional.* 🛠️🛡️🔓
+*Enjoy your film workflow with GT23 V2.2.3!*
+*Robust. Open. Professional.*

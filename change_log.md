@@ -24,7 +24,31 @@
   - EN: Decoupled `layouts.json`, `films.json`, and `contact_layouts.json` into `GT23_Assets/config` for easy user editing; internal defaults are automatically exported on first run.
   - CN: 实现了配置文件的全面解耦，现在 `layouts.json`、`films.json` 与 `contact_layouts.json` 会在首次运行时自动释放到 `GT23_Assets/config` 目录，且优先于内置配置加载，方便用户直接修改参数。
 
-## [2.2.2] - 2026-03-21
+## [2.2.3] - 2026-03-25
+
+### Core & Functionality / 核心与功能
+- **[Feature] Config Decoupling / 配置文件解耦**:
+  - EN: Externalized `layouts.json` and `films.json` to `GT23_Assets/config/`. Users can now modify parameters without re-compiling.
+  - CN: 将 `layouts.json` 和 `films.json` 配置文件外挂至 `GT23_Assets/config/`。由于实现了配置解耦，用户无需重新打包即可自定义边框与胶片参数。
+- **[Feature] Manual Film Preservation / 手动胶卷名锁定**:
+  - EN: Manual film strings are now strictly preserved and no longer overwritten by standard database matching.
+  - CN: 实现了手动胶卷名称的强制锁定，确保用户手动输入的型号不再被数据库标准名覆盖。
+- **[Feature] Flexible Image Sorting / 灵活图片排序**:
+  - EN: Added filename and EXIF date sorting for contact sheets, including a reverse toggle.
+  - CN: 索引页工具新增排序功能：支持按“文件名”或“拍摄时间”排序，并配备“倒序”开关。
+- **[Fix] 135 Emulsion Display / 修复 135 乳剂号显示**:
+  - EN: Resolved a bug where emulsion numbers were hidden in 135 format renders.
+  - CN: 修复了 135 画幅渲染时乳剂号被隐藏的 Bug。
+
+### Stability & Sync / 稳定性与同步
+- **[Performance] Robust Multi-Source Sync / 强力多源同步**:
+  - EN: Implemented physical file validation and Gitee Token mechanism to resolve "empty folder" download issues.
+  - CN: 引入了物理文件校验与 Gitee API Token 机制，彻底解决了特定网络环境下同步成功但文件夹为空的问题。
+- **[Fix] UI Grid Alignment / 界面格栅对齐**:
+  - EN: Refactored Advanced Settings with a uniform grid layout to prevent label crowding in different languages.
+  - CN: 重构了高级设置面板的格栅布局，解决了多语言下标签重叠与对齐不均的问题。
+
+## [2.2.2] - 2026-03-23
 
 ### Core & Efficiency / 核心与效率
 - **[Performance] Extreme EXE Size Optimization / 极致 EXE 体积优化**:
