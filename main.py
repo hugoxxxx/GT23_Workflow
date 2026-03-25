@@ -56,14 +56,12 @@ def main():
         else:
             base_path = os.path.dirname(os.path.abspath(__file__))
         
-        ico_path = os.path.join(base_path, 'assets', 'GT23_Icon_v2.ico')
-        png_path = os.path.join(base_path, 'assets', 'GT23_Icon_v2.png')
+        ico_path = os.path.join(base_path, 'assets', 'GT23_Icon.ico')
+        png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
 
-        # EN: Set both iconbitmap (classic Win) and iconphoto (modern HIDPI)
-        # CN: 同时设置 iconbitmap (适配经典任务栏) 和 iconphoto (适配现代高分屏标题栏)
+        # EN: Set window icons / CN: 设置窗口图标
         if os.path.exists(ico_path):
             try:
-                # EN: Method 1: Classic Win32 icon mapping
                 app.iconbitmap(default=ico_path)
                 app.iconbitmap(ico_path)
             except Exception:
@@ -71,31 +69,12 @@ def main():
         
         if os.path.exists(png_path):
             try:
-                # EN: Method 2: Multi-size icon stack for titlebar and high-DPI
-                # CN: 多尺度图标栈：提供全套尺寸，确保高分屏下的像素级清晰度
-                from PIL import Image, ImageTk
-                img_pil = Image.open(png_path).convert("RGBA")
-                icon_sizes = [16, 32, 48, 64, 128, 256]
-                
-                # EN: Keep references to avoid garbage collection / CN: 必须保留引用防止 GC
-                app._icon_photos = [] # type: ignore[attr-defined]
-                for s in icon_sizes:
-                    resized = img_pil.resize((s, s), Image.Resampling.LANCZOS)
-                    photo = ImageTk.PhotoImage(resized)
-                    app._icon_photos.append(photo) # type: ignore[attr-defined]
-                
-                # EN: Apply the best match for each context / CN: 应用最佳匹配
-                app.iconphoto(True, *app._icon_photos) # type: ignore[attr-defined]
+                photo = tk.PhotoImage(file=png_path)
+                app.iconphoto(True, photo)
+                app._icon_photo = photo # type: ignore[attr-defined]
             except Exception:
-                try:
-                    photo = tk.PhotoImage(file=png_path)
-                    app.iconphoto(True, photo)
-                    app._icon_photo = photo # type: ignore[attr-defined]
-                except Exception:
-                    pass
+                pass
     except Exception:
-        # EN: Icon loading failed, continue without icon (silent fail is OK)
-        # CN: 图标加载失败，不中止程序，默认失败可接受
         pass
     
     # EN: Center window on screen / CN: 居中显示窗口
