@@ -111,9 +111,9 @@ class MainWindow:
             
             if logo_count == 0:
                 title = "首次运行提示" if self.lang == "zh" else "First Run Hint"
-                msg = ("检测到本地图标库为空。\n\n本版本为轻量化版（不打包 126+ 款相机图标）。\n"
+                msg = ("检测到本地图标库为空。\n\n本版本为轻量化版（不包含相机图标库）。\n"
                        "是否现在从云端仓库同步图标资源？") if self.lang == "zh" else \
-                      ("No camera logos detected.\n\nThis is a lightweight version (logos not bundled).\n"
+                      ("No camera logos detected.\n\nThis is a lightweight version (asset library not bundled).\n"
                        "Would you like to sync asset library from cloud now?")
                 
                 if messagebox.askyesno(title, msg):
