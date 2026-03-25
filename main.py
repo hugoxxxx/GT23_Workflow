@@ -44,11 +44,22 @@ def main():
         
         png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
         if os.path.exists(png_path):
-            # EN: Use original PNG and let the system handle scaling
-            # CN: 仅使用原始 PNG，将缩放交给系统处理
-            img = tk.PhotoImage(file=png_path)
-            app.iconphoto(True, img)
-            app._icon_photo = img # type: ignore[attr-defined]
+            # EN: Use PIL for more robust loading of high-res PNGs
+            # CN: 使用 PIL 提高超大分辨率 PNG 的加载稳定性
+            try:
+                from PIL import Image, ImageTk
+                img_pil = Image.open(png_path)
+                img = ImageTk.PhotoImage(img_pil)
+                app.iconphoto(True, img)
+                app._icon_photo = img # type: ignore[attr-defined]
+            except Exception:
+                # Fallback to tk.PhotoImage if PIL fails
+                try:
+                    img = tk.PhotoImage(file=png_path)
+                    app.iconphoto(True, img)
+                    app._icon_photo = img # type: ignore[attr-defined]
+                except Exception:
+                    pass
     except Exception:
         pass
     
