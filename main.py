@@ -20,6 +20,15 @@ def main():
     EN: Main function - initialize and run GUI application
     CN: 主程序 - 初始化并运行 GUI 应用程序
     """
+    # EN: Set unique AppUserModelID to ensure taskbar shows the custom icon (Windows only)
+    # CN: 设置唯一的 AppUserModelID，确保任务栏显示自定义图标而非 Python 图标（仅限 Windows）
+    try:
+        from ctypes import windll
+        my_appid = "hugoxxxx.GT23.Workflow.v2"
+        windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_appid)
+    except Exception:
+        pass
+
     # EN: Detect system language / CN: 检测系统语言
     _lang = detect_system_language()
     ver = get_version_string()
