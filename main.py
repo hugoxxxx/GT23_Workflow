@@ -47,31 +47,35 @@ def main():
         ico_path = os.path.join(base_path, 'assets', 'GT23_Icon.ico')
         png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
 
-        # EN: Prefer .ico on Windows for title bar + taskbar
-        # CN: Windows 上优先使用 .ico，能同时影响标题栏与任务栏
+        # EN: Set both iconbitmap (classic Win) and iconphoto (modern HIDPI)
+        # CN: 同时设置 iconbitmap (适配经典任务栏) 和 iconphoto (适配现代高分屏标题栏)
         if os.path.exists(ico_path):
             try:
-                # EN: Try multiple Tk variants for reliability on Windows
-                # CN: 兼容性处理：尝试多种 Tk 设置方式，提升在 Windows 上的成功率
+                # EN: Method 1: Classic Win32 icon mapping
                 app.iconbitmap(default=ico_path)
                 app.iconbitmap(ico_path)
+            except Exception:
+                pass
+        
+        if os.path.exists(png_path):
+            try:
+                # EN: Method 2: High-resolution PNG based icon for titlebar
+                # This often looks sharper on modern Windows 10/11 High-DPI
+                from PIL import Image, ImageTk
+                img_pil = Image.open(png_path).convert("RGBA")
+                # EN: Create a reasonable-sized icon for the PhotoImage to avoid heavy scaling
+                img_small = img_pil.resize((256, 256), Image.Resampling.LANCZOS)
+                photo = ImageTk.PhotoImage(img_small)
+                app.iconphoto(True, photo)
+                # Keep reference
+                app._icon_photo = photo # type: ignore[attr-defined]
+            except Exception:
+                # Fallback to standard tk.PhotoImage if PIL fails
                 try:
-                    app.wm_iconbitmap(ico_path)  # type: ignore[attr-defined]
+                    photo = tk.PhotoImage(file=png_path)
+                    app.iconphoto(True, photo)
                 except Exception:
                     pass
-            except Exception:
-                # EN: Fallback to PNG with iconphoto
-                # CN: 回退到使用 PNG 的 iconphoto
-                if os.path.exists(png_path):
-                    img = tk.PhotoImage(file=png_path)
-                    app.iconphoto(True, img)
-                    app.iconphoto(False, img)
-        elif os.path.exists(png_path):
-            # EN: Non-Windows or missing .ico → use PNG
-            # CN: 非 Windows 或无 .ico 时使用 PNG
-            img = tk.PhotoImage(file=png_path)
-            app.iconphoto(True, img)
-            app.iconphoto(False, img)
     except Exception:
         # EN: Icon loading failed, continue without icon (silent fail is OK)
         # CN: 图标加载失败，不中止程序，默认失败可接受
