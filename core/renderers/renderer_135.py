@@ -66,7 +66,9 @@ class Renderer135(BaseFilmRenderer):
         standard_data = sample_data if sample_data else meta_handler.get_data(img_list[0])
         # EN: Extract info that should stay consistent across entire roll
         # CN: 提取需要在整个胶卷上保持一致的信息
-        display_code_from_standard = standard_data.get('EdgeCode') or standard_data.get('Film') or user_emulsion or "未知胶卷"
+        film_text = standard_data.get('EdgeCode') or standard_data.get('Film') or user_emulsion or "未知胶卷"
+        prefix = f"{user_emulsion.strip()}  " if user_emulsion and user_emulsion.strip() != film_text else ""
+        display_code_from_standard = f"{prefix}{film_text}"
         cur_color_from_standard = standard_data.get("ContactColor", (245, 130, 35, 210))
         # EN: --- [END OF MODIFICATION] ---
         # CN: --- [核心修改结束] ---

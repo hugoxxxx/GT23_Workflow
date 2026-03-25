@@ -56,13 +56,9 @@ class BorderPanel:
         CN: 从JSON加载布局配置
         """
         try:
-            if getattr(sys, 'frozen', False):
-                base_path = sys._MEIPASS
-            else:
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                base_path = os.path.dirname(os.path.dirname(current_dir))
+            from core.metadata import MetadataHandler
+            config_path = MetadataHandler._resolve_config_path('layouts.json')
             
-            config_path = os.path.join(base_path, 'config', 'layouts.json')
             with open(config_path, 'r', encoding='utf-8') as f:
                 self.layout_config = json.load(f)
         except Exception as e:
@@ -156,32 +152,37 @@ class BorderPanel:
         advanced_text = "高级设置" if self.lang == "zh" else "Advanced Settings"
         self.advanced_frame = ttk.Labelframe(self.left_frame, text=advanced_text, padding=10)
         self.advanced_frame.pack(fill=X, pady=(0, 10))
-        # EN: Advanced settings components - Restored to 2x2 grid
+        # EN: Advanced settings components
         row1 = ttk.Frame(self.advanced_frame)
         row1.pack(fill=X, pady=2)
+        row1.columnconfigure(0, weight=1, uniform="adv")
+        row1.columnconfigure(1, weight=1, uniform="adv")
+        
         row2 = ttk.Frame(self.advanced_frame)
         row2.pack(fill=X, pady=2)
+        row2.columnconfigure(0, weight=1, uniform="adv")
+        row2.columnconfigure(1, weight=1, uniform="adv")
 
-        def add_setting_to_row(parent, label_text, var, side=LEFT):
+        def add_setting_to_grid(parent, label_text, var, col):
             container = ttk.Frame(parent)
-            container.pack(side=side, fill=X, expand=YES)
+            container.grid(row=0, column=col, sticky=EW, padx=2)
             lbl = ttk.Label(container, text=label_text, width=12)
             lbl.pack(side=LEFT)
-            ttk.Entry(container, textvariable=var, width=12).pack(side=LEFT, padx=(0, 20))
+            ttk.Entry(container, textvariable=var, width=12).pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
             var.trace('w', lambda *args: self.on_params_changed())
             return lbl
 
         self.side_ratio_var = ttk.DoubleVar(value=0.04)
-        self.side_label = add_setting_to_row(row1, "左右边框" if self.lang == "zh" else "Side Margin", self.side_ratio_var)
+        self.side_label = add_setting_to_grid(row1, "左右边框" if self.lang == "zh" else "Side Margin", self.side_ratio_var, 0)
         
         self.top_ratio_var = ttk.DoubleVar(value=0.04)
-        self.top_label = add_setting_to_row(row1, "顶部留白" if self.lang == "zh" else "Top Margin", self.top_ratio_var)
+        self.top_label = add_setting_to_grid(row1, "顶部留白" if self.lang == "zh" else "Top Margin", self.top_ratio_var, 1)
         
         self.bottom_ratio_var = ttk.DoubleVar(value=0.13)
-        self.bottom_label = add_setting_to_row(row2, "底部留白" if self.lang == "zh" else "Bottom Margin", self.bottom_ratio_var)
+        self.bottom_label = add_setting_to_grid(row2, "底部留白" if self.lang == "zh" else "Bottom Margin", self.bottom_ratio_var, 0)
         
         self.font_scale_var = ttk.DoubleVar(value=0.032)
-        self.font_label = add_setting_to_row(row2, "字体基础" if self.lang == "zh" else "Font Scale", self.font_scale_var)
+        self.font_label = add_setting_to_grid(row2, "字体基础" if self.lang == "zh" else "Font Scale", self.font_scale_var, 1)
 
         # EN: Manual EXIF Overrides / CN: 手动 EXIF 覆盖
         exif_text = "手动 EXIF 覆盖 (留空则读取原图)" if self.lang == "zh" else "Manual EXIF Overrides (Leave blank to use file EXIF)"
@@ -199,26 +200,32 @@ class BorderPanel:
         # Layout grids - Restored to 3x2 grid
         ex_row1 = ttk.Frame(self.exif_frame)
         ex_row1.pack(fill=X, pady=2)
+        ex_row1.columnconfigure(0, weight=1, uniform="exif")
+        ex_row1.columnconfigure(1, weight=1, uniform="exif")
+        
         ex_row2 = ttk.Frame(self.exif_frame)
         ex_row2.pack(fill=X, pady=2)
+        ex_row2.columnconfigure(0, weight=1, uniform="exif")
+        ex_row2.columnconfigure(1, weight=1, uniform="exif")
+        
         ex_row3 = ttk.Frame(self.exif_frame)
         ex_row3.pack(fill=X, pady=2)
+        ex_row3.columnconfigure(0, weight=1, uniform="exif")
+        ex_row3.columnconfigure(1, weight=1, uniform="exif")
 
-        def add_exif_field_to_row(parent, label_text, var):
+        def add_exif_field_to_grid(parent, label_text, var, col):
             container = ttk.Frame(parent)
-            container.pack(side=LEFT, fill=X, expand=YES)
+            container.grid(row=0, column=col, sticky=EW)
             ttk.Label(container, text=label_text, width=8).pack(side=LEFT)
-            ttk.Entry(container, textvariable=var, width=18).pack(side=LEFT, padx=(0, 15), fill=X, expand=YES)
+            ttk.Entry(container, textvariable=var, width=18).pack(side=LEFT, padx=(0, 10), fill=X, expand=YES)
             var.trace('w', lambda *args: self.on_params_changed())
 
-        add_exif_field_to_row(ex_row1, "Make:", self.exif_make_var)
-        add_exif_field_to_row(ex_row1, "Model:", self.exif_model_var)
-        add_exif_field_to_row(ex_row2, "Shutter:", self.exif_shutter_var)
-        add_exif_field_to_row(ex_row2, "Aperture:", self.exif_aperture_var)
-        add_exif_field_to_row(ex_row3, "ISO:", self.exif_iso_var)
-        
-        # Lens field gets more space
-        add_exif_field_to_row(ex_row3, "Lens:", self.exif_lens_var)
+        add_exif_field_to_grid(ex_row1, "Make:", self.exif_make_var, 0)
+        add_exif_field_to_grid(ex_row1, "Model:", self.exif_model_var, 1)
+        add_exif_field_to_grid(ex_row2, "Shutter:", self.exif_shutter_var, 0)
+        add_exif_field_to_grid(ex_row2, "Aperture:", self.exif_aperture_var, 1)
+        add_exif_field_to_grid(ex_row3, "ISO:", self.exif_iso_var, 0)
+        add_exif_field_to_grid(ex_row3, "Lens:", self.exif_lens_var, 1)
 
         # EN: Process button / CN: 处理按钮 (Pinned to left frame bottom)
         process_text = "开始处理" if self.lang == "zh" else "Start Processing"

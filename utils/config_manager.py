@@ -53,5 +53,30 @@ class ConfigManager:
         self.config[key] = value
         self.save()
 
+    def get_managed_path(self, subfolder=None, filename=None):
+        """
+        EN: Get path for managed assets (logos, config, etc.)
+        CN: 获取托管资产的路径（如图标、配置等）
+        """
+        custom_path = self.get("custom_asset_path")
+        if custom_path and os.path.exists(custom_path):
+            base = custom_path
+        else:
+            if getattr(sys, 'frozen', False):
+                # EXE next to EXECUTABLE
+                base = os.path.join(os.path.dirname(sys.executable), "GT23_Assets")
+            else:
+                # Dev mode: Project root
+                # Note: config_manager.py is in utils/, so we go up 1 level
+                utils_dir = os.path.dirname(os.path.abspath(__file__))
+                base = os.path.join(os.path.dirname(utils_dir), "GT23_Assets")
+        
+        path = base
+        if subfolder:
+            path = os.path.join(path, subfolder)
+        if filename:
+            path = os.path.join(path, filename)
+        return path
+
 # Global instance
 config_manager = ConfigManager()

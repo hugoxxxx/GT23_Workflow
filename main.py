@@ -8,9 +8,11 @@ import sys
 import os
 import tkinter as tk
 import ttkbootstrap as ttk
+import shutil
 from gui.main_window import MainWindow, detect_system_language
 from version import get_version_string
 from core.renderer import bootstrap_logos
+from utils.config_manager import config_manager
 
 
 def main():
@@ -92,6 +94,8 @@ def main():
         
         # EN: Bootstrap logos early / CN: 尽早引导并释放 Logo 资源
         bootstrap_logos()
+        # EN: Bootstrap configs / CN: 引导并释放默认配置文件
+        bootstrap_configs()
     except Exception:
         # EN: Fail silently, not critical / CN: 默认失败，不影响使用
         pass
@@ -102,6 +106,39 @@ def main():
     # EN: Start event loop / CN: 启动事件循环
     app.mainloop()
 
+
+def bootstrap_configs():
+    """
+    EN: Export internal config JSONs to GT23_Assets/config on the first run.
+    CN: 首次运行时，将内置配置 JSON 释放到 GT23_Assets/config 目录。
+    """
+    # 1. EN: Determine external config dir / CN: 确定外部配置目录
+    ext_config_dir = config_manager.get_managed_path("config")
+    os.makedirs(ext_config_dir, exist_ok=True)
+    
+    # 2. EN: Determine internal source dir / CN: 确定内部源目录
+    if getattr(sys, 'frozen', False):
+        int_base = sys._MEIPASS
+    else:
+        # main.py is in root
+        int_base = os.path.dirname(os.path.abspath(__file__))
+    
+    int_config_dir = os.path.join(int_base, "config")
+    
+    # 3. EN: Export missing files / CN: 释放缺失的文件
+    exported = []
+    for filename in ['layouts.json', 'films.json', 'contact_layouts.json']:
+        src = os.path.join(int_config_dir, filename)
+        dst = os.path.join(ext_config_dir, filename)
+        if os.path.exists(src) and not os.path.exists(dst):
+            try:
+                shutil.copy2(src, dst)
+                exported.append(filename)
+            except Exception:
+                pass
+    
+    if exported:
+        print(f"CN: [✔] 已释放默认配置到 GT23_Assets/config: {', '.join(exported)}")
 
 if __name__ == "__main__":
     main()

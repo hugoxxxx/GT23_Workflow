@@ -58,32 +58,31 @@ class MetadataHandler:
         if os.path.isabs(filename):
             return filename
 
-        base_dir = os.path.dirname(os.path.abspath(__file__))
         candidates = []
 
-        # 0. EN: Check User-Defined Path first / CN: 极高优先级：用户自定义路径
-        custom_base = config_manager.get("custom_asset_path")
-        if custom_base and os.path.exists(custom_base):
-            candidates.append(os.path.join(custom_base, "films", filename))
-            candidates.append(os.path.join(custom_base, filename))
+        # 0. EN: Check Managed "config" folder first (highest user priority)
+        # CN: 极高优先级：托管资产下的 config 文件夹 (用户最容易找到并编辑的地方)
+        managed_config = config_manager.get_managed_path("config", filename)
+        candidates.append(managed_config)
 
-        # 1. EN: Check in decoupled Assets Repo / CN: 检查解耦的资产仓库 (GT23_Assets/films)
-        # Note: The 'films' subfolder is specific to film configs, other configs might be directly under GT23_Assets
-        # For now, we assume 'films' is part of the path for film-related configs, and direct for others.
-        # A more robust solution might check GT23_Assets directly for non-film configs.
-        decoupled_path_films = os.path.join(os.path.dirname(base_dir), "GT23_Assets", "films", filename)
-        decoupled_path_general = os.path.join(os.path.dirname(base_dir), "GT23_Assets", filename)
-        candidates.append(decoupled_path_films)
-        candidates.append(decoupled_path_general)
-
-
-        # 2. EN: Check in internal assets / CN: 检查内置资源 (assets/config)
-        internal_path = os.path.join(os.path.dirname(base_dir), "assets", "config", filename)
-        candidates.append(internal_path)
+        # 1. EN: Check in decoupled Assets Repo (legacy subfolders)
+        # CN: 检查解耦的资产仓库中的子文件夹 (如 GT23_Assets/films)
+        if "films.json" in filename:
+            candidates.append(config_manager.get_managed_path("films", filename))
         
-        # 3. EN: Check in legacy sub-folder / CN: 检查旧版配置目录 (config)
-        legacy_path = os.path.join(os.path.dirname(base_dir), "config", filename)
-        candidates.append(legacy_path)
+        candidates.append(config_manager.get_managed_path(filename=filename))
+
+        # 2. EN: Determine internal base (system or bundled)
+        # CN: 确定内部资源基准路径
+        if getattr(sys, 'frozen', False):
+            base_dir = sys._MEIPASS
+        else:
+            # metadata.py is in core/, so we go up 1 level to reach root
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        # 3. EN: Internal fallback paths / CN: 内部回退路径 (assets/config or config)
+        candidates.append(os.path.join(base_dir, "assets", "config", filename))
+        candidates.append(os.path.join(base_dir, "config", filename))
 
         # 4. CWD/config (for development)
         candidates.append(os.path.join(os.getcwd(), 'config', filename))
@@ -160,8 +159,8 @@ class MetadataHandler:
                         break
 
                 if manual_bundle:
-                    display_film = manual_bundle["std_name"]
-                    edge_code = manual_bundle["edge_code"]
+                    display_film = manual_film
+                    edge_code = manual_film.upper()
                     contact_color = tuple(manual_bundle["color"])
                 else:
                     # EN: If not found in database, use as-is

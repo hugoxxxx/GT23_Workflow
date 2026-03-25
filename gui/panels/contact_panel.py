@@ -158,10 +158,12 @@ class ContactPanel:
         self.roll_id_var = ttk.StringVar(value="")
         ttk.Entry(row3, textvariable=self.roll_id_var).pack(side=LEFT, fill=X, expand=YES)
 
-        # EN: Display options for date and EXIF
-        # CN: 日期与EXIF显示选项
+        # EN: Display and Sort options
+        # CN: 显示与排序选项
         options_row = ttk.Frame(self.film_info_frame)
         options_row.pack(fill=X, pady=5)
+        
+        # 1. EN: Date/EXIF toggles / CN: 日期与EXIF开关
         self.show_date_var = ttk.BooleanVar(value=True)
         self.show_exif_var = ttk.BooleanVar(value=True)
         date_text = "显示日期" if self.lang == "zh" else "Show Date"
@@ -170,6 +172,18 @@ class ContactPanel:
         self.show_date_check.pack(side=LEFT, padx=(0, 10))
         self.show_exif_check = ttk.Checkbutton(options_row, text=exif_text, variable=self.show_exif_var, bootstyle="round-toggle")
         self.show_exif_check.pack(side=LEFT)
+
+        # 2. EN: Sorting / CN: 图片排序
+        sort_row = ttk.Frame(self.film_info_frame)
+        sort_row.pack(fill=X, pady=5)
+        sort_label_text = "图片排序:" if self.lang == "zh" else "Image Sort:"
+        self.sort_label = ttk.Label(sort_row, text=sort_label_text, width=20)
+        self.sort_label.pack(side=LEFT)
+        
+        self.sort_var = ttk.StringVar()
+        self.sort_combo = ttk.Combobox(sort_row, textvariable=self.sort_var, state="readonly")
+        self.sort_combo.pack(side=LEFT, fill=X, expand=YES)
+        self.setup_sort_options()
         
         # EN: Generate button / CN: 生成按钮
         generate_text = "全卷缩略图" if self.lang == "zh" else "Contact Sheet"
@@ -324,6 +338,8 @@ class ContactPanel:
             self.emulsion_label.config(text="乳剂号 (可选):")
             self.show_date_check.config(text="显示日期")
             self.show_exif_check.config(text="显示EXIF")
+            self.sort_label.config(text="图片排序:")
+            self.setup_sort_options()
             self.generate_button.config(text="全卷缩略图")
             self.log_frame.config(text="生成日志")
             self.update_film_combo_values()
@@ -343,6 +359,8 @@ class ContactPanel:
             self.emulsion_label.config(text="Emulsion # (optional):")
             self.show_date_check.config(text="Show Date")
             self.show_exif_check.config(text="Show EXIF")
+            self.sort_label.config(text="Image Sort:")
+            self.setup_sort_options()
             self.generate_button.config(text="Generate Contact Sheet")
             self.log_frame.config(text="Generation Log")
             self.update_film_combo_values()
@@ -476,6 +494,18 @@ class ContactPanel:
         selected_format = self.detected_format
         orientation = self.orientation_var.get() if selected_format == "645_6x8_43" else None
         
+        # EN: Map sort selection to parameters / CN: 将排序选择映射为参数
+        sort_text = self.sort_var.get()
+        sort_method = "name"
+        reverse = False
+        
+        if self.lang == "zh":
+            if "降序" in sort_text or "新 → 旧" in sort_text: reverse = True
+            if "时间" in sort_text: sort_method = "date"
+        else:
+            if "Descending" in sort_text or "New to Old" in sort_text: reverse = True
+            if "Date" in sort_text: sort_method = "date"
+
         params = {
             'format': selected_format,
             'manual_film': manual_film,
@@ -483,6 +513,8 @@ class ContactPanel:
             'orientation': orientation,  # EN: Add orientation parameter / CN: 添加方向参数
             'show_date': self.show_date_var.get(),
             'show_exif': self.show_exif_var.get(),
+            'sort_method': sort_method,
+            'reverse': reverse,
             'input_folder': input_folder,
             'output_folder': output_folder
         }
@@ -520,6 +552,8 @@ class ContactPanel:
                 emulsion_number=params['emulsion_number'],
                 show_date=params['show_date'],
                 show_exif=params['show_exif'],
+                sort_method=params['sort_method'],
+                reverse=params['reverse'],
                 lang=self.lang,  # EN: Localize messages / CN: 按当前语言输出
                 progress_callback=progress_update
             )
@@ -616,3 +650,25 @@ class ContactPanel:
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
         self.log_text.config(state="disabled")
+
+    def setup_sort_options(self):
+        """
+        EN: Setup sorting options in Combobox
+        CN: 设置排序下拉框选项
+        """
+        if self.lang == "zh":
+            options = [
+                "文件名 (升序)",
+                "文件名 (降序)",
+                "拍摄时间 (旧 → 新)",
+                "拍摄时间 (新 → 旧)"
+            ]
+        else:
+            options = [
+                "Filename (Ascending)",
+                "Filename (Descending)",
+                "Date (Old to New)",
+                "Date (New to Old)"
+            ]
+        self.sort_combo['values'] = options
+        self.sort_combo.current(0)

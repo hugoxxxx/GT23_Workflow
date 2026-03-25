@@ -68,7 +68,7 @@ class ContactSheetPro:
             print("-"*60)
             input("\n按回车键退出 / Press Enter to exit...")
     
-    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None, show_date=True, show_exif=True):
+    def generate(self, input_dir, output_dir, format=None, manual_film=None, emulsion_number=None, orientation=None, lang="zh", progress_callback=None, show_date=True, show_exif=True, sort_method="name", reverse=False):
         """
         EN: Pure logic function for contact sheet generation (GUI-friendly).
         CN: 底片索引生成纯逻辑函数（GUI友好）。
@@ -81,6 +81,8 @@ class ContactSheetPro:
             emulsion_number: User-provided emulsion number
             orientation: For 645 format: "L" (landscape/vertical strip) or "P" (portrait/horizontal strip)
             progress_callback: Function(message) for progress updates
+            sort_method: "name" (filename) or "date" (EXIF date)
+            reverse: Whether to reverse sorting order
         
         Returns:
             {
@@ -112,7 +114,32 @@ class ContactSheetPro:
                 progress_callback(_t("正在扫描文件...", "Scanning files..."))
             
             # EN: Get image paths / CN: 获取图片路径
-            img_paths = sorted([os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+            raw_imgs = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+            if not raw_imgs:
+                return {
+                    'success': False,
+                    'output_path': '',
+                    'layout_detected': '',
+                    'frames_count': 0,
+                    'message': _t("未找到图片", "No images found")
+                }
+
+            # EN: Apply sorting / CN: 执行排序
+            if sort_method == "date":
+                if progress_callback:
+                    progress_callback(_t("正在按拍摄时间排序...", "Sorting by date..."))
+                # EN: Sort by EXIF date, fallback to filename if dates are equal or missing
+                # CN: 按拍摄日期排序，如果日期相同或缺失则回序至文件名
+                def get_date_key(path):
+                    try:
+                        d = self.meta.get_data(path)
+                        return (d.get("DateTime", "9999:99:99 99:99:99"), path)
+                    except:
+                        return ("9999:99:99 99:99:99", path)
+                img_paths = sorted(raw_imgs, key=get_date_key, reverse=reverse)
+            else:
+                # EN: Default sorting by filename / CN: 默认按文件名排序
+                img_paths = sorted(raw_imgs, reverse=reverse)
             if not img_paths:
                 return {
                     'success': False,

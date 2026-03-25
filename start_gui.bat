@@ -11,6 +11,22 @@ echo    GT23 胶片工作流 - GUI 启动器
 echo ========================================
 echo.
 
+REM --- [NEW] EN: Check for local venv first / CN: 优先检查本地 venv ---
+if exist "venv\Scripts\python.exe" (
+    echo [*] Found local venv, checking dependencies... / 发现本地 venv，检查并补全依赖库...
+    ".\venv\Scripts\pip.exe" install -r requirements-gui.txt --quiet
+    echo [*] Starting GUI... / 正在启动 GUI...
+    ".\venv\Scripts\pythonw.exe" main.py
+    if errorlevel 1 (
+        echo [ERROR] GUI failed to start using venv.
+        echo [*] Trying with console for debugging...
+        ".\venv\Scripts\python.exe" main.py
+        pause
+    )
+    exit /b 0
+)
+
+REM --- [EXISTING] EN: Fallback to Conda / CN: 回退到 Conda ---
 REM Check if gt23 environment exists
 call conda info --envs | findstr /C:"gt23" >nul 2>&1
 if errorlevel 1 (
@@ -19,6 +35,7 @@ if errorlevel 1 (
     call conda create -n gt23 python=3.11 -y
     if errorlevel 1 (
         echo [ERROR] Failed to create environment / 创建环境失败
+        echo [*] Please try running manually: .\venv\Scripts\pythonw.exe main.py
         pause
         exit /b 1
     )

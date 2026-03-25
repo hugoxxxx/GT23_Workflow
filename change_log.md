@@ -1,5 +1,29 @@
 # Change Log / 变更日志
 
+## [2.2.3] - 2026-03-25
+
+### Core & Contact Sheet / 核心与底片索引
+- **[Fix] Manual Film Name Preservation / 手动胶卷名称锁定**:
+  - EN: Fixed an issue where manual film inputs were overwritten by standard database names; manual strings are now strictly preserved.
+  - CN: 修复了手动输入的胶卷型号会被数据库标准格式覆盖的问题，现在系统会严格保留用户的原始输入（如 KODAK 5207）。
+- **[Fix] 135 Emulsion Display / 135 乳剂号显示修复**:
+  - EN: Resolved a bug in the 135 renderer where the emulsion number was hidden; it now displays correctly alongside the film name.
+  - CN: 修复了 135 渲染器中乳剂号被隐藏的 Bug，现在乳剂号会与胶卷名正常拼接显示。
+- **[Feature] Flexible Image Sorting / 灵活图片排序**:
+  - EN: Added support for sorting contact sheet images by Filename or EXIF Date, with an optional Reverse toggle.
+  - CN: 底片索引新增了“图片排序”功能，支持按文件名或拍摄时间排序，并提供一键倒序开关。
+
+### GUI & Environment / 界面与用户体验
+- **[Fix] Advanced Settings Layout / 高级设置布局修复**:
+  - EN: Refactored the Advanced Settings and EXIF Overrides into a balanced Grid layout to prevent text clipping and ensure consistent column widths.
+  - CN: 将“高级设置”与“EXIF 覆盖”重构为等宽格栅布局（Grid），彻底解决了由于字符长度导致的标签挤压与输入框对不齐问题。
+- **[Stability] Robust Multi-Source Sync / 强力多源同步**:
+  - EN: Enhanced asset sync with Gitee API Token (CAPTCHA bypass), physical file verification (force download if empty), and robust ZIP root detection.
+  - CN: 彻底重构资源同步逻辑，引入 Gitee Token 绕过验证码，增加“物理文件检索”机制（空文件夹强制重下），并优化了 ZIP 压缩包根目录自动识别。
+- **[Feature] Config Decoupling / 配置文件解耦**:
+  - EN: Decoupled `layouts.json`, `films.json`, and `contact_layouts.json` into `GT23_Assets/config` for easy user editing; internal defaults are automatically exported on first run.
+  - CN: 实现了配置文件的全面解耦，现在 `layouts.json`、`films.json` 与 `contact_layouts.json` 会在首次运行时自动释放到 `GT23_Assets/config` 目录，且优先于内置配置加载，方便用户直接修改参数。
+
 ## [2.2.2] - 2026-03-21
 
 ### Core & Efficiency / 核心与效率

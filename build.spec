@@ -16,7 +16,6 @@ block_cipher = None
 # CN: 需要打包进 exe 的数据文件（配置、资源等）
 datas = [
     ('config', 'config'),      # Config files (layouts, films)
-    ('assets/libs', 'assets/libs'),  # Keep libs intact
     ('assets/GT23_Icon.ico', 'assets'),  # Include ICO for runtime window icon
     ('assets/GT23_Icon.png', 'assets'),  # Window icon
     # Fonts in use

@@ -4,8 +4,8 @@ EN: Version information for GT23 Film Workflow
 CN: GT23 胶片工作流版本信息
 """
 
-__version__ = "2.2.2"
-__version_info__ = (2, 2, 0)
+__version__ = "2.2.3"
+__version_info__ = (2, 2, 3)
 __author__ = "Hugo"
 __email__ = "xjames007@gmail.com"
 __license__ = "MIT"
