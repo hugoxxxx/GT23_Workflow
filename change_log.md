@@ -44,6 +44,9 @@
 - **[Performance] Robust Multi-Source Sync / 强力多源同步**:
   - EN: Implemented physical file validation and Gitee Token mechanism to resolve "empty folder" download issues.
   - CN: 引入了物理文件校验与 Gitee API Token 机制，彻底解决了特定网络环境下同步成功但文件夹为空的问题。
+- **[Aesthetics] 2026 Brand Icon / 2026 品牌图标更新**:
+  - EN: Integrated high-resolution 2026 GT23 logo and generated multi-size .ico for Windows binaries.
+  - CN: 集成了高清 2026 版 GT23 品牌图标，并为 Windows 版本同步生成了多尺寸 .ico 资源。
 - **[Fix] UI Grid Alignment / 界面格栅对齐**:
   - EN: Refactored Advanced Settings with a uniform grid layout to prevent label crowding in different languages.
   - CN: 重构了高级设置面板的格栅布局，解决了多语言下标签重叠与对齐不均的问题。
