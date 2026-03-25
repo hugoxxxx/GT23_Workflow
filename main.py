@@ -56,8 +56,8 @@ def main():
         else:
             base_path = os.path.dirname(os.path.abspath(__file__))
         
-        ico_path = os.path.join(base_path, 'assets', 'GT23_Icon.ico')
-        png_path = os.path.join(base_path, 'assets', 'GT23_Icon.png')
+        ico_path = os.path.join(base_path, 'assets', 'GT23_Icon_v2.ico')
+        png_path = os.path.join(base_path, 'assets', 'GT23_Icon_v2.png')
 
         # EN: Set both iconbitmap (classic Win) and iconphoto (modern HIDPI)
         # CN: 同时设置 iconbitmap (适配经典任务栏) 和 iconphoto (适配现代高分屏标题栏)
