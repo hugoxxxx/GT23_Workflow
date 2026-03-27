@@ -181,8 +181,24 @@ class BorderPanel:
         self.bottom_ratio_var = ttk.DoubleVar(value=0.13)
         self.bottom_label = add_setting_to_grid(row2, "底部留白" if self.lang == "zh" else "Bottom Margin", self.bottom_ratio_var, 0)
         
+        row3 = ttk.Frame(self.advanced_frame)
+        row3.pack(fill=X, pady=2)
+        row3.columnconfigure(0, weight=1, uniform="adv")
+        row3.columnconfigure(1, weight=1, uniform="adv")
+
         self.font_scale_var = ttk.DoubleVar(value=0.032)
         self.font_label = add_setting_to_grid(row2, "字体基础" if self.lang == "zh" else "Font Scale", self.font_scale_var, 1)
+
+        # EN: Border Theme selector / CN: 边框主题选择
+        theme_container = ttk.Frame(row3)
+        theme_container.grid(row=0, column=0, sticky=EW, padx=2)
+        self.theme_label = ttk.Label(theme_container, text="边框主题" if self.lang == "zh" else "Border Theme", width=12)
+        self.theme_label.pack(side=LEFT)
+        self.theme_var = ttk.StringVar(value="light")
+        self.theme_combo = ttk.Combobox(theme_container, textvariable=self.theme_var, state="readonly", width=12)
+        self.theme_combo.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
+        self.theme_combo.bind("<<ComboboxSelected>>", lambda e: self.on_params_changed())
+        self._update_theme_combo_values()
 
         # EN: Manual EXIF Overrides / CN: 手动 EXIF 覆盖
         exif_text = "手动 EXIF 覆盖 (留空则读取原图)" if self.lang == "zh" else "Manual EXIF Overrides (Leave blank to use file EXIF)"
@@ -340,6 +356,9 @@ class BorderPanel:
             self.font_label.configure(width=12)
             self.exif_frame.config(text="手动 EXIF 覆盖 (留空则读取原图)")
             self.preview_frame.config(text="预览（显示文件夹第一张图片）")
+            self.theme_label.config(text="边框主题")
+            self.theme_label.configure(width=12)
+            self._update_theme_combo_values()
             self.redraw_preview()
             self.process_button.config(text="开始处理")
             self.log_frame.config(text="处理日志")
@@ -363,6 +382,9 @@ class BorderPanel:
             self.bottom_label.configure(width=15)
             self.font_label.config(text="Font Scale")
             self.font_label.configure(width=15)
+            self.theme_label.config(text="Border Theme")
+            self.theme_label.configure(width=15)
+            self._update_theme_combo_values()
             self.exif_frame.config(text="Manual EXIF Overrides (Leave blank to use file EXIF)")
             self.preview_frame.config(text="Preview (First Image in Folder)")
             self.redraw_preview()
@@ -645,9 +667,56 @@ class BorderPanel:
 
                     renderer = FilmRenderer()
                     # EN: Downscale target edge for faster preview while keeping shadow / CN: 降低分辨率加快预览同时保留阴影
+                    # EN: Pass the selected theme / CN: 传递当前选中的主题 (light/dark/rainbow/fuji_rainbow)
+                    theme_str = self.theme_var.get()
+                    if self.lang == "zh":
+                        # EN: Mapping for Chinese UI items / CN: 中文 UI 项映射
+                        theme_map = {
+                            "浅色": "light", 
+                            "深色": "dark", 
+                            "马卡龙": "rainbow", 
+                            "富士彩虹": "fuji_rainbow"
+                        }
+                        theme_val = "light" # Default
+                        for k, v in theme_map.items():
+                            if k in theme_str:
+                                theme_val = v
+                                break
+                    else:
+                        # EN: Mapping for English UI items / CN: 英文 UI 项映射
+                        theme_map = {
+                            "Default": "light", 
+                            "Light": "light",
+                            "Dark": "dark", 
+                            "Macaron": "rainbow", 
+                            "Rainbow": "rainbow",
+                            "Fuji": "fuji_rainbow"
+                        }
+                        theme_val = "light"
+                        for k, v in theme_map.items():
+                            if k in theme_str:
+                                theme_val = v
+                                break
+
+                    # EN: For rainbow themes, pick a random color for single-image preview
+                    # CN: 对于彩虹主题，为单张预览随机抽取一个位置
+                    r_index = 0
+                    r_total = 1 # Single image preview = 100% slice
+                    if theme_val == "rainbow":
+                        import random
+                        r_index = random.randint(0, 5) # Pick 1 of 6 macaron colors
+                    elif theme_val == "fuji_rainbow":
+                        # EN: For full horizontal gradient on single image
+                        # CN: 为单张图展示完整横向渐变，索引固定为 0
+                        r_index = 0
+                        r_total = 1
+
                     out_name = renderer.process_image(img_path, data, temp_dir, 
                                                      target_long_edge=1200, 
-                                                     manual_rotation=data.get('manual_rotation', 0))
+                                                     manual_rotation=data.get('manual_rotation', 0),
+                                                     theme=theme_val,
+                                                     rainbow_index=r_index,
+                                                     rainbow_total=r_total)
 
                     out_path = os.path.join(temp_dir, out_name)
                     if not os.path.exists(out_path):
@@ -813,39 +882,56 @@ class BorderPanel:
             'FNumber': self.exif_aperture_var.get().strip(),
             'ISO': self.exif_iso_var.get().strip()
         }
-        
+
         # EN: Collect manual rotation / CN: 收集手动旋转
         manual_rotation = self.rotation_var.get()
-        
+
+        # EN: Collect selected theme / CN: 收集选中的主题
+        theme_str = self.theme_var.get()
+        theme_val = "light"
+        if self.lang == "zh":
+            theme_map = {"浅色": "light", "深色": "dark", "马卡龙": "rainbow", "富士彩虹": "fuji_rainbow"}
+            for k, v in theme_map.items():
+                if k in theme_str:
+                    theme_val = v
+                    break
+        else:
+            theme_map = {"Light": "light", "Default": "light", "Dark": "dark", "Macaron": "rainbow", "Fuji": "fuji_rainbow"}
+            for k, v in theme_map.items():
+                if k in theme_str:
+                    theme_val = v
+                    break
+
         self.worker_thread = threading.Thread(
             target=self.process_worker,
-            args=(input_folder, output_folder, is_digital, manual_film, custom_layout, manual_exif, manual_rotation),
+            args=(input_folder, output_folder, is_digital, manual_film, custom_layout, manual_exif, manual_rotation, theme_val),
             daemon=True
         )
         self.worker_thread.start()
-    
-    def process_worker(self, input_dir, output_dir, is_digital, manual_film, custom_layout=None, manual_exif=None, manual_rotation=0):
+
+    def process_worker(self, input_dir, output_dir, is_digital, manual_film, custom_layout=None, manual_exif=None, manual_rotation=0, theme="light"):
         """
         EN: Worker thread for processing
         CN: 处理工作线程
         """
         try:
             from apps.border_tool import process_border_batch
-            
+
             def progress_callback(current, total, filename):
                 percent = int((current / total) * 100)
                 self.parent.after(0, lambda p=percent: self.progress.config(value=p))
                 self.parent.after(0, lambda c=current, t=total, f=filename: self.log(f"[{c}/{t}] {f}"))
-            
+
             # Note: We added manual_exif to apps/border_tool.py in a subsequent step
             # Note: Added manual_rotation to bridge the gap
-            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback, lang=self.lang, custom_layout=custom_layout, manual_exif=manual_exif, manual_rotation=manual_rotation)
+            # Note: Added theme parameter for v2.3.0
+            result = process_border_batch(input_dir, output_dir, is_digital, manual_film, progress_callback, lang=self.lang, custom_layout=custom_layout, manual_exif=manual_exif, manual_rotation=manual_rotation, theme=theme)
             self.parent.after(0, lambda r=result: self.on_processing_complete(r))
         except Exception as e:
             import traceback
             error_msg = f"{str(e)}\n\n{traceback.format_exc()}"
             self.parent.after(0, lambda msg=error_msg: self.on_processing_error(msg))
-    
+
     def on_processing_complete(self, result):
         """
         EN: Handle processing completion
@@ -853,7 +939,7 @@ class BorderPanel:
         """
         self.progress.pack_forget()
         self.process_button.config(state="normal")
-        
+
         if result.get('success'):
             self.log("\n✓ " + "="*50)
             msg1 = "✓ 处理完成！" if self.lang == "zh" else "✓ Processing complete!"
@@ -861,7 +947,7 @@ class BorderPanel:
             self.log(msg1)
             self.log(msg2)
             self.log("✓ " + "="*50)
-            
+
             # EN: Show result dialog and ask to open folder / CN: 显示结果对话框并询问是否打开文件夹
             title = "完成" if self.lang == "zh" else "Complete"
             msg = f"处理完成！\n\n已处理 {result.get('processed', 0)} 张照片\n\n是否打开输出文件夹？" if self.lang == "zh" else f"Processing complete!\n\nProcessed {result.get('processed', 0)} photos\n\nOpen output folder?"
@@ -873,7 +959,7 @@ class BorderPanel:
                     else:
                         working_dir = os.getcwd()
                     output_folder = os.path.join(working_dir, "photos_out")
-                    
+
                     # EN: Cross-platform folder opening / CN: 跨平台打开文件夹
                     system = platform.system()
                     if system == "Windows":
@@ -892,7 +978,7 @@ class BorderPanel:
             self.log(f"✗ {result.get('message', 'Unknown error')}")
             title = "错误" if self.lang == "zh" else "Error"
             messagebox.showerror(title, result.get('message', 'Unknown error'))
-    
+
     def on_processing_error(self, error_msg):
         """
         EN: Handle processing error
@@ -900,14 +986,14 @@ class BorderPanel:
         """
         self.progress.pack_forget()
         self.process_button.config(state="normal")
-        
+
         msg = f"\n✗ 发生错误\n{error_msg}" if self.lang == "zh" else f"\n✗ Error occurred\n{error_msg}"
         self.log(msg)
         title = "错误" if self.lang == "zh" else "Error"
         msg = (f"处理过程中发生错误：\n\n{error_msg[:200]}...\n\n如需帮助请联系：xjames007@gmail.com") if self.lang == "zh" else \
               (f"Error during processing:\n\n{error_msg[:200]}...\n\nFor help contact: xjames007@gmail.com")
         messagebox.showerror(title, msg)
-    
+
     def log(self, message):
         """
         EN: Append message to log
@@ -917,3 +1003,35 @@ class BorderPanel:
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
         self.log_text.config(state="disabled")
+
+    def _update_theme_combo_values(self):
+        """
+        EN: Update theme combo box values with current language
+        CN: 使用当前语言更新主题下拉框选项
+        """
+        if self.lang == "zh":
+            themes = ["浅色 (Default)", "深色 (Dark Mode)", "马卡龙 (Rainbow)", "富士彩虹 (Fuji Rainbow)"]
+        else:
+            themes = ["Light (Default)", "Dark Mode", "Macaron (Rainbow)", "Fuji Rainbow"]
+
+        current = self.theme_var.get()
+        self.theme_combo['values'] = themes
+
+        # EN: Try to maintain selection
+        # CN: 尝试保持之前的选择
+        selected = False
+        if current:
+            for i, theme in enumerate(themes):
+                # Search by keyword
+                for kw in ["Light", "Default", "Dark", "Macaron", "Fuji", "浅色", "深色", "马卡龙", "富士"]:
+                    if kw in current and kw in theme:
+                        # Extra check for Fuji/Rainbow ambiguity
+                        if "Fuji" in current and "Fuji" not in theme: continue
+                        if "马卡龙" in current and "马卡龙" not in theme: continue
+                        self.theme_combo.current(i)
+                        selected = True
+                        break
+                if selected: break
+
+        if not selected:
+            self.theme_combo.current(0)

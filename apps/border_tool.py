@@ -104,7 +104,7 @@ def run_border_tool():
         input("\n按回车键退出 / Press Enter to exit...")
 
 
-def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None, manual_exif=None, manual_rotation=0):
+def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=None, progress_callback=None, lang="zh", custom_layout=None, manual_exif=None, manual_rotation=0, theme="light"):
     """
     EN: Pure logic function for batch border processing (GUI-friendly).
     CN: 批量边框处理纯逻辑函数（GUI友好）。
@@ -152,8 +152,16 @@ def process_border_batch(input_dir, output_dir, is_digital=False, manual_film=No
                         if v:
                             data[k] = v
                 
-                # EN: Final Rendering / CN: 最终渲染 (PASS manual_rotation)
-                success = renderer.process_image(img_path, data, output_dir, manual_rotation=manual_rotation)
+                # EN: Final Rendering / CN: 最终渲染 (PASS manual_rotation and theme)
+                # EN: For rainbow themes, use sequential index and total / CN: 对于彩虹主题，使用序列索引与总量
+                r_index = (idx - 1)
+                r_total = len(img_paths)
+                
+                success = renderer.process_image(img_path, data, output_dir, 
+                                                manual_rotation=manual_rotation, 
+                                                theme=theme,
+                                                rainbow_index=r_index,
+                                                rainbow_total=r_total)
                 
                 if success:
                     results['success'] += 1

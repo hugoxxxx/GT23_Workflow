@@ -62,7 +62,12 @@ class FilmRenderer:
                         pass
 
 
-    def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0):
+    def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0, 
+                    theme="light", rainbow_index=0, rainbow_total=1, is_sample=False):
+        """
+        EN: Main entry point with theme, global rainbow sequence, and sample mode.
+        CN: 主渲染入口，增强主题、全局彩虹长卷与 SAMPLE 样品模式支持。
+        """
         try:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
@@ -74,16 +79,17 @@ class FilmRenderer:
             
             # EN: Apply manual rotation (0, 90, 180, 270) / CN: 应用手动旋转
             if manual_rotation != 0:
-                # PIL rotate is CCW, so we use -angle for CW
                 img = img.rotate(-manual_rotation, expand=True)
 
             if img.mode != "RGB": img = img.convert("RGB")
             img = self._smart_resize(img, target_long_edge)
             w, h = img.size
             
-            # --- EN: DATA INTEGRITY CHECK / CN: 数据完整性校验 ---
-            # EN: Get layout dict, ensure it has defaults to avoid N/A
-            # CN: 获取布局字典，确保有默认值防止出现 N/A
+            # --- EN: THEME SETUP / CN: 主题颜色设置 ---
+            # EN: Support rainbow_index for sequential coloring
+            bg_color, main_color, sub_color, line_color = self._apply_theme_colors(theme, index=rainbow_index)
+            
+            # --- EN: DATA INTEGRITY CHECK ---
             layout = data.get('layout', {})
             layout_name = layout.get('name', 'CUSTOM')
             side_ratio = layout.get('side', 0.04)
@@ -91,48 +97,220 @@ class FilmRenderer:
             bottom_ratio = layout.get('bottom', 0.13)
             font_base_scale = layout.get('font_scale', 0.032)
             
-            # --- EN: CALCULATE SPACING / CN: 计算物理间距 ---
+            # --- EN: CALCULATE SPACING ---
             side_pad = int(w * side_ratio)
             top_pad = int(w * top_ratio)
             bottom_splice = int(h * bottom_ratio)
             
             new_w, new_h = w + (side_pad * 2), h + top_pad + side_pad + bottom_splice
             
-            # --- EN: DRAWING / CN: 绘制流程 ---
-            canvas = Image.new("RGB", (new_w, new_h), self.bg_color)
+            # --- EN: DRAWING ---
+            # EN: Fuji Rainbow mode uses a global sliced gradient canvas
+            # CN: 富士彩虹模式使用全局分段横向渐变画布
+            # EN: Rainbow modes (Macaron/Fuji) use different gradient engines
+            # CN: 彩虹模式：区分长卷系统（富士）与随机渐变系统（马卡龙）
+            if theme == "fuji_rainbow":
+                # EN: Continuous spectrum slice for Fuji / CN: 富士系统：连续光谱切片
+                canvas = self._create_fuji_rainbow_canvas(new_w, new_h, rainbow_index, rainbow_total)
+            elif theme == "rainbow":
+                # EN: Dynamic 2-color gradient for Macaron / CN: 马卡龙系统：动态双色随机渐变
+                macaron_palette = [
+                    (255, 180, 200), (210, 180, 255), (180, 220, 255), 
+                    (180, 255, 220), (255, 250, 190), (255, 210, 180)
+                ]
+                c1 = macaron_palette[rainbow_index % len(macaron_palette)]
+                c2 = macaron_palette[(rainbow_index + 1) % len(macaron_palette)]
+                canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
+            else:
+                # EN: Use solid background for light/dark/macaron
+                # CN: 浅色/深色/普通彩虹使用纯色背景
+                canvas = Image.new("RGB", (new_w, new_h), bg_color)
+            
             canvas.paste(img, (side_pad, top_pad))
             draw = ImageDraw.Draw(canvas)
             
-            # EN: 1px inner border / CN: 1像素内边框
-            draw.rectangle([side_pad, top_pad, side_pad + w, top_pad + h], outline=self.border_line_color, width=1)
+            # EN: 1px inner border
+            draw.rectangle([side_pad, top_pad, side_pad + w, top_pad + h], outline=line_color, width=1)
             
-            # --- EN: TYPOGRAPHY HIERARCHY / CN: 字体层级关联 ---
+            # --- EN: TYPOGRAPHY HIERARCHY ---
             main_text, sub_text = self._prepare_strings(data)
             
-            # EN: Link sub_size to main_size (0.78 ratio)
-            # CN: 将副标题字号关联至主标题 (0.78 黄金比例)
+            # EN: SAMPLE mode override / CN: SAMPLE 模式强制覆盖
+            # 老大特别强调：相机、镜头、光圈、快门、胶卷信息全部显示 SAMPLE
+            if is_sample:
+                main_text = "SAMPLE SAMPLE"
+                sub_text = "SAMPLE SAMPLE | SAMPLE | SAMPLE"
+            
             long_edge = max(new_w, new_h)
             base_main_font_size = int(long_edge * font_base_scale)
             base_sub_font_size = int(base_main_font_size * 0.78)
 
-            # EN: Ensure text fits within the available space
-            # CN: 确保文本适应可用空间
-            available_width = new_w - (side_pad * 4)  # 减去左右边距和安全余量
+            available_width = new_w - (side_pad * 4)
             actual_main_size, actual_sub_size = self._adjust_font_sizes_to_fit(
                 draw, main_text, sub_text, available_width, 
                 base_main_font_size, base_sub_font_size
             )
 
             self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
-                            main_text, sub_text, actual_main_size, actual_sub_size, data=data)
+                            main_text, sub_text, actual_main_size, actual_sub_size, 
+                            data=data, main_color=main_color, sub_color=sub_color)
             
-            # EN: Apply shadow effect for professional film look / CN: 应用阴影效果实现专业胶片感
+            # --- EN: FINAL POLISH ---
             final_output = self._apply_pro_shadow(canvas)
             return self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name)
 
         except Exception as e:
             print(f"CN: [×] 渲染程序出错: {e}")
             return False
+
+    def _apply_theme_colors(self, theme, index=0):
+        """
+        EN: Define theme color palettes with rainbow sequence index.
+        CN: 定义调色板，支持彩虹序列索引。
+        """
+        if theme == "dark":
+            # EN: Professional Cold Midnight Dark Mode / CN: 专业冷调蓝黑深色模式
+            return (15, 16, 20), (245, 245, 245), (210, 210, 210), (45, 45, 45)
+        elif theme == "rainbow":
+            # EN: Soft Macaron Palette / CN: 柔和马卡龙色库
+            # EN: Logic handled by linear gradient canvas in process_image
+            # CN: 实际方案由渲染入口的双色渐变引擎接管
+            return (255, 255, 255), (32, 32, 32), (60, 60, 60), (235, 235, 235)
+        elif theme == "fuji_rainbow":
+            # EN: Saturated Fujifilm Instax Palette / CN: 高饱和富士拍立得色库
+            palette = [
+                (30, 50, 110), (30, 120, 200), (0, 200, 240), (140, 210, 50), 
+                (255, 220, 0), (255, 140, 0), (255, 70, 60), (255, 70, 140), 
+                (180, 50, 160), (100, 20, 120)
+            ]
+            bg = palette[index % len(palette)]
+            # EN: Always use dark text (Light mode style) as requested / CN: 响应老大要求：始终使用深色文字（浅色模式审美）
+            return bg, (26, 26, 26), (85, 85, 85), (255, 255, 255)
+        else:
+            # Light
+            return (255, 255, 255), (26, 26, 26), (85, 85, 85), (238, 238, 238)
+
+    def _create_linear_gradient_canvas(self, w, h, c1, c2):
+        """
+        EN: Simple 2-color horizontal gradient for Macaron Mode.
+        CN: 马卡龙模式专用的双色线性渐变画布。
+        """
+        canvas = Image.new("RGB", (w, h))
+        draw = ImageDraw.Draw(canvas)
+        for x in range(w):
+            t = x / w
+            r = int(c1[0] + (c2[0] - c1[0]) * t)
+            g = int(c1[1] + (c2[1] - c1[1]) * t)
+            b = int(c1[2] + (c2[2] - c1[2]) * t)
+            draw.line([(x, 0), (x, h)], fill=(r, g, b))
+        return canvas
+
+    def _create_fuji_rainbow_canvas(self, w, h, index, total):
+        """
+        EN: Generate a global rainbow slice for the Fuji Rainbow theme.
+        CN: 为富士彩虹主题生成全局彩虹预览切片。
+        """
+        canvas = Image.new("RGB", (w, h))
+        draw = ImageDraw.Draw(canvas)
+        
+        # EN: Vibrant & High-Saturation Fuji Rainbow palette (Recovered from "Grey" feedback)
+        # CN: 高饱和度“真·鲜艳”富士彩虹色谱（针对“太灰”反馈的最终校准）
+        colors = [
+            (255, 110, 110),  # Vibrant Coral Red / 鲜珊瑚红
+            (255, 180, 70),   # Vibrant Gold Orange / 鲜亮金橙
+            (255, 230, 80),   # Vibrant Sunny Yellow / 鲜亮阳光黄
+            (120, 240, 120),  # Vibrant Mint Green / 鲜嫩薄荷绿
+            (100, 230, 245),  # Vibrant Sky Cyan / 鲜碧空青
+            (100, 160, 255),  # Vibrant Ultramarine / 鲜亮群青
+            (200, 100, 255)   # Vibrant Electric Violet / 鲜亮紫罗兰
+        ]
+        
+        # EN: Calculate the normalized range for this specific frame [t_start, t_end]
+        # CN: 计算该帧在全局彩虹中的归一化范围 [t_start, t_end]
+        # Use floating point division to avoid integer issues
+        f_idx = float(index)
+        f_total = float(total)
+        t_start = max(0.0, min(1.0, f_idx / f_total))
+        t_end = max(0.0, min(1.0, (f_idx + 1.0) / f_total))
+        
+        for x in range(w):
+            # EN: Map the local pixel position to the global rainbow position
+            # CN: 将局部像素位置映射到全局彩虹位置
+            pos = t_start + (x / w) * (t_end - t_start)
+            
+            # EN: Find colors to interpolate
+            # CN: 寻找插值颜色
+            num_segments = len(colors) - 1
+            scaled_pos = pos * num_segments
+            idx = int(scaled_pos)
+            next_idx = min(idx + 1, num_segments)
+            inner_t = scaled_pos - idx
+            
+            c1 = colors[idx]
+            c2 = colors[next_idx]
+            
+            r = int(c1[0] + (c2[0] - c1[0]) * inner_t)
+            g = int(c1[1] + (c2[1] - c1[1]) * inner_t)
+            b = int(c1[2] + (c2[2] - c1[2]) * inner_t)
+            
+            # EN: Draw horizontal gradient line by line
+            # CN: 逐行绘制横向渐变
+            draw.line([(x, 0), (x, h)], fill=(r, g, b))
+            
+        return canvas
+
+    def _create_rainbow_canvas(self, w, h):
+        """
+        EN: Generate a premium Fujifilm Instax Wide style rainbow gradient.
+        CN: 生成高级感富士拍立得 Wide 风格彩虹渐变。
+        """
+        canvas = Image.new("RGB", (w, h))
+        
+        # EN: Fujifilm Instax Wide Rainbow Palette (Soft Macaron tones)
+        # CN: 富士拍立得 Wide 彩虹调色板（马卡龙色系）
+        colors = [
+            (255, 180, 200), # Soft Pink / 粉
+            (210, 180, 255), # Lavender / 紫
+            (180, 220, 255), # Sky Blue / 蓝
+            (180, 255, 220), # Mint / 绿
+            (255, 250, 190), # Soft Yellow / 黄
+            (255, 210, 180)  # Peach / 橙
+        ]
+        
+        draw = ImageDraw.Draw(canvas)
+        
+        # EN: Use 30-degree diagonal soft gradient for more dynamic look
+        # CN: 使用 30 度斜向软渐变，增加动态感
+        for y in range(h):
+            # EN: Calculate gradient position based on X and Y to create diagonal effect
+            # CN: 根据 X 和 Y 计算渐变位置，创建斜向效果
+            # Formula: (y + x * tan(30)) / (h + w * tan(30))
+            # simplified to (y + x*0.58)
+            tan30 = 0.577
+            max_val = h + w * tan30
+            
+            # Since we draw line by line, we interpolate along the line
+            for x in [0, w-1]: # We only need to interpolate for the full width if needed
+                pass
+                
+            # Optimized Horizontal-ish with slight shift
+            pos = y / h
+            idx = int(pos * (len(colors) - 1))
+            next_idx = min(idx + 1, len(colors) - 1)
+            inner_pos = (pos * (len(colors) - 1)) - idx
+            
+            c1 = colors[idx]
+            c2 = colors[next_idx]
+            
+            r = int(c1[0] + (c2[0] - c1[0]) * inner_pos)
+            g = int(c1[1] + (c2[1] - c1[1]) * inner_pos)
+            b = int(c1[2] + (c2[2] - c1[2]) * inner_pos)
+            
+            draw.line([(0, y), (w, y)], fill=(r, g, b))
+            
+        # EN: Use a smaller radius to keep the "stripe" structure but soft
+        # CN: 使用较小的模糊半径，保持“条纹感”且柔和
+        return canvas.filter(ImageFilter.GaussianBlur(radius=15))
 
     def _prepare_strings(self, data):
         """EN: Dual-Engine Typography / CN: 胶片/数码双引擎排版"""
@@ -181,7 +359,12 @@ class FilmRenderer:
         
         return camera_text, "  |  ".join(info_parts)
 
-    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None):
+    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None):
+        # EN: Use provided colors or fallback to defaults
+        # CN: 使用提供的颜色，或回退至默认值
+        m_color = main_color or self.main_color
+        s_color = sub_color or self.sub_color
+        
         # EN: Vertical center of the white area / CN: 白色区域垂直中心
         base_y = top_pad + h + (side_pad + bottom_splice) // 2
         
@@ -228,6 +411,28 @@ class FilmRenderer:
                         scaled_w = int(orig_w * (target_h / orig_h))
                         logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
 
+                    # --- EN: LOGO INTELLIGENT ADAPTATION / CN: LOGO 智能适配 ---
+                    # EN: If background is dark (m_color is light), adapt dark parts to white while preserving colors
+                    # CN: 如果背景是深色（文字颜色为浅色），将暗部（黑色文字）适配为白色，同时保留品牌色彩
+                    if m_color[0] > 200:
+                        if logo_img.mode != 'RGBA': logo_img = logo_img.convert('RGBA')
+                        # EN: Pixel-level scan to protect colors like Leica Red or Nikon Yellow
+                        # CN: 像素级扫描，保护徕卡红或尼康黄等品牌色
+                        pixels = list(logo_img.getdata())
+                        new_pixels = []
+                        for r, g, b, a in pixels:
+                            # EN: Identify dark neutral pixels (Blacks)
+                            # CN: 识别暗中性色像素（黑色部分）
+                            is_dark = (r < 85 and g < 85 and b < 85)
+                            is_neutral = (abs(r-g) < 20 and abs(g-b) < 20)
+                            if is_dark and is_neutral:
+                                # EN: Flip to white but keep original alpha / CN: 翻转为白色，保留原始透明度
+                                new_pixels.append((255, 255, 255, a))
+                            else:
+                                # EN: Preserve brand colors / CN: 保留品牌色
+                                new_pixels.append((r, g, b, a))
+                        logo_img.putdata(new_pixels)
+
                     # EN: Center horizontally, align vertically with text pos
                     # CN: 水平居中，垂直与文字位置对齐
                     logo_x = (new_w - logo_img.width) // 2
@@ -245,9 +450,9 @@ class FilmRenderer:
 
         # --- EN: ZEISS T* HIGHLIGHT / CN: 蔡司 T* 红色高亮 ---
         # Zeiss red color: #ed1f25 -> (237, 31, 37)
-        sub_colors = self.sub_color
+        sub_colors = s_color
         if "T*" in sub_text:
-            sub_colors = [self.sub_color] * len(sub_text)
+            sub_colors = [s_color] * len(sub_text)
             zeiss_red = (237, 31, 37)
             i = 0
             while i < len(sub_text) - 1:
@@ -262,13 +467,13 @@ class FilmRenderer:
         try:
             from .typo_engine import TypoEngine
             if not logo_drawn:
-                TypoEngine.draw_text(draw, main_draw_pos, main_text, self.font_main, m_size, self.main_color)
+                TypoEngine.draw_text(draw, main_draw_pos, main_text, self.font_main, m_size, m_color)
             TypoEngine.draw_text(draw, sub_draw_pos, sub_text, self.font_sub, s_size, sub_colors)
         except Exception as e:
             if not logo_drawn:
-                draw.text(main_draw_pos, main_text, fill="black", anchor="mm")
+                draw.text(main_draw_pos, main_text, fill=m_color, anchor="mm")
             # Fallback for sub_text: just use the base sub_color as a single fill
-            draw.text(sub_draw_pos, sub_text, fill=self.sub_color, anchor="mm")
+            draw.text(sub_draw_pos, sub_text, fill=s_color, anchor="mm")
 
 
     def _find_logo_path(self, make, model):
