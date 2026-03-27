@@ -1,5 +1,15 @@
 # Change Log / 变更日志
 
+## [2.3.0-alpha] - 2026-03-27
+
+### 开发初始化 / Development Initialization
+- **[Task] v2.3.0 周期启动 / Lifecycle Start**:
+  - EN: Created `v2.3.0` branch and bumped global version to `2.3.0-alpha`.
+  - CN: 开启 `v2.3.0` 开发分支，并将全局版本号更新至 `2.3.0-alpha`。
+- **[Docs] 文档规范重构 / Documentation Standards**:
+  - EN: Initialized v2.3.0 release notes and overhauled progress tracking artifacts to be bilingual according to new AI guidelines.
+  - CN: 初始化 v2.3.0 发布说明，并根据新的 AI 准则将进度追踪文档重构为中英双语格式。
+
 ## [2.2.3] - 2026-03-25
 
 ### Core & Contact Sheet / 核心与底片索引
