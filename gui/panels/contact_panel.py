@@ -76,21 +76,26 @@ class ContactPanel:
         
         self.format_var = ttk.StringVar(value="")
         format_label = ttk.Label(self.format_frame, textvariable=self.format_var, font=("Microsoft YaHei UI", 11, "bold"), foreground="#2780e3")
-        format_label.pack(anchor=W, pady=5)
+        format_label.pack(side=LEFT, anchor=W, pady=5)
+        
+        # EN: Manual switch to 135HF button / CN: 手动切换到 135HF 按钮
+        hf_btn_text = "半格模式" if self.lang == "zh" else "Half-Frame"
+        self.hf_button = ttk.Button(self.format_frame, text=hf_btn_text, command=self.force_135hf, bootstyle="info-outline", width=12)
+        self.hf_button.pack(side=RIGHT, padx=(5, 0))
         
         # EN: Store the actual format value separately / CN: 单独存储实际的画幅值
         self.detected_format = ""
         
-        # EN: 645 orientation selection (show only when 645 is detected) / CN: 645方向选择（仅在检测到645时显示）
-        orient_text = "645 方向" if self.lang == "zh" else "645 Orientation"
+        # EN: Orientation selection (for 645 & 135HF) / CN: 方向选择（针对 645 和 135HF）
+        orient_text = "排版方向" if self.lang == "zh" else "Orientation"
         self.orientation_frame = ttk.Labelframe(top_container, text=orient_text, padding=10)
         self.orientation_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 0))
         self.orientation_frame.pack_forget()  # Hide initially / 初始隐藏
         
         self.orientation_var = ttk.StringVar(value="L")
         self.orientations = [
-            ("L", "垂直条(L) - 照片横向", "Vertical strip (L) - horizontal photo"),
-            ("P", "水平条(P) - 照片竖向", "Horizontal strip (P) - vertical photo")
+            ("L", "垂直条 (L) - 横向照片", "Vertical strip (L) - Landscape"),
+            ("P", "水平条 (P) - 竖向照片", "Horizontal strip (P) - Portrait")
         ]
         
         self.orientation_radios = []
@@ -172,12 +177,12 @@ class ContactPanel:
         self.show_date_check.pack(side=LEFT, padx=(0, 10))
         self.show_exif_check = ttk.Checkbutton(options_row, text=exif_text, variable=self.show_exif_var, bootstyle="round-toggle")
         self.show_exif_check.pack(side=LEFT)
-
-        # 1.5 EN: Half-frame toggle / CN: 半格模式开关
+        
+        # EN: State flag for half-frame (UI-less) / CN: 半格模式状态标志 (无界面)
         self.half_frame_var = ttk.BooleanVar(value=False)
-        hf_text = "半格模式" if self.lang == "zh" else "Half-Frame"
-        self.half_frame_check = ttk.Checkbutton(options_row, text=hf_text, variable=self.half_frame_var, bootstyle="round-toggle")
-        self.half_frame_check.pack(side=LEFT, padx=(10, 0))
+
+        self.show_exif_check = ttk.Checkbutton(options_row, text=exif_text, variable=self.show_exif_var, bootstyle="round-toggle")
+        self.show_exif_check.pack(side=LEFT)
 
         # 2. EN: Sorting / CN: 图片排序
         sort_row = ttk.Frame(self.film_info_frame)
@@ -264,21 +269,29 @@ class ContactPanel:
                     self.format_var.set(detected_format)
                     
                     # EN: Show/hide orientation frame based on format / CN: 根据画幅显示/隐藏方向选择
-                    if detected_format == "645_6x8_43":
+                    if detected_format in ["645_6x8_43", "135HF"]:
                         self.orientation_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 0), after=self.format_frame)
                     else:
                         self.orientation_frame.pack_forget()
                     
-                    # EN: Set half-frame toggle if detected / CN: 如果检测到半格，则设置开关
+                    # EN: Set half-frame state / CN: 设置半格状态
                     if detected_format == "135HF":
                         self.half_frame_var.set(True)
+                        self.hf_button.config(bootstyle="info") # Highlight / 突出显示
                     else:
-                        # EN: If it's standard 135, ensure it's not checked by default unless previously set
-                        if detected_format == "135_6x9":
-                            self.half_frame_var.set(False)
+                        self.half_frame_var.set(False)
+                        self.hf_button.config(bootstyle="info-outline")
         except Exception:
-            # EN: Format detection failed, silent fail is OK / CN: 画幅检测失败，静默失败可接受
             pass
+
+    def force_135hf(self):
+        """EN: Manually force 135HF mode / CN: 手动强制半格模式"""
+        self.detected_format = "135HF"
+        self.format_var.set("135HF")
+        self.half_frame_var.set(True)
+        self.hf_button.config(bootstyle="info")
+        self.orientation_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 0), after=self.format_frame)
+        self.log("✓ " + ("已手动切换至半格模式 (135HF)" if self.lang == "zh" else "Manually switched to Half-Frame (135HF)"))
     
     def refresh_format(self):
         """
@@ -374,7 +387,7 @@ class ContactPanel:
             self.emulsion_label.config(text="Emulsion # (optional):")
             self.show_date_check.config(text="Show Date")
             self.show_exif_check.config(text="Show EXIF")
-            self.half_frame_check.config(text="Half-Frame")
+            self.hf_button.config(text="Half-Frame")
             self.sort_label.config(text="Image Sort:")
             self.setup_sort_options()
             self.generate_button.config(text="Generate Contact Sheet")
@@ -510,17 +523,15 @@ class ContactPanel:
         selected_format = self.detected_format
         
         # EN: Manual override: If Half-Frame is checked and format is 135, upgrade to 135HF
-        # CN: 手工覆盖：如果勾选了半格且画幅是 135，则升级为 135HF
         if self.half_frame_var.get() and selected_format == "135_6x9":
             selected_format = "135HF"
         # EN: If already detected as 135HF, keep it
         elif self.half_frame_var.get() and not selected_format:
             selected_format = "135HF"
         elif not self.half_frame_var.get() and selected_format == "135HF":
-            # EN: If user unchecks half-frame on a high-count roll, treat as standard 135
             selected_format = "135_6x9"
 
-        orientation = self.orientation_var.get() if selected_format == "645_6x8_43" else None
+        orientation = self.orientation_var.get() if selected_format in ["645_6x8_43", "135HF"] else None
         
         # EN: Map sort selection to parameters / CN: 将排序选择映射为参数
         sort_text = self.sort_var.get()
