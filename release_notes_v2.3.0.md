@@ -7,10 +7,9 @@
 ### 1. 🌈 彩虹相纸 (Rainbow Theme)
 灵感源自经典的富士胶片（Fujifilm Instax）彩虹渐变相纸。
 - **连续光谱**: 在批量处理多张图片时，系统会自动分配光谱顺序。当您将成品图连拼时，会呈现出一条丝滑、无断点的彩虹渐变长卷。
-- **视觉美感**: 独特的色彩过渡算法，为您的扫街或日常记录增添一份梦幻感。
 
-![Rainbow 9-Grid Preview](previews/v2.3/grid_rainbow.jpg)
-*彩虹相纸：九宫格连续渐变效果展示。*
+![Rainbow 10-Image Strip](previews/v2.3/strip_rainbow_10.jpg)
+*彩虹相纸：10 张横向连拼连续渐变效果展示。*
 
 ### 2. 🍭 马卡龙色系 (Macaron Palette)
 全新设计的马卡龙渐变底色，专为追求个性化审美的用户打造。
