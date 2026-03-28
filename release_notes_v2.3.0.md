@@ -6,19 +6,19 @@
 ### 1.1 🌈 彩虹相纸 (Rainbow Theme)
 灵感源自经典的富士渐变相纸。系统会自动计算批量照片的光谱顺序，呈现出丝滑、无断点的彩虹渐变长卷。
 
-![Rainbow 10-Image Strip](previews/v2.3/strip_rainbow_10.jpg)
+<img src="previews/v2.3/strip_rainbow_10.jpg" width="800" alt="Rainbow Strip">
 *彩虹相纸：10 张横向连拼连续渐变效果展示。*
 
 ### 1.2 🍭 马卡龙色系 (Macaron Palette)
 专为朋友圈九宫格打造。提供 9 种精选动态渐变色，并引入基于物理位置的确定性分配算法，确保每次预览色彩始终如一。
 
-![Macaron 9-Grid Preview](previews/v2.3/grid_macaron.jpg)
+<img src="previews/v2.3/grid_macaron.jpg" width="600" alt="Macaron 9-Grid">
 *马卡龙配色：九宫格梦幻渐变展示。*
 
 ### 1.3 🌑 专业深色边框 (Professional Dark Border)
 针对高对比度作品推出的极致深空灰背景，配合白墨增强的反色算法，确保 Logo 与文字极具质感。
 
-![Dark Border Sample](previews/v2.3/sample_dark.jpg)
+<img src="previews/v2.3/sample_dark.jpg" width="600" alt="Dark Border Sample">
 *深色边框：更适合极简主义的作品展示。*
 
 ### 1.4 🧊 纯净模式与智能记忆 (Pure Mode & State Memory)
@@ -37,10 +37,10 @@
 
 **样片展示：**
 
-![135HF P-Mode](previews/v2.3/135hf_p_mode.jpg)
+<img src="previews/v2.3/135hf_p_mode.jpg" width="800" alt="135HF P-Mode">
 *P 模式：传统水平底片条排版*
 
-![135HF L-Mode](previews/v2.3/135hf_l_mode.jpg)
+<img src="previews/v2.3/135hf_l_mode.jpg" width="800" alt="135HF L-Mode">
 *L 模式：独特垂直排列方式，信息自动旋转对齐*
 
 ### 2.2 📸 满额排版与智能对齐
