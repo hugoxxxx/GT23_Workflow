@@ -6,11 +6,18 @@ from core.renderers.renderer_66 import Renderer66
 from core.renderers.renderer_645 import Renderer645
 from core.renderers.renderer_67 import Renderer67
 from core.renderers.renderer_135 import Renderer135
+from core.renderers.renderer_135hf import Renderer135HF
 
 class ContactSheetPro:
     def __init__(self):
         self.meta = MetadataHandler()
-        self.renderers = {"66": Renderer66(), "645": Renderer645(), "67": Renderer67(), "135": Renderer135()}
+        self.renderers = {
+            "66": Renderer66(), 
+            "645": Renderer645(), 
+            "67": Renderer67(), 
+            "135": Renderer135(),
+            "135HF": Renderer135HF()
+        }
 
     def run(self):
         try:
@@ -104,6 +111,7 @@ class ContactSheetPro:
                 "6x7_4x5": "67",
                 "645_6x8_43": "645",
                 "135_6x9": "135",
+                "135HF": "135HF",
                 "PANORAMIC": "135"  # EN: Fallback panoramic to 135 / CN: 全景降级为135
             }
             
