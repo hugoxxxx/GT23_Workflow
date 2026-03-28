@@ -57,8 +57,13 @@ class TypoEngine:
         font_path = cls._resolve_font_path(font_path)
         
         try:
-            ttfont = TTFont(font_path)
-            pil_font = ImageFont.truetype(font_path, font_size)
+            # EN: Handle TTC collections by defaulting to index 0 / CN: 处理 TTC 字库集合（默认索引 0）
+            if font_path.lower().endswith(".ttc"):
+                ttfont = TTFont(font_path, fontNumber=0)
+                pil_font = ImageFont.truetype(font_path, font_size, index=0)
+            else:
+                ttfont = TTFont(font_path)
+                pil_font = ImageFont.truetype(font_path, font_size)
         except Exception as e:
             # EN: Fallback to default font if loading fails
             # CN: 如果加载失败，回退到默认字体

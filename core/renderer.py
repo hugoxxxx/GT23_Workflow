@@ -63,7 +63,7 @@ class FilmRenderer:
 
 
     def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0, 
-                    theme="light", rainbow_index=0, rainbow_total=1, is_sample=False):
+                    theme="light", is_pure=False, rainbow_index=0, rainbow_total=1, is_sample=False, **kwargs):
         """
         EN: Main entry point with theme, global rainbow sequence, and sample mode.
         CN: 主渲染入口，增强主题、全局彩虹长卷与 SAMPLE 样品模式支持。
@@ -105,21 +105,35 @@ class FilmRenderer:
             new_w, new_h = w + (side_pad * 2), h + top_pad + side_pad + bottom_splice
             
             # --- EN: DRAWING ---
-            # EN: Fuji Rainbow mode uses a global sliced gradient canvas
-            # CN: 富士彩虹模式使用全局分段横向渐变画布
-            # EN: Rainbow modes (Macaron/Fuji) use different gradient engines
-            # CN: 彩虹模式：区分长卷系统（富士）与随机渐变系统（马卡龙）
-            if theme == "fuji_rainbow":
-                # EN: Continuous spectrum slice for Fuji / CN: 富士系统：连续光谱切片
-                canvas = self._create_fuji_rainbow_canvas(new_w, new_h, rainbow_index, rainbow_total)
-            elif theme == "rainbow":
+            # EN: Rainbow mode uses a global sliced gradient canvas
+            # CN: 彩虹模式使用全局分段横向渐变画布
+            # EN: Rainbow modes (Macaron/Rainbow) use different gradient engines
+            # CN: 彩虹模式：区分长卷系统（彩虹）与随机渐变系统（马卡龙）
+            if theme == "rainbow":
+                # EN: Pass specific t_start/t_end for physical continuity / CN: 传递具体的起始/结束比例以实现物理连贯
+                t_range = kwargs.get('rainbow_range', (0.0, 1.0))
+                # DEBUG
+                print(f"DEBUG [Renderer]: theme=rainbow, t_range={t_range}, size={new_w}x{new_h}")
+                canvas = self._create_fuji_rainbow_canvas(new_w, new_h, t_range[0], t_range[1])
+            elif theme == "macaron":
                 # EN: Dynamic 2-color gradient for Macaron / CN: 马卡龙系统：动态双色随机渐变
                 macaron_palette = [
                     (255, 180, 200), (210, 180, 255), (180, 220, 255), 
-                    (180, 255, 220), (255, 250, 190), (255, 210, 180)
+                    (180, 255, 220), (255, 250, 190), (255, 210, 180),
+                    (200, 255, 255), (255, 220, 255), (220, 255, 180)
                 ]
-                c1 = macaron_palette[rainbow_index % len(macaron_palette)]
-                c2 = macaron_palette[(rainbow_index + 1) % len(macaron_palette)]
+                # EN: Resolve color index (Must be deterministic)
+                # CN: 解析色彩索引 (必须是确定性的)
+                if rainbow_index >= 0:
+                    c_idx = rainbow_index
+                else:
+                    # EN: Fallback to MD5 hash of path to ensure identical photo always gets identical color
+                    # CN: 降级到路径的 MD5 哈希，确保同一张图始终获得相同色彩
+                    import hashlib
+                    c_idx = int(hashlib.md5(img_path.encode()).hexdigest(), 16) % len(macaron_palette)
+
+                c1 = macaron_palette[c_idx % len(macaron_palette)]
+                c2 = macaron_palette[(c_idx + 1) % len(macaron_palette)]
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
             else:
                 # EN: Use solid background for light/dark/macaron
@@ -141,19 +155,26 @@ class FilmRenderer:
                 main_text = "SAMPLE SAMPLE"
                 sub_text = "SAMPLE SAMPLE | SAMPLE | SAMPLE"
             
-            long_edge = max(new_w, new_h)
-            base_main_font_size = int(long_edge * font_base_scale)
-            base_sub_font_size = int(base_main_font_size * 0.78)
+            # --- EN: RENDERING PIPELINE / CN: 渲染流水线 ---
+            if is_pure:
+                # EN: Pure Border Mode skips all text/logo layers
+                # CN: 纯边框模式跳过所有文本与 Logo 图层
+                pass
+            else:
+                # EN: Prepare Typography Hierarchy / CN: 准备字体层级
+                long_edge = max(new_w, new_h)
+                base_main_font_size = int(long_edge * font_base_scale)
+                base_sub_font_size = int(base_main_font_size * 0.78)
 
-            available_width = new_w - (side_pad * 4)
-            actual_main_size, actual_sub_size = self._adjust_font_sizes_to_fit(
-                draw, main_text, sub_text, available_width, 
-                base_main_font_size, base_sub_font_size
-            )
+                available_width = new_w - (side_pad * 4)
+                actual_main_size, actual_sub_size = self._adjust_font_sizes_to_fit(
+                    draw, main_text, sub_text, available_width, 
+                    base_main_font_size, base_sub_font_size
+                )
 
-            self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
-                            main_text, sub_text, actual_main_size, actual_sub_size, 
-                            data=data, main_color=main_color, sub_color=sub_color)
+                self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
+                                main_text, sub_text, actual_main_size, actual_sub_size, 
+                                data=data, main_color=main_color, sub_color=sub_color)
             
             # --- EN: FINAL POLISH ---
             final_output = self._apply_pro_shadow(canvas)
@@ -171,12 +192,12 @@ class FilmRenderer:
         if theme == "dark":
             # EN: Professional Cold Midnight Dark Mode / CN: 专业冷调蓝黑深色模式
             return (15, 16, 20), (245, 245, 245), (210, 210, 210), (45, 45, 45)
-        elif theme == "rainbow":
+        elif theme == "macaron":
             # EN: Soft Macaron Palette / CN: 柔和马卡龙色库
             # EN: Logic handled by linear gradient canvas in process_image
             # CN: 实际方案由渲染入口的双色渐变引擎接管
             return (255, 255, 255), (32, 32, 32), (60, 60, 60), (235, 235, 235)
-        elif theme == "fuji_rainbow":
+        elif theme == "rainbow":
             # EN: Saturated Fujifilm Instax Palette / CN: 高饱和富士拍立得色库
             palette = [
                 (30, 50, 110), (30, 120, 200), (0, 200, 240), (140, 210, 50), 
@@ -205,10 +226,10 @@ class FilmRenderer:
             draw.line([(x, 0), (x, h)], fill=(r, g, b))
         return canvas
 
-    def _create_fuji_rainbow_canvas(self, w, h, index, total):
+    def _create_fuji_rainbow_canvas(self, w, h, t_start, t_end):
         """
-        EN: Generate a global rainbow slice for the Fuji Rainbow theme.
-        CN: 为富士彩虹主题生成全局彩虹预览切片。
+        EN: Generate a global rainbow slice for the Rainbow theme using range [t_start, t_end].
+        CN: 使用范围 [t_start, t_end] 为“彩虹”主题生成全局彩虹切片。
         """
         canvas = Image.new("RGB", (w, h))
         draw = ImageDraw.Draw(canvas)
@@ -225,13 +246,9 @@ class FilmRenderer:
             (200, 100, 255)   # Vibrant Electric Violet / 鲜亮紫罗兰
         ]
         
-        # EN: Calculate the normalized range for this specific frame [t_start, t_end]
-        # CN: 计算该帧在全局彩虹中的归一化范围 [t_start, t_end]
-        # Use floating point division to avoid integer issues
-        f_idx = float(index)
-        f_total = float(total)
-        t_start = max(0.0, min(1.0, f_idx / f_total))
-        t_end = max(0.0, min(1.0, (f_idx + 1.0) / f_total))
+        # EN: Range is now passed directly as floats / CN: 范围现在作为浮点数直接传入
+        t_start = max(0.0, min(1.0, float(t_start)))
+        t_end = max(0.0, min(1.0, float(t_end)))
         
         for x in range(w):
             # EN: Map the local pixel position to the global rainbow position
@@ -314,13 +331,17 @@ class FilmRenderer:
 
     def _prepare_strings(self, data):
         """EN: Dual-Engine Typography / CN: 胶片/数码双引擎排版"""
-        make_raw = str(data.get('Make') or "").strip()
-        model_raw = str(data.get('Model') or "").strip()
+        # EN: Handle visibility toggles / CN: 处理显示开关
+        show_make = data.get('show_make', 1)
+        show_model = data.get('show_model', 1)
+
+        make_raw = str(data.get('Make') or "").strip() if show_make else ""
+        model_raw = str(data.get('Model') or "").strip() if show_model else ""
         make = make_raw.upper()
         model = model_raw.upper()
 
         # EN: Deduplicate brand prefix in model (e.g., CANON CANON EOS R6 -> CANON EOS R6)
-        # CN: 去重型号里的品牌前缀（示例：CANON CANON EOS R6 -> CANON EOS R6）
+        # CN: 去重型号里的品牌前缀
         dedup_model = model
         if make and model and model.startswith(make):
             dedup_model = model[len(make):].lstrip(" -_/") or model
@@ -337,19 +358,19 @@ class FilmRenderer:
         is_digi = data.get('is_digital', False)
         
         # 1. EN: Lens / CN: 镜头
-        if data.get('LensModel'): 
+        if data.get('show_lens', 1) and data.get('LensModel'): 
             info_parts.append(data['LensModel'])
         
         # 2. EN: Focal Length (Digital only) / CN: 焦距 (仅数码)
-        if is_digi and data.get('FocalLength'):
+        if data.get('show_lens', 1) and is_digi and data.get('FocalLength'):
             info_parts.append(data['FocalLength'])
         
         # 3. EN: Exposure (Shutter + Aperture + ISO for Digital)
         # CN: 曝光组件 (快门 + 光圈 + 数码模式下的 ISO)
         params = []
-        if data.get('ExposureTimeStr'): params.append(f"{data['ExposureTimeStr']}s")
-        if data.get('FNumber'): params.append(f"f/{data['FNumber']}")
-        if is_digi and data.get('ISO'): params.append(f"ISO {data['ISO']}")
+        if data.get('show_shutter', 1) and data.get('ExposureTimeStr'): params.append(f"{data['ExposureTimeStr']}s")
+        if data.get('show_aperture', 1) and data.get('FNumber'): params.append(f"f/{data['FNumber']}")
+        if data.get('show_iso', 1) and is_digi and data.get('ISO'): params.append(f"ISO {data['ISO']}")
         if params: info_parts.append(" ".join(params))
         
         # 4. EN: Film (Film mode only) / CN: 胶片名称 (仅胶片模式)
@@ -365,6 +386,9 @@ class FilmRenderer:
         m_color = main_color or self.main_color
         s_color = sub_color or self.sub_color
         
+        # EN: Detect CJK characters and resolve paths / CN: 检测 CJK 字符并解析路径
+        resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
+
         # EN: Vertical center of the white area / CN: 白色区域垂直中心
         base_y = top_pad + h + (side_pad + bottom_splice) // 2
         
@@ -373,7 +397,9 @@ class FilmRenderer:
 
         # --- EN: CAMERA LOGO RENDERING / CN: 相机 LOGO 渲染 ---
         logo_drawn = False
-        if data:
+        # EN: Only draw logo if Model visibility is ON
+        # CN: 仅在型号可见性开启时绘制 Logo
+        if data and data.get('show_model', 1):
             make = str(data.get('Make') or "").strip()
             model = str(data.get('Model') or "").strip()
             logo_path = self._find_logo_path(make, model)
@@ -382,8 +408,8 @@ class FilmRenderer:
                 try:
                     import cairosvg
                     from .typo_engine import TypoEngine
-                    resolved_main = TypoEngine._resolve_font_path(self.font_main)
-                    main_font = self._get_font(resolved_main, m_size)
+                    resolved_main_font = TypoEngine._resolve_font_path(resolved_main)
+                    main_font = self._get_font(resolved_main_font, m_size)
                     
                     # EN: Calculate typical font height for scaling / CN: 计算典型字体高度用于缩放
                     ascent, descent = main_font.getmetrics()
@@ -467,8 +493,8 @@ class FilmRenderer:
         try:
             from .typo_engine import TypoEngine
             if not logo_drawn:
-                TypoEngine.draw_text(draw, main_draw_pos, main_text, self.font_main, m_size, m_color)
-            TypoEngine.draw_text(draw, sub_draw_pos, sub_text, self.font_sub, s_size, sub_colors)
+                TypoEngine.draw_text(draw, main_draw_pos, main_text, resolved_main, m_size, m_color)
+            TypoEngine.draw_text(draw, sub_draw_pos, sub_text, resolved_sub, s_size, sub_colors)
         except Exception as e:
             if not logo_drawn:
                 draw.text(main_draw_pos, main_text, fill=m_color, anchor="mm")
@@ -598,13 +624,9 @@ class FilmRenderer:
     def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
         """
         调整字体大小使其适应可用宽度
-        使用与 TypoEngine 相同的字体路径解析，确保测量准确。
         """
-        # EN: Use same path resolution as TypoEngine to ensure fonts match
-        # CN: 使用与 TypoEngine 相同的路径解析，确保字体一致
-        from .typo_engine import TypoEngine
-        resolved_main = TypoEngine._resolve_font_path(self.font_main)
-        resolved_sub  = TypoEngine._resolve_font_path(self.font_sub)
+        # EN: Resolve font paths including CJK fallback / CN: 解析字体路径，包含中文字库回退
+        resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
 
         # 创建临时绘图对象来测量文本宽度
         temp_img = Image.new("RGB", (1, 1))
@@ -631,17 +653,57 @@ class FilmRenderer:
         
         return final_main_size, final_sub_size
 
-    def _get_font(self, font_path, font_size):
+    def _get_font(self, font_path, size):
         """
         获取字体对象，如果指定字体不存在则使用默认字体
         """
         try:
-            if os.path.exists(font_path):
-                return ImageFont.truetype(font_path, font_size)
-            else:
-                return ImageFont.load_default()
+            actual_path = self._resolve_path(font_path)
+            if os.path.exists(actual_path):
+                if actual_path.lower().endswith(".ttc"):
+                    return ImageFont.truetype(actual_path, size, index=0)
+                return ImageFont.truetype(actual_path, size)
+            return ImageFont.load_default()
         except:
             return ImageFont.load_default()
+
+    def _contains_chinese(self, text):
+        """EN: Detect if text contains CJK characters. / CN: 检测文本是否包含中文字符。"""
+        import re
+        if not text: return False
+        return bool(re.search(r'[\u4e00-\u9fff]', str(text)))
+
+    def _resolve_font_paths(self, main_text, sub_text):
+        """
+        EN: Resolve final font paths including CJK fallback.
+        CN: 解析最终字体路径，包括中文字体降级逻辑。
+        """
+        # EN: Default paths / CN: 默认路径
+        resolved_main = self.font_main
+        resolved_sub  = self.font_sub
+        
+        # EN: Detect Chinese / CN: 检查中文并降级字库
+        if self._contains_chinese(main_text) or self._contains_chinese(sub_text):
+            cjk_path = self._get_system_cjk_font()
+            if cjk_path:
+                resolved_main = cjk_path
+                resolved_sub  = cjk_path
+        
+        # EN: Resolve to absolute paths / CN: 解析为绝对路径
+        from .typo_engine import TypoEngine
+        return TypoEngine._resolve_font_path(resolved_main), TypoEngine._resolve_font_path(resolved_sub)
+
+    def _get_system_cjk_font(self):
+        """EN: Find Microsoft YaHei or similar on Windows. / CN: 在 Windows 上寻找微软雅黑。"""
+        if sys.platform == "win32":
+            paths = [
+                "C:\\Windows\\Fonts\\msyh.ttc",    # Microsoft YaHei
+                "C:\\Windows\\Fonts\\msyhbd.ttc",  # YaHei Bold
+                "C:\\Windows\\Fonts\\simhei.ttf"   # SimHei
+            ]
+            for p in paths:
+                if os.path.exists(p): return p
+        return None
 
 def bootstrap_logos(resolver_func=None):
     """
