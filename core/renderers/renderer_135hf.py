@@ -91,24 +91,28 @@ class Renderer135HF(Renderer135):
                 # CN: 粘贴照片（保持竖向比例）
                 self._paste_photo_for_hf(canvas, img_list[idx], curr_x, py, photo_w, photo_h)
 
-                # EN: Render index number / CN: 渲染索引序号
-                top_label = f"{idx + 1}"
-                tw = draw.textlength(top_label, font=em_font)
-                draw.text((curr_x + (photo_w - tw)//2, sy + int(0.2 * px_per_mm)), top_label, font=em_font, fill=cur_color)
+                # EN: Render index number (Follow 135 standard: one number per 2 HF units / 38mm)
+                # CN: 渲染索引序号 (跟随 135 标准：每 2 个半格单元/38mm 一个编号)
+                if c % 2 == 0:
+                    # EN: Correct 135-style index: (row * full_frame_slots + current_slot)
+                    # CN: 正确的 135 式索引：(行 * 全画幅位 + 当前槽位)
+                    thirteen_five_idx = (r * (cols // 2)) + (c // 2) + 1
+                    top_label = f"{thirteen_five_idx}"
+                    tw = draw.textlength(top_label, font=em_font)
+                    draw.text((curr_x + (photo_w - tw)//2, sy + int(0.2 * px_per_mm)), top_label, font=em_font, fill=cur_color)
 
-                # EN: Render Film Brand (Option A: Edge Code) every 4 frames
-                # CN: 每隔 4 帧渲染一次胶片品牌名 (方案 A：边缘喷码)
-                if (c % 4 == 0):
+                # EN: Render Film Brand (Option A: Edge Code) periodically
+                # CN: 周期性渲染胶片品牌名 (方案 A：边缘喷码)
+                # EN: Place brand name where there is NO number (e.g. odd columns) to avoid overlap
+                # CN: 在没有编号的奇数列位置放置品牌名，避免重叠
+                if (c % 4 == 1):
                     brand_text = display_code_from_standard
-                    # EN: Position it in the gap between the current and next index numbers
-                    # CN: 将其放置在当前序号与下一个序号之间的间隙区域
                     bw = draw.textlength(brand_text, font=em_font)
-                    brand_center_x = curr_x + photo_w + (gap_w // 2)
-                    brand_x = brand_center_x - (bw // 2)
-                    
-                    # EN: Only draw if not the last column
-                    if c < cols - 1:
-                        self._draw_single_glowing_text(canvas, brand_text, (brand_x, sy + int(0.2 * px_per_mm)), em_font, cur_color)
+                    # EN: Center between current frame's center and next frame's start for a professional look?
+                    # EN: Actually, centering above the odd frame is safest.
+                    # CN: 在奇数列上方进行居中显示
+                    brand_x = curr_x + (photo_w - bw) // 2
+                    self._draw_single_glowing_text(canvas, brand_text, (brand_x, sy + int(0.2 * px_per_mm)), em_font, cur_color)
 
                 # EN: Render data back (EXIF) per frame / CN: 每帧渲染数据背 (EXIF)
                 sample_data_for_back = meta_handler.get_data(img_list[idx])
