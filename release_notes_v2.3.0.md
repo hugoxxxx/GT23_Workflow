@@ -21,12 +21,12 @@ This cycle redefines the border engine with dual-mode rainbows and professional 
 - **极冷调深色模式 (Midnight Blue-Black)**: 深色模式背景进化为极致清冷的冷调蓝黑 `(15, 16, 20)`。
 - **Logo 智能保护**: 仅对图标中的暗中像素进行反色处理，完美保留品牌原色（如哈苏 V/蔡司 T* 红色标识）。
 
-### 📸 视觉演示 (Visual Showcase)
-以下为 **18° 灰** 底片在富士彩虹模式下的全局长卷衔接效果：
-*(Please refer to `fuji_strip_10.jpg` for the full high-fidelity experience)*
+### 📸 样片全集预览 (Showcase Preview Pack)
+所有渐变模式的 5/7/10 张连拼样片已统一归档至核心目录下的 `v2.3.0_Previews` 文件夹，方便一键上传。
+All 5/7/10 frame showcase strips for rainbow modes are now archived in the `v2.3.0_Previews` folder for easy sharing.
 
-- **[五张连拼 (5-Frame Strip)](file:///C:/Users/Administrator/.gemini/antigravity/brain/c8a253e5-2462-43c8-b5ae-aabd976f3807/fuji_strip_5.jpg)**
-- **[十张连拼 (10-Frame Strip)](file:///C:/Users/Administrator/.gemini/antigravity/brain/c8a253e5-2462-43c8-b5ae-aabd976f3807/fuji_strip_10.jpg)**
+- **[马卡龙双色渐变全集 (Macaron Strip Pack)](file:///d:/Projects/GT23_Workflow/v2.3.0_Previews/)**
+- **[富士全谱长卷全集 (Fuji Strip Pack)](file:///d:/Projects/GT23_Workflow/v2.3.0_Previews/)**
 
 ---
 ### 🛠️ 进度跟踪 (Current Progress)
