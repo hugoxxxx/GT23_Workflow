@@ -44,9 +44,12 @@ class Renderer135HF(Renderer135):
         strip_h_mm, strip_w_mm = 35.0, 228.0
         s_h, s_w = int(strip_h_mm * px_per_mm), int(strip_w_mm * px_per_mm)
         
+        # EN: Ensure 72 slots are filled / CN: 确保填充 72 个槽位
+        total_slots = cols_per_strip * num_strips
+        full_list = img_list + [None] * (total_slots - len(img_list))
+        
         for i in range(num_strips):
-            chunk = img_list[i * cols_per_strip : (i + 1) * cols_per_strip]
-            if not chunk: break
+            chunk = full_list[i * cols_per_strip : (i + 1) * cols_per_strip]
             
             # EN: Render a Horizontal Strip (P-style) / CN: 渲染一个水平底片条 (P式布局)
             strip_img = Image.new('RGBA', (s_w, s_h), (12, 12, 12, 255))
@@ -102,14 +105,22 @@ class Renderer135HF(Renderer135):
             curr_x = gap // 2 + c * (pw + gap)
             py = info_h
             
-            # Paste Photo
-            with Image.open(img_paths[c]) as img:
-                # EN: Force Portrait for the horizontal strip logic (will be rotated later in L-mode)
-                # CN: 在水平条逻辑中强制竖向 (L模式下后续会整体旋转)
-                if img.width > img.height:
-                    img = img.rotate(-90, expand=True)
-                img = img.resize((pw, ph), Image.Resampling.LANCZOS)
-                strip_canvas.paste(img, (int(curr_x), py))
+            # Paste Photo (Crop - don't stretch)
+            # CN: 居中裁切 - 不进行缩放拉伸
+            if img_paths[c]:
+                from PIL import ImageOps
+                with Image.open(img_paths[c]) as img:
+                    # EN: Force Portrait for the horizontal strip logic (will be rotated later in L-mode)
+                    # CN: 在水平条逻辑中强制竖向 (L模式下后续会整体旋转)
+                    if img.width > img.height:
+                        img = img.rotate(-90, expand=True)
+                    
+                    # EN: Center Crop to 18:24 / CN: 居中裁切为 18:24
+                    img = ImageOps.fit(img, (pw, ph), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+                    strip_canvas.paste(img, (int(curr_x), py))
+            else:
+                # EN: Fill empty slot with dark gray / CN: 空槽位填充深灰色
+                draw.rectangle([curr_x, py, curr_x + pw, py + ph], fill=(25, 25, 25))
             
             # Numbering (Top)
             if c % 2 == 0:
@@ -125,8 +136,9 @@ class Renderer135HF(Renderer135):
                 self._draw_single_glowing_text(strip_canvas, film_name, (bx, int(0.2 * px_per_mm)), em_font, color)
             
             # Data Back (EXIF)
-            p_data = meta.get_data(img_paths[c])
-            self._draw_glowing_data_back(strip_canvas, p_data, curr_x, py, pw, ph, color, date_font, exif_font, px_per_mm, show_date=show_date, show_exif=show_exif)
+            if img_paths[c]:
+                p_data = meta.get_data(img_paths[c])
+                self._draw_glowing_data_back(strip_canvas, p_data, curr_x, py, pw, ph, color, date_font, exif_font, px_per_mm, show_date=show_date, show_exif=show_exif)
 
     def _draw_single_glowing_text(self, canvas, text, pos, font, color):
         draw = ImageDraw.Draw(canvas)
