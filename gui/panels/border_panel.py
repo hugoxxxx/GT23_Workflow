@@ -976,7 +976,6 @@ class BorderPanel:
             'rainbow_index': getattr(self, 'current_rainbow_index', -1), # Persistence
             'auto_detect': self.auto_detect_var.get(),
             'film_combo': self.film_combo.get(),
-            'is_digital': self.mode_var.get() == "digital",
             'exif': {
                 'Make': self.exif_make_var.get().strip(),
                 'Model': self.exif_model_var.get().strip(),
@@ -1019,8 +1018,6 @@ class BorderPanel:
                 
                 self.rotation_var.set(cfg.get('rotation', 0))
                 self.auto_detect_var.set(cfg.get('auto_detect', True))
-                self.mode_var.set("digital" if cfg.get('is_digital') else "film")
-                
                 exif = cfg.get('exif', {})
                 self.exif_make_var.set(exif.get('Make', ''))
                 self.exif_model_var.set(exif.get('Model', ''))
@@ -1038,7 +1035,8 @@ class BorderPanel:
                 self.show_lens_var.set(exif.get('show_lens', 1))
                 
                 self.on_auto_detect_changed() # Update combo state
-                self.on_mode_changed()
+                # EN: We no longer set mode_var here to keep it global
+                # CN: 此处不再设置 mode_var，以保持全局一致性
         finally:
             self._loading_state = False
             # EN: Trigger final preview for this path / CN: 触发该路径的最终预览
@@ -1452,8 +1450,9 @@ class BorderPanel:
                 # EN: Load per-image config or fallback / CN: 读取各图专属配置或使用兜底
                 cfg = self.image_configs.get(img_path)
                 
-                is_digital = cfg.get('is_digital', global_cfg['is_digital']) if cfg else global_cfg['is_digital']
-                is_pure = cfg.get('is_pure', global_cfg['is_pure']) if cfg else global_cfg['is_pure']
+                # EN: Work Mode is now strictly global / CN: 工作模式现在严格全局化
+                is_digital = global_cfg['is_digital']
+                is_pure = global_cfg['is_pure']
                 theme_str = cfg.get('theme', global_cfg['theme']) if cfg else global_cfg['theme']
                 
                 # EN: Resolve manual film / CN: 解析手动胶片
