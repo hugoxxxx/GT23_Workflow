@@ -38,14 +38,16 @@ class Renderer135HF(Renderer135):
         SPROC_W_MM, SPROC_H_MM = 2.0, 2.8
         INFO_ZONE_MM = 5.5
         
-        cols, rows = final_cfg.get('cols', 12), final_cfg.get('rows', 6)
+        cols, rows = 12, 6 # EN: Hardcoded for robustness / CN: 硬编码以保证稳健性
         m_x, m_y_t = final_cfg.get('margin_x', 150), final_cfg.get('margin_y_top', 500)
 
         # 3. EN: Calculate scale constants / CN: 计算比例常数
-        col_pitch_px = (new_w - 2 * m_x) // cols
-        # EN: Scaling ratio based on physical unit (frame + gap)
-        # CN: 基于物理单元（画幅+间隙）的缩放比例
-        px_per_mm = (col_pitch_px * (PHOTO_W_MM / (PHOTO_W_MM + GAP_MM))) / PHOTO_W_MM
+        # EN: We use the absolute physical width of a 35mm sheet row (6 full frames * 38mm = 228.0mm)
+        # EN: This ensures height parity with Renderer135 perfectly.
+        # CN: 我们使用 35mm 索引页单行的绝对物理宽度 (6 个全画幅位 * 38mm = 228.0mm)
+        # CN: 这能确保渲染高度与 Renderer135 完美对齐。
+        usable_w_px = (new_w - 2 * m_x)
+        px_per_mm = usable_w_px / 228.0
         
         photo_w, photo_h = int(PHOTO_W_MM * px_per_mm), int(PHOTO_H_MM * px_per_mm)
         gap_w = int(GAP_MM * px_per_mm)
@@ -93,6 +95,20 @@ class Renderer135HF(Renderer135):
                 top_label = f"{idx + 1}"
                 tw = draw.textlength(top_label, font=em_font)
                 draw.text((curr_x + (photo_w - tw)//2, sy + int(0.2 * px_per_mm)), top_label, font=em_font, fill=cur_color)
+
+                # EN: Render Film Brand (Option A: Edge Code) every 4 frames
+                # CN: 每隔 4 帧渲染一次胶片品牌名 (方案 A：边缘喷码)
+                if (c % 4 == 0):
+                    brand_text = display_code_from_standard
+                    # EN: Position it in the gap between the current and next index numbers
+                    # CN: 将其放置在当前序号与下一个序号之间的间隙区域
+                    bw = draw.textlength(brand_text, font=em_font)
+                    brand_center_x = curr_x + photo_w + (gap_w // 2)
+                    brand_x = brand_center_x - (bw // 2)
+                    
+                    # EN: Only draw if not the last column
+                    if c < cols - 1:
+                        self._draw_single_glowing_text(canvas, brand_text, (brand_x, sy + int(0.2 * px_per_mm)), em_font, cur_color)
 
                 # EN: Render data back (EXIF) per frame / CN: 每帧渲染数据背 (EXIF)
                 sample_data_for_back = meta_handler.get_data(img_list[idx])
