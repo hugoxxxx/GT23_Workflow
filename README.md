@@ -8,24 +8,24 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 ---
 
-## 🔥 What's New — v2.2.2 (Slim & Smart Edition)
-- **Extreme Optimization | 极简架构 (v2.2.2)**
-   - EN: Slashed EXE size from ~200MB to **38.8 MB** (80% reduction!) by manual binary filtering.
-   - CN: 通过极致的二进制过滤技术，将 EXE 体积从约 200MB 暴减至 **38.8 MB**，减重达 80%！
-- **Smart Asset Sync | 智能云端更新 (v2.2.2)**
-   - EN: Asset updates are now independent of the app version! Standalone EXE comes "Zero-Asset" for speed; prompts for **One-Click Sync** (121+ logos) to fetch the latest cloud library instantly without waiting for an EXE update.
-   - CN: **图标库实时更新**：图标库与软件版本完全解耦。只需一键同步，即可瞬间获取云端最新的相机适配，无需等待软件版本更新，实现真正的“无限扩容”。
-- **Failover & Validation | 容错同步与校验 (v2.2.2)**
-   - EN: Implemented ZIP signature validation (`PK\x03\x04`) and automatic fallback between remotes to ensure rock-solid updates in any region.
-   - CN: 实现了 ZIP 签名校验机制与多源重试逻辑，确保在不同网络环境下都能稳定拉取资源包。
+## 🔥 What's New — v2.3.0 (Half-Frame & Aesthetics Edition)
+- **🎞️ All-New 135HF Mode | 全新 135 半格模式 (v2.3.0)**
+   - EN: Dedicated engine for 18x24mm half-frame cameras! Supports P/L layouts, fixed 72-frame full sheets, and smart center-cropping.
+   - CN: 专为半格玩家打造。支持横/纵双向排版、强制 72 画幅满额补全及智能居中裁切。
+- **🌈 Artistic Themes | 艺术边框系列 (v2.3.0)**
+   - EN: Introduced **Rainbow**, **Macaron**, and **Dark Border** themes for social sharing.
+   - CN: 新增 **彩虹相纸**、**马卡龙九宫格** 及 **专业深色边框**，为社交媒体分享注入更多个性。
+- **Extreme Optimization | 极致优化 (v2.2.x - v2.3.0)**
+   - EN: Slashed EXE size to ~40MB and introduced **Per-Image State Memory**.
+   - CN: EXE 体积极致精简至 ~40MB，并新增 **单图配置记忆** 功能。
 
 ## 🚀 How to Use (EXE Users) | 使用指南 (独立版用户)
-1. **Download & Launch**: Grab the `GT23_Workflow_v2.2.2.exe` (~39MB).
+1. **Download & Launch**: Grab the `GT23_Workflow_v2.3.0.exe` (~40MB).
 2. **One-Click Sync**: On first run, a prompt will appear asking to sync assets. Click **Yes**.
 3. **Full Library Restored**: The app will automatically download and install 121+ icons and film profiles into the `GT23_Assets/` folder alongside the EXE.
 4. **Ready to Roll**: Your workflow is now fully populated and ready for professional output!
 
-1. **下载并运行**: 获取 `GT23_Workflow_v2.2.2.exe`（仅约 39MB）。
+1. **下载并运行**: 获取 `GT23_Workflow_v2.3.0.exe`（约 40MB）。
 2. **一键同步**: 首次启动时，程序会提示是否同步资源库，点击**是**。
 3. **满血归位**: 程序会自动将 121+ 款图标与胶片配置拉取至 EXE 旁的 `GT23_Assets/` 目录。
 4. **正式使用**: 至此，您的工具已完全就绪，可享受丝滑的专业胶片排版流程。
@@ -59,7 +59,7 @@ A dedicated tool for film photographers to generate **Digital Contact Sheets** a
 
 * **Dual Toolsets | 双重工具集**: 
     * **Border Tool**: Professional cropping, padding, and aesthetic border processing for individual scans. Features real-time preview, auto date selection, EXIF visibility toggle, and customizable border ratio. | **边框美化工具**: 为单张扫描件提供专业的裁剪、填充及边框美化处理。支持实时预览、自动选择日期、EXIF 信息显隐控制、自定义边框比例。
-    * **Contact Sheet (135/120)**: Automated index sheet generation with physical film simulation. | **底片索引工具**: 自动化生成具备物理底片质感的索引印样。
+    * **Contact Sheet (135/120/135HF)**: Automated index sheet generation with physical film simulation. Now with full **Half-Frame (135HF)** support. | **底片索引工具**: 自动化生成具备物理底片质感的索引印样。现已全面支持 **135 半格 (135HF)** 模式。
 
 * **Dynamic DataBack | 动态背印**:
     * EN: Automatically reads EXIF (Date, Aperture, Shutter, Film stock) for **each individual frame**. Simulated glowing orange LED/Segment font styles. | CN: 自动读取每一帧的 EXIF 信息（日期、光圈、快门、胶片型号）。采用仿真 LED 橙色七段数码管字体。
@@ -229,8 +229,8 @@ Steps | 步骤：
 - [x] **v1.9 - v2.0**: Multi‑format (66/645/67/135), film library expansion, sprocket rendering, EXE packaging | 多画幅、胶片库扩展、齿孔渲染、EXE 封包
 - [x] **v2.0.0**: Ship GUI desktop app with real-time preview, EXIF/date controls | 正式发布 GUI 桌面版，支持实时预览、EXIF/日期控制
 - [x] **v2.1.x**: PNG-to-JPEG transition (5x speed boost), Vector Logo engine, Zeiss T* red highlight, Ink BBox alignment | 切换为 JPEG 渲染（提速 5 倍）、矢量图标引擎、蔡司 T* 红色高亮、像素级对齐
-- [x] **v2.2.x**: Asset decoupling (GT23_Assets), Smart Incremental Sync, Custom Asset Path, Native Typography (YaHei/Segoe UI) | 资产库分库、智能增量同步、自定义资产路径、原生字体支持 (微软雅黑/Segoe UI)
-- [ ] **Future**: No further plans at this time | 远期暂无规划
+- [x] **v2.3.x**: 135HF Half-frame mode (P/L), Rainbow/Macaron themes, Dark border, Pure mode, GUI toolbutton toggle | 135HF 半格模式 (P/L)、彩虹/马卡龙主题、纯净模式、GUI 工具按钮联动
+- [ ] **v2.4.x**: Android version full feature sync, Multi-Roll Merge | 安卓版本全功能同步、多卷合拼 (Multi-Roll Merge)
 
 ---
 
@@ -303,24 +303,28 @@ GT23_Workflow/
 <img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_135.jpg" width="100%" alt="135format">
 </td>
 <td width="50%" align="center">
-<b>66 Format</b> (12 frames)<br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_66.jpg" width="100%" alt="66format">
+<b>135HF Format (Half-Frame)</b> (72 frames)<br/>
+<img src="previews/v2.3/135hf_p_mode.jpg" width="100%" alt="135hf_format">
 </td>
 </tr>
 <tr>
+<td width="50%" align="center">
+<b>66 Format</b> (12 frames)<br/>
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_66.jpg" width="100%" alt="66format">
+</td>
 <td width="50%" align="center">
 <b>645 Landscape</b> (16 frames)<br/>
 <img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_645-L.jpg" width="100%" alt="645format_L">
 </td>
+</tr>
+<tr>
 <td width="50%" align="center">
 <b>645 Portrait</b> (16 frames)<br/>
 <img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_645-P.jpg" width="100%" alt="645format_P">
 </td>
-</tr>
-<tr>
-<td colspan="2" align="center">
+<td width="50%" align="center">
 <b>67 Format</b> (10 frames)<br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_67.jpg" width="50%" alt="67format">
+<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_67.jpg" width="100%" alt="67format">
 </td>
 </tr>
 </table>
