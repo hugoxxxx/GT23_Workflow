@@ -118,9 +118,6 @@ class Renderer135HF(Renderer135):
                     # EN: Center Crop to 18:24 / CN: 居中裁切为 18:24
                     img = ImageOps.fit(img, (pw, ph), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
                     strip_canvas.paste(img, (int(curr_x), py))
-            else:
-                # EN: Fill empty slot with pure black / CN: 空槽位填充纯黑色
-                draw.rectangle([curr_x, py, curr_x + pw, py + ph], fill=(0, 0, 0))
             
             # Numbering (Top)
             if c % 2 == 0:
