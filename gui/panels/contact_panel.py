@@ -78,9 +78,13 @@ class ContactPanel:
         format_label = ttk.Label(self.format_frame, textvariable=self.format_var, font=("Microsoft YaHei UI", 11, "bold"), foreground="#2780e3")
         format_label.pack(side=LEFT, anchor=W, pady=5)
         
-        # EN: Manual switch to 135HF button / CN: 手动切换到 135HF 按钮
+        # EN: State flag for half-frame / CN: 半格模式状态标志
+        self.half_frame_var = ttk.BooleanVar(value=False)
+        
+        # EN: Manual switch to 135HF (Toolbutton style) / CN: 手动切换到 135HF (工具按钮样式开关)
         hf_btn_text = "半格模式" if self.lang == "zh" else "Half-Frame"
-        self.hf_button = ttk.Button(self.format_frame, text=hf_btn_text, command=self.force_135hf, bootstyle="info-outline", width=12)
+        self.hf_button = ttk.Checkbutton(self.format_frame, text=hf_btn_text, variable=self.half_frame_var, 
+                                        command=self.on_hf_toggle, bootstyle="info-toolbutton", width=12)
         self.hf_button.pack(side=RIGHT, padx=(5, 0))
         
         # EN: Store the actual format value separately / CN: 单独存储实际的画幅值
@@ -177,9 +181,6 @@ class ContactPanel:
         self.show_date_check.pack(side=LEFT, padx=(0, 10))
         self.show_exif_check = ttk.Checkbutton(options_row, text=exif_text, variable=self.show_exif_var, bootstyle="round-toggle")
         self.show_exif_check.pack(side=LEFT)
-        
-        # EN: State flag for half-frame (UI-less) / CN: 半格模式状态标志 (无界面)
-        self.half_frame_var = ttk.BooleanVar(value=False)
 
         self.show_exif_check = ttk.Checkbutton(options_row, text=exif_text, variable=self.show_exif_var, bootstyle="round-toggle")
         self.show_exif_check.pack(side=LEFT)
@@ -277,21 +278,26 @@ class ContactPanel:
                     # EN: Set half-frame state / CN: 设置半格状态
                     if detected_format == "135HF":
                         self.half_frame_var.set(True)
-                        self.hf_button.config(bootstyle="info") # Highlight / 突出显示
                     else:
                         self.half_frame_var.set(False)
-                        self.hf_button.config(bootstyle="info-outline")
         except Exception:
             pass
 
-    def force_135hf(self):
-        """EN: Manually force 135HF mode / CN: 手动强制半格模式"""
-        self.detected_format = "135HF"
-        self.format_var.set("135HF")
-        self.half_frame_var.set(True)
-        self.hf_button.config(bootstyle="info")
-        self.orientation_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 0), after=self.format_frame)
-        self.log("✓ " + ("已手动切换至半格模式 (135HF)" if self.lang == "zh" else "Manually switched to Half-Frame (135HF)"))
+    def on_hf_toggle(self):
+        """EN: Handle Half-Frame toggle / CN: 处理半格模式开关切换"""
+        is_on = self.half_frame_var.get()
+        if is_on:
+            self.detected_format = "135HF"
+            self.format_var.set("135HF")
+            self.orientation_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 0), after=self.format_frame)
+            msg = "已开启半格模式 (135HF)" if self.lang == "zh" else "Half-Frame Mode (135HF) ON"
+        else:
+            # EN: Revert to 135_6x9 or detect again / CN: 切回 135_6x9 或重新检测
+            self.detected_format = "135_6x9"
+            self.format_var.set("135_6x9")
+            self.orientation_frame.pack_forget()
+            msg = "已关闭半格模式 / Standard 135 Mode" if self.lang == "zh" else "Half-Frame Mode OFF"
+        self.log(f"✓ {msg}")
     
     def refresh_format(self):
         """
