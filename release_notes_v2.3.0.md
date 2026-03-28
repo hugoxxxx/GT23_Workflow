@@ -1,6 +1,6 @@
 # GT23 Film Workflow v2.3.0 发布说明
 
-## � 模块一：边框样式与社交分享增强 (Border Styles & Socials)
+## 📸 模块一：边框样式与社交分享增强 (Border Styles & Socials)
 在 v2.3.0 版本中，我们深耕社交媒体分享审美，带来了 3 款全新边框主题与极致极简的交互逻辑。
 
 ### 1.1 🌈 彩虹相纸 (Rainbow Theme)
@@ -21,7 +21,7 @@
 ![Dark Border Sample](previews/v2.3/sample_dark.jpg)
 *深色边框：更适合极简主义的作品展示。*
 
-### 1.4 � 纯净模式与智能记忆 (Pure Mode & State Memory)
+### 1.4 🧊 纯净模式与智能记忆 (Pure Mode & State Memory)
 - **纯净模式**: 一键隐藏所有文字与参数，仅保留色彩边框。
 - **配置记忆**: 每张照片独立记忆显隐设置，切换图片时自动恢复，极大提升操作流。
 
