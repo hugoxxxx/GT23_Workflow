@@ -97,7 +97,9 @@ class Renderer135HF(Renderer135):
         self._draw_iso_sprockets_vector(strip_canvas, 0, strip_canvas.width, 0, info_h, strip_h, int(2.0 * px_per_mm), int(2.8 * px_per_mm), px_per_mm, film_name)
         
         for c in range(len(img_paths)):
-            curr_x = c * (pw + gap)
+            # EN: Center frames within the 228mm strip by splitting the extra 1mm gap
+            # CN: 通过平分多出的 1mm 间隙，使照片在 228mm 的底片条内居中
+            curr_x = gap // 2 + c * (pw + gap)
             py = info_h
             
             # Paste Photo
