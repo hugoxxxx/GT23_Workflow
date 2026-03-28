@@ -36,13 +36,12 @@
 - **L 模式（纵向）**: 独特的垂直底片条排列，底片边上的品牌名、数字标号和拍摄信息会自动旋转对齐。
 
 **样片展示：**
-````carousel
-![135HF P-Mode](file:///d:/Projects/GT23_Workflow/previews/v2.3/135hf_p_mode.jpg)
-P 模式：传统水平底片条排版
-<!-- slide -->
-![135HF L-Mode](file:///d:/Projects/GT23_Workflow/previews/v2.3/135hf_l_mode.jpg)
-L 模式：独特垂直排列方式，信息自动旋转对齐
-````
+
+![135HF P-Mode](previews/v2.3/135hf_p_mode.jpg)
+*P 模式：传统水平底片条排版*
+
+![135HF L-Mode](previews/v2.3/135hf_l_mode.jpg)
+*L 模式：独特垂直排列方式，信息自动旋转对齐*
 
 ### 2.2 📸 满额排版与智能对齐
 为了追求极致的物理仿真，我们在半格渲染逻辑中加入了以下改进：
