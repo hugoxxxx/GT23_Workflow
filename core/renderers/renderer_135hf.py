@@ -14,8 +14,8 @@ class Renderer135HF(Renderer135):
     
     def render(self, canvas, img_list, cfg, meta_handler, user_emulsion, sample_data=None, orientation=None, show_date=True, show_exif=True):
         print("\n" + "="*65)
-        print("EN: [135HF] Rendering Half-Frame Contact Sheet (72 Frames capacity)")
-        print("CN: [135HF] 正在渲染半格索引页 (支持 72 张图片)")
+        print(f"EN: [135HF] Rendering Half-Frame Contact Sheet (Orientation: {orientation or 'P'})")
+        print(f"CN: [135HF] 正在渲染半格索引页 (方向: {orientation or 'P'})")
         print("="*65)
         
         # 1. EN: Load 135HF configuration / CN: 加载 135HF 配置
@@ -25,27 +25,25 @@ class Renderer135HF(Renderer135):
         draw = ImageDraw.Draw(canvas)
         draw.rectangle([0, 0, new_w, new_h], fill=(235, 235, 235))
 
-        # 2. EN: ISO 1007 Physical Parameters (mm) / CN: ISO 1007 物理参数 (mm)
-        # EN: Standard 135 strip = 35mm wide.
-        # EN: Half-frame = 18.0mm (W) x 24.0mm (H).
-        # EN: 4 perforations pitch = 19.0mm. Gap = 19 - 18 = 1.0mm.
-        # CN: 标准 135 胶片宽 35mm。
-        # CN: 半格画幅 = 18.0mm (宽) x 24.0mm (高)。
-        # CN: 4 个齿孔位间距 = 19.0mm。因此间隙 = 19 - 18 = 1.0mm。
+        # 2. EN: Physical Parameters (mm) / CN: 物理参数 (mm)
         STRIP_W_MM = 35.0
-        PHOTO_W_MM, PHOTO_H_MM = 18.0, 24.0
-        GAP_MM = 1.0  # EN: Key research finding: 1.0mm / CN: 核心调研结论：1.0mm
+        GAP_MM = 1.0  
         SPROC_W_MM, SPROC_H_MM = 2.0, 2.8
         INFO_ZONE_MM = 5.5
+
+        # EN: Handle Orientation (P=Portrait, L=Landscape)
+        # CN: 处理方向 (P=竖向, L=横向)
+        if orientation == 'L':
+            PHOTO_W_MM, PHOTO_H_MM = 24.0, 18.0
+            cols, rows = 9, 6
+        else:
+            PHOTO_W_MM, PHOTO_H_MM = 18.0, 24.0
+            cols, rows = 12, 6 
         
-        cols, rows = 12, 6 # EN: Hardcoded for robustness / CN: 硬编码以保证稳健性
         m_x, m_y_t = final_cfg.get('margin_x', 150), final_cfg.get('margin_y_top', 500)
 
-        # 3. EN: Calculate scale constants / CN: 计算比例常数
-        # EN: We use the absolute physical width of a 35mm sheet row (6 full frames * 38mm = 228.0mm)
-        # EN: This ensures height parity with Renderer135 perfectly.
-        # CN: 我们使用 35mm 索引页单行的绝对物理宽度 (6 个全画幅位 * 38mm = 228.0mm)
-        # CN: 这能确保渲染高度与 Renderer135 完美对齐。
+        # 3. EN: Calculate scale constants (Baseline: 228.0mm)
+        # CN: 计算比例常数 (基准: 228.0mm)
         usable_w_px = (new_w - 2 * m_x)
         px_per_mm = usable_w_px / 228.0
         
@@ -56,7 +54,6 @@ class Renderer135HF(Renderer135):
         row_gap = final_cfg.get('row_gap', 100)
 
         # 4. EN: Font variants / CN: 字体变体
-        # EN: Slightly smaller for 135HF density / CN: 针对高密度排版稍微缩小字号
         em_font = self.led_font.font_variant(size=int(1.3 * px_per_mm))
         db_font = self.seg_font.font_variant(size=int(1.3 * px_per_mm))
 
@@ -73,10 +70,7 @@ class Renderer135HF(Renderer135):
             strip_start_x = m_x - gap_w // 2
             strip_end_x = m_x + (cols * (photo_w + gap_w)) - gap_w // 2
             
-            # EN: Draw film strip background / CN: 绘制胶片条背景
             draw.rectangle([strip_start_x, sy, strip_end_x, sy + strip_h], fill=(12, 12, 12))
-            
-            # EN: Render vector sprockets / CN: 渲染矢量齿孔
             self._draw_iso_sprockets_vector(canvas, strip_start_x, strip_end_x, sy, info_h, strip_h, sp_w, sp_h, px_per_mm, display_code_from_standard)
 
             for c in range(cols):
@@ -87,15 +81,13 @@ class Renderer135HF(Renderer135):
                 curr_x = m_x + c * (photo_w + gap_w)
                 py = sy + info_h
 
-                # EN: Paste photo (Maintains portrait aspect)
-                # CN: 粘贴照片（保持竖向比例）
+                # EN: Paste photo (Maintains aspect based on mode)
+                # CN: 粘贴照片 (基于模式保持比例)
                 self._paste_photo_for_hf(canvas, img_list[idx], curr_x, py, photo_w, photo_h)
 
-                # EN: Render index number (Follow 135 standard: one number per 2 HF units / 38mm)
-                # CN: 渲染索引序号 (跟随 135 标准：每 2 个半格单元/38mm 一个编号)
+                # EN: Render index number (Follow 135 standard)
+                # CN: 渲染索引序号 (跟随 135 标准)
                 if c % 2 == 0:
-                    # EN: Correct 135-style index: (row * full_frame_slots + current_slot)
-                    # CN: 正确的 135 式索引：(行 * 全画幅位 + 当前槽位)
                     thirteen_five_idx = (r * (cols // 2)) + (c // 2) + 1
                     top_label = f"{thirteen_five_idx}"
                     tw = draw.textlength(top_label, font=em_font)
@@ -103,14 +95,9 @@ class Renderer135HF(Renderer135):
 
                 # EN: Render Film Brand (Option A: Edge Code) periodically
                 # CN: 周期性渲染胶片品牌名 (方案 A：边缘喷码)
-                # EN: Place brand name where there is NO number (e.g. odd columns) to avoid overlap
-                # CN: 在没有编号的奇数列位置放置品牌名，避免重叠
                 if (c % 4 == 1):
                     brand_text = display_code_from_standard
                     bw = draw.textlength(brand_text, font=em_font)
-                    # EN: Center between current frame's center and next frame's start for a professional look?
-                    # EN: Actually, centering above the odd frame is safest.
-                    # CN: 在奇数列上方进行居中显示
                     brand_x = curr_x + (photo_w - bw) // 2
                     self._draw_single_glowing_text(canvas, brand_text, (brand_x, sy + int(0.2 * px_per_mm)), em_font, cur_color)
 
@@ -134,11 +121,16 @@ class Renderer135HF(Renderer135):
         return canvas
 
     def _paste_photo_for_hf(self, canvas, path, x, y, w, h):
-        """EN: Paste photo and keep portrait orientation for HF"""
+        """EN: Paste photo and adapt to slot orientation (L or P)"""
         with Image.open(path) as img:
-            # EN: Half-Frame is natively portrait. If shot landscape, rotate to fit.
-            # CN: 半格原生即为竖向。如果是横拍，则旋转以适应。
-            if img.width > img.height:
-                img = img.rotate(-90, expand=True)
+            # EN: Handle rotation based on target slot aspect
+            # CN: 根据目标槽位宽高比处理旋转
+            if w > h: # EN: Landscape slot / CN: 横向槽位 (24x18)
+                if img.height > img.width: # EN: Portrait photo -> Rotate / CN: 竖向照片 -> 旋转
+                    img = img.rotate(-90, expand=True)
+            else: # EN: Portrait slot / CN: 竖向槽位 (18x24)
+                if img.width > img.height: # EN: Landscape photo -> Rotate / CN: 横向照片 -> 旋转
+                    img = img.rotate(-90, expand=True)
+            
             img = img.resize((w, h), Image.Resampling.LANCZOS)
             canvas.paste(img, (int(x), int(y)))
