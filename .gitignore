@@ -37,7 +37,9 @@ output/
 *.png
 *.tiff
 
-# Allow UI assets and logos
+# Allow UI assets, logos and previews
 !assets/**/*.png
 !assets/**/*.jpg
 !assets/**/*.jpeg
+!previews/**/*.jpg
+!previews/**/*.png
