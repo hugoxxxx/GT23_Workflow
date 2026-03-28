@@ -1,6 +1,6 @@
 # core/renderers/renderer_135hf.py
-# EN: Renderer for 135 Half-Frame format (18x24mm) - v1.0
-# CN: 135 半格画幅渲染器 (18x24mm) - v1.0
+# EN: Renderer for 135 Half-Frame format (18x24mm) - v2.0
+# CN: 135 半格画幅渲染器 (18x24mm) - v2.0
 
 import os
 from PIL import Image, ImageDraw, ImageFont
@@ -25,7 +25,7 @@ class Renderer135HF(Renderer135):
         draw = ImageDraw.Draw(canvas)
         draw.rectangle([0, 0, new_w, new_h], fill=(235, 235, 235))
 
-        # 2. EN: Physical Parameters (mm) / CN: 物理参数 (mm)
+        # 2. EN: Physical Constants (mm) / CN: 物理常数 (mm)
         STRIP_W_MM = 35.0
         GAP_MM = 1.0  
         SPROC_W_MM, SPROC_H_MM = 2.0, 2.8
@@ -33,124 +33,141 @@ class Renderer135HF(Renderer135):
         
         m_x, m_y_t = final_cfg.get('margin_x', 150), final_cfg.get('margin_y_top', 500)
         usable_w_px = (new_w - 2 * m_x)
-        px_per_mm = usable_w_px / 228.0 # EN: Baseline 228mm / CN: 基准 228mm
+        px_per_mm = usable_w_px / 228.0 # EN: Baseline 228mm for parity / CN: 对齐基准 228mm
         
-        gap_w = int(GAP_MM * px_per_mm)
-        strip_h_w = int(STRIP_W_MM * px_per_mm)
-        info_h_w = int(INFO_ZONE_MM * px_per_mm)
+        # Derived pixel dimensions
+        gap_px = int(GAP_MM * px_per_mm)
+        strip_px = int(STRIP_W_MM * px_per_mm)
+        info_px = int(INFO_ZONE_MM * px_per_mm)
         sp_w, sp_h = int(SPROC_W_MM * px_per_mm), int(SPROC_H_MM * px_per_mm)
-        row_gap = final_cfg.get('row_gap', 100)
-
-        # 4. EN: Font variants / CN: 字体变体
-        em_font = self.led_font.font_variant(size=int(1.3 * px_per_mm))
-        db_font = self.seg_font.font_variant(size=int(1.3 * px_per_mm))
-
-        # 5. EN: Roll-level metadata / CN: 全卷元数据
+        
+        # 3. EN: Branding & Meta Prep / CN: 品牌与元数据准备
         standard_data = sample_data if sample_data else meta_handler.get_data(img_list[0])
         film_text = standard_data.get('EdgeCode') or standard_data.get('Film') or user_emulsion or "FILM"
         prefix = f"{user_emulsion.strip()}  " if user_emulsion and user_emulsion.strip() != film_text else ""
-        display_code_from_standard = f"{prefix}{film_text}"
+        display_name = f"{prefix}{film_text}"
         cur_color = standard_data.get("ContactColor", (245, 130, 35, 210))
+        
+        em_font = self.led_font.font_variant(size=int(1.3 * px_per_mm))
+        date_font = self.into_dot_font.font_variant(size=int(1.2 * px_per_mm))
+        exif_font = self.seg_font.font_variant(size=int(1.2 * px_per_mm))
 
-        # 6. EN: Rendering Logic based on Orientation / CN: 基于方向的渲染逻辑
+        # 4. EN: Orientation Branching / CN: 方向分支
         if orientation == 'L':
-            # EN: L Mode - Vertical Strips, Landscape Photos (Like 645_L)
-            # CN: L 模式 - 垂直底片条，横向照片 (对齐 645_L 逻辑)
+            # EN: L-Mode: Vertical strips (6 columns), Landscape Photos (24x18)
+            # CN: L 模式：垂直底片条 (6 列)，横向照片 (24x18)
             PHOTO_W_MM, PHOTO_H_MM = 24.0, 18.0
             cols, rows = 6, 12
-            photo_w, photo_h = int(PHOTO_W_MM * px_per_mm), int(PHOTO_H_MM * px_per_mm)
-            
-            # EN: Calculate column pitch / CN: 计算列间距
-            col_pitch_px = (photo_w + 3 * gap_w + 2 * info_h_w) # Simple approx
-            col_pitch_px = usable_w_px // cols
+            pw, ph = int(PHOTO_W_MM * px_per_mm), int(PHOTO_H_MM * px_per_mm)
+            col_pitch = usable_w_px // cols
             
             for c in range(cols):
-                sx = m_x + c * col_pitch_px + (col_pitch_px - strip_h_w) // 2
-                draw.rectangle([sx, m_y_t, sx + strip_h_w, m_y_t + rows * (photo_h + gap_w)], fill=(12, 12, 12))
-                # EN: Render Vertical Sprocket Info (Left & Right)
-                # CN: 渲染垂直齿孔信息 (左和右)
-                # Note: For simplicity, we reuse the vector drawer but with rotation if needed.
-                # Actually, 645L draws vertical strips. I will follow that aesthetic.
+                sx = m_x + c * col_pitch + (col_pitch - strip_px) // 2
+                strip_len = rows * (ph + gap_px)
+                draw.rectangle([sx, m_y_t, sx + strip_px, m_y_t + strip_len], fill=(12, 12, 12))
+                
+                # EN: Draw vertical sprockets / CN: 绘制垂直齿孔
+                self._draw_vertical_sprockets_vector(canvas, sx, m_y_t, m_y_t + strip_len, info_px, strip_px, sp_w, sp_h, px_per_mm, display_name)
                 
                 for r in range(rows):
-                    idx = c * rows + r # Column-major for vertical strips
+                    idx = c * rows + r # Vertical column-major
                     if idx >= len(img_list): break
                     
-                    curr_y = m_y_t + r * (photo_h + gap_w)
-                    px = sx + info_h_w
-                    self._paste_photo_for_hf(canvas, img_list[idx], px, curr_y, photo_w, photo_h)
+                    curr_y = m_y_t + r * (ph + gap_px)
+                    px = sx + info_px
+                    self._paste_photo_for_hf(canvas, img_list[idx], px, curr_y, pw, ph)
                     
-                    # Numbering and branding on the right margin of vertical strip
+                    # Numbering/Branding on RIGHT edge (90deg Rotated)
                     if r % 2 == 0:
-                        num_idx = (c * (rows // 2)) + (r // 2) + 1
+                        num_idx = (idx // 2) + 1 # Logic: Continuous sequence
                         num_layer = self.create_rotated_text(str(num_idx), 90, color=cur_color)
-                        nx = sx + strip_h_w - info_h_w//2 - num_layer.width//2
-                        canvas.paste(num_layer, (int(nx), int(curr_y + (photo_h - num_layer.height)//2)), num_layer)
+                        nx = sx + strip_px - info_px//2 - num_layer.width//2
+                        canvas.paste(num_layer, (int(nx), int(curr_y + (ph - num_layer.height)//2)), num_layer)
+                    
+                    if r % 4 == 1:
+                        brand_layer = self.create_rotated_seg_text(display_name, 90, cur_color)
+                        bx = sx + strip_px - info_px//2 - brand_layer.width//2
+                        canvas.paste(brand_layer, (int(bx), int(curr_y + (ph - brand_layer.height)//2)), brand_layer)
+                    
+                    # Data Back (EXIF)
+                    p_data = meta_handler.get_data(img_list[idx])
+                    self._draw_glowing_data_back(canvas, p_data, px, curr_y, pw, ph, cur_color, date_font, exif_font, px_per_mm, show_date=show_date, show_exif=show_exif)
         else:
-            # EN: P Mode - Horizontal Strips, Portrait Photos (Original P logic)
-            # CN: P 模式 - 水平底片条，竖向照片 (原 P 逻辑)
+            # EN: P-Mode: Horizontal strips (6 rows), Portrait Photos (18x24)
+            # CN: P 模式：水平底片条 (6 行)，竖向照片 (18x24)
             PHOTO_W_MM, PHOTO_H_MM = 18.0, 24.0
-            cols, rows = 12, 6 
-            photo_w, photo_h = int(PHOTO_W_MM * px_per_mm), int(PHOTO_H_MM * px_per_mm)
-
+            cols, rows = 12, 6
+            pw, ph = int(PHOTO_W_MM * px_per_mm), int(PHOTO_H_MM * px_per_mm)
+            rg = final_cfg.get('row_gap', 100)
+            
             for r in range(rows):
-                sy = m_y_t + r * (strip_h_w + row_gap)
-                strip_start_x = m_x - gap_w // 2
-                strip_end_x = m_x + (cols * (photo_w + gap_w)) - gap_w // 2
+                sy = m_y_t + r * (strip_px + rg)
+                strip_w = cols * (pw + gap_px)
+                draw.rectangle([m_x, sy, m_x + strip_w, sy + strip_px], fill=(12, 12, 12))
                 
-                draw.rectangle([strip_start_x, sy, strip_end_x, sy + strip_h_w], fill=(12, 12, 12))
-                self._draw_iso_sprockets_vector(canvas, strip_start_x, strip_end_x, sy, info_h_w, strip_h_w, sp_w, sp_h, px_per_mm, display_code_from_standard)
-
+                # EN: Draw horizontal sprockets / CN: 绘制水平齿孔
+                self._draw_iso_sprockets_vector(canvas, m_x, m_x + strip_w, sy, info_px, strip_px, sp_w, sp_h, px_per_mm, display_name)
+                
                 for c in range(cols):
                     idx = r * cols + c
                     if idx >= len(img_list): break
                     
-                    curr_x = m_x + c * (photo_w + gap_w)
-                    py = sy + info_h_w
-                    self._paste_photo_for_hf(canvas, img_list[idx], curr_x, py, photo_w, photo_h)
-
+                    curr_x = m_x + c * (pw + gap_px)
+                    py = sy + info_px
+                    self._paste_photo_for_hf(canvas, img_list[idx], curr_x, py, pw, ph)
+                    
+                    # Numbering/Branding on TOP edge (Normal)
                     if c % 2 == 0:
-                        thirteen_five_idx = (r * (cols // 2)) + (c // 2) + 1
-                        top_label = f"{thirteen_five_idx}"
-                        tw = draw.textlength(top_label, font=em_font)
-                        draw.text((curr_x + (photo_w - tw)//2, sy + int(0.2 * px_per_mm)), top_label, font=em_font, fill=cur_color)
+                        num_idx = (idx // 2) + 1
+                        val_str = str(num_idx)
+                        tw = draw.textlength(val_str, font=em_font)
+                        draw.text((curr_x + (pw - tw)//2, sy + int(0.2 * px_per_mm)), val_str, font=em_font, fill=cur_color)
+                        
+                    if c % 4 == 1:
+                        bw = draw.textlength(display_name, font=em_font)
+                        bx = curr_x + (pw - bw)//2
+                        self._draw_single_glowing_text(canvas, display_name, (bx, sy + int(0.2 * px_per_mm)), em_font, cur_color)
+                        
+                    # Data Back (EXIF)
+                    p_data = meta_handler.get_data(img_list[idx])
+                    self._draw_glowing_data_back(canvas, p_data, curr_x, py, pw, ph, cur_color, date_font, exif_font, px_per_mm, show_date=show_date, show_exif=show_exif)
 
-                    if (c % 4 == 1):
-                        brand_text = display_code_from_standard
-                        bw = draw.textlength(brand_text, font=em_font)
-                        brand_x = curr_x + (photo_w - bw) // 2
-                        self._draw_single_glowing_text(canvas, brand_text, (brand_x, sy + int(0.2 * px_per_mm)), em_font, cur_color)
-
-                # EN: Render data back (EXIF) per frame / CN: 每帧渲染数据背 (EXIF)
-                sample_data_for_back = meta_handler.get_data(img_list[idx])
-                date_font = self.into_dot_font.font_variant(size=int(1.2 * px_per_mm))
-                exif_font = self.seg_font.font_variant(size=int(1.2 * px_per_mm))
-                
-                self._draw_glowing_data_back(
-                    canvas, sample_data_for_back, curr_x, py, photo_w, photo_h,
-                    cur_color, date_font, exif_font, px_per_mm,
-                    show_date=show_date, show_exif=show_exif
-                )
-
-        # 7. EN: Right-side cutoff cleanup / CN: 右侧截断清理
-        max_photo_right = m_x + cols * (photo_w + gap_w) - gap_w
-        final_cutoff_x = max_photo_right + int(1.0 * px_per_mm)
-        if final_cutoff_x < new_w:
-            draw.rectangle([final_cutoff_x, 0, new_w, new_h], fill=(235, 235, 235))
+            # Cleanup right side for P-mode
+            cutoff_x = m_x + cols * (pw + gap_px) + int(1.0 * px_per_mm)
+            if cutoff_x < new_w:
+                draw.rectangle([cutoff_x, 0, new_w, new_h], fill=(235, 235, 235))
 
         return canvas
 
+    def _draw_vertical_sprockets_vector(self, canvas, sx, start_y, end_y, info_px, strip_px, sp_w, sp_h, px_per_mm, film_name):
+        """EN: Draw vertical sprockets for L-mode"""
+        draw = ImageDraw.Draw(canvas)
+        pitch_px = 4.75 * px_per_mm
+        is_mov = any(x in film_name.lower() for x in ['vision', '500t', '250d', 'movie', 'cinema', '52', '72'])
+        
+        curr_y = start_y + pitch_px / 2
+        while curr_y < end_y:
+            # Left
+            lx = sx + (info_px - sp_w) // 2
+            self._draw_single_sprocket(draw, lx, curr_y - sp_h//2, sp_w, sp_h, is_mov)
+            # Right
+            rx = sx + strip_px - (info_px - sp_w) // 2 - sp_w
+            self._draw_single_sprocket(draw, rx, curr_y - sp_h//2, sp_w, sp_h, is_mov)
+            curr_y += pitch_px
+
+    def _draw_single_sprocket(self, draw, x, y, w, h, is_movie=False):
+        if is_movie:
+            path = self.make_custom_sprocket_path(x, y, w, h)
+            draw.polygon(path, fill=(220, 220, 220, 200))
+        else:
+            draw.rounded_rectangle([x, y, x + w, y + h], radius=int(0.5 * (w / 2.0)), fill=(220, 220, 220, 200))
+
     def _paste_photo_for_hf(self, canvas, path, x, y, w, h):
-        """EN: Paste photo and adapt to slot orientation (L or P)"""
+        """EN: Paste and rotate photo intelligently"""
         with Image.open(path) as img:
-            # EN: Handle rotation based on target slot aspect
-            # CN: 根据目标槽位宽高比处理旋转
-            if w > h: # EN: Landscape slot / CN: 横向槽位 (24x18)
-                if img.height > img.width: # EN: Portrait photo -> Rotate / CN: 竖向照片 -> 旋转
-                    img = img.rotate(-90, expand=True)
-            else: # EN: Portrait slot / CN: 竖向槽位 (18x24)
-                if img.width > img.height: # EN: Landscape photo -> Rotate / CN: 横向照片 -> 旋转
-                    img = img.rotate(-90, expand=True)
-            
+            if w > h: # Landscape slot
+                if img.height > img.width: img = img.rotate(-90, expand=True)
+            else: # Portrait slot
+                if img.width > img.height: img = img.rotate(-90, expand=True)
             img = img.resize((w, h), Image.Resampling.LANCZOS)
             canvas.paste(img, (int(x), int(y)))
