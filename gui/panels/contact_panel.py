@@ -351,7 +351,7 @@ class ContactPanel:
         
         if lang == "zh":
             self.format_frame.config(text="画幅")
-            self.orientation_frame.config(text="645 方向")
+            self.orientation_frame.config(text="排版方向")
             for i, radio in enumerate(self.orientation_radios):
                 _, text_zh, _ = self.orientations[i]
                 radio.config(text=text_zh)
@@ -365,7 +365,7 @@ class ContactPanel:
             self.emulsion_label.config(text="乳剂号 (可选):")
             self.show_date_check.config(text="显示日期")
             self.show_exif_check.config(text="显示EXIF")
-            self.half_frame_check.config(text="半格模式")
+            self.hf_button.config(text="半格模式")
             self.sort_label.config(text="图片排序:")
             self.setup_sort_options()
             self.generate_button.config(text="全卷缩略图")
@@ -373,7 +373,7 @@ class ContactPanel:
             self.update_film_combo_values()
         else:
             self.format_frame.config(text="Format")
-            self.orientation_frame.config(text="645 Orientation")
+            self.orientation_frame.config(text="Orientation")
             for i, radio in enumerate(self.orientation_radios):
                 _, _, text_en = self.orientations[i]
                 radio.config(text=text_en)
