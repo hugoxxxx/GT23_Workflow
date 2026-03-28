@@ -173,6 +173,12 @@ class ContactPanel:
         self.show_exif_check = ttk.Checkbutton(options_row, text=exif_text, variable=self.show_exif_var, bootstyle="round-toggle")
         self.show_exif_check.pack(side=LEFT)
 
+        # 1.5 EN: Half-frame toggle / CN: 半格模式开关
+        self.half_frame_var = ttk.BooleanVar(value=False)
+        hf_text = "半格模式" if self.lang == "zh" else "Half-Frame"
+        self.half_frame_check = ttk.Checkbutton(options_row, text=hf_text, variable=self.half_frame_var, bootstyle="round-toggle")
+        self.half_frame_check.pack(side=LEFT, padx=(10, 0))
+
         # 2. EN: Sorting / CN: 图片排序
         sort_row = ttk.Frame(self.film_info_frame)
         sort_row.pack(fill=X, pady=5)
@@ -262,6 +268,14 @@ class ContactPanel:
                         self.orientation_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 0), after=self.format_frame)
                     else:
                         self.orientation_frame.pack_forget()
+                    
+                    # EN: Set half-frame toggle if detected / CN: 如果检测到半格，则设置开关
+                    if detected_format == "135HF":
+                        self.half_frame_var.set(True)
+                    else:
+                        # EN: If it's standard 135, ensure it's not checked by default unless previously set
+                        if detected_format == "135_6x9":
+                            self.half_frame_var.set(False)
         except Exception:
             # EN: Format detection failed, silent fail is OK / CN: 画幅检测失败，静默失败可接受
             pass
@@ -338,6 +352,7 @@ class ContactPanel:
             self.emulsion_label.config(text="乳剂号 (可选):")
             self.show_date_check.config(text="显示日期")
             self.show_exif_check.config(text="显示EXIF")
+            self.half_frame_check.config(text="半格模式")
             self.sort_label.config(text="图片排序:")
             self.setup_sort_options()
             self.generate_button.config(text="全卷缩略图")
@@ -359,6 +374,7 @@ class ContactPanel:
             self.emulsion_label.config(text="Emulsion # (optional):")
             self.show_date_check.config(text="Show Date")
             self.show_exif_check.config(text="Show EXIF")
+            self.half_frame_check.config(text="Half-Frame")
             self.sort_label.config(text="Image Sort:")
             self.setup_sort_options()
             self.generate_button.config(text="Generate Contact Sheet")
@@ -492,6 +508,18 @@ class ContactPanel:
         # EN: Collect parameters / CN: 收集参数
         # EN: Use detected format instead of ComboBox / CN: 使用检测到的画幅而非下拉框
         selected_format = self.detected_format
+        
+        # EN: Manual override: If Half-Frame is checked and format is 135, upgrade to 135HF
+        # CN: 手工覆盖：如果勾选了半格且画幅是 135，则升级为 135HF
+        if self.half_frame_var.get() and selected_format == "135_6x9":
+            selected_format = "135HF"
+        # EN: If already detected as 135HF, keep it
+        elif self.half_frame_var.get() and not selected_format:
+            selected_format = "135HF"
+        elif not self.half_frame_var.get() and selected_format == "135HF":
+            # EN: If user unchecks half-frame on a high-count roll, treat as standard 135
+            selected_format = "135_6x9"
+
         orientation = self.orientation_var.get() if selected_format == "645_6x8_43" else None
         
         # EN: Map sort selection to parameters / CN: 将排序选择映射为参数

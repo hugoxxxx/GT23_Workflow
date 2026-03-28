@@ -224,13 +224,21 @@ class MetadataHandler:
         with Image.open(img_paths[0]) as img:
             w, h = img.size
             ratio = max(w, h) / min(w, h)
+            is_portrait = h > w
+        
         # EN: Map aspect ratio to layout name / CN: 将宽高比映射到布局名称
         if 0.95 <= ratio <= 1.05:
             return "6x6"
         if 1.09 <= ratio <= 1.28:
             return "6x7_4x5"
+        
+        # EN: Distinguish between 645 (120 film, ~15 frames) and 135HF (135 film, 72 frames)
+        # CN: 区分 645 (120 胶卷，约 15 张) 和 135HF (135 胶卷，72 张)
         if 1.28 <= ratio <= 1.42:
+            if len(img_paths) > 32: # EN: Likely 135 Half-Frame / CN: 大概率是 135 半格
+                return "135HF"
             return "645_6x8_43"
+
         if 1.42 <= ratio <= 1.70:
             return "135_6x9"
         if 1.70 <= ratio <= 5.0:
