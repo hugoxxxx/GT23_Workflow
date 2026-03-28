@@ -119,8 +119,8 @@ class Renderer135HF(Renderer135):
                     img = ImageOps.fit(img, (pw, ph), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
                     strip_canvas.paste(img, (int(curr_x), py))
             else:
-                # EN: Fill empty slot with dark gray / CN: 空槽位填充深灰色
-                draw.rectangle([curr_x, py, curr_x + pw, py + ph], fill=(25, 25, 25))
+                # EN: Fill empty slot with pure black / CN: 空槽位填充纯黑色
+                draw.rectangle([curr_x, py, curr_x + pw, py + ph], fill=(0, 0, 0))
             
             # Numbering (Top)
             if c % 2 == 0:
