@@ -2,6 +2,19 @@
 
 ## [2.3.3-alpha] - 2026-03-28
 
+### 🎞️ 135 半格索引与排版重构 (135HF Precision Contact Sheet)
+- **[Feature] 135HF 渲染器 v3.0 / Unified Strip Rotation**:
+  - EN: Implemented a new "Unified Strip Rotation" architecture for P (Horizontal) and L (Vertical) modes, ensuring perfect 1:1 physical parity with symmetrical 0.5mm margins.
+  - CN: 实现了 P/L 双模式统一旋转架构。底片条现在通过 90 度顺时针旋转实现垂直排列（L模式），修复了首尾留白非对称问题（各 0.5mm 完美平衡）。
+  - EN: Fixed 72-frame slot enforcement (dark base color fill for missing slots) and center-cropping (ImageOps.fit) to prevent thumbnail stretching.
+  - CN: 实现了强制 72 画幅条位补全（不足部分以底片基色填充），并引入了居中裁切算法，彻底告别非标比例导致的拉伸变形。
+- **[Aesthetics] 强化底片细节 / High-Precision Film Assets**:
+  - EN: Added rotated branding, numbering, and dual-sided vector sprockets (Standard KS / Movie BH-1866) for L-mode strips.
+  - CN: 针对 L 模式垂直条进行了视觉加固：支持自动旋转的品牌名与数字标号，并完美适配双侧高精度矢量齿孔（支持切换电影卷/民用卷样式）。
+- **[Interactive] “半格”模式开关 / Half-Frame UI Toggle**:
+  - EN: Added a "Half-Frame" Toolbutton switch in the Format panel for manual orientation override and P/L mode selection.
+  - CN: format 面板新增了工具按钮样式的“半格模式”开关。即使系统识别失效，用户也能一键强制切入半格逻辑，并同步开启 P/L 排版方向面板。
+
 ### 🎨 UI 交互与多语言适配 (UI Interaction & Localization)
 - **[Feature] 纯净模式 / Pure Mode**:
   - EN: Introduced "Pure Mode" to suppress all text and logo overlays while preserving the border background.
