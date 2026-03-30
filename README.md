@@ -7,11 +7,11 @@
 
 **GT23 Film Workflow** is a professional automation suite designed for film photographers. It bridges the gap between analog scans and digital presentation by simulating physical film aesthetic logic, restoring shooting metadata (EXIF) onto glowing "DataBacks", and generating industrial-grade contact sheets.
 
-**GT23 Film Workflow** 是一款专为胶片摄影師打造的专业自动化工具。它旨在打破扫描件与数字展示之间的隔阂：通过模拟真实的物理底片排版逻辑，将拍摄元数据（EXIF）以“数码背印”形式还原至画面，并提価工业级的底片索引（Contact Sheet）生成能力。
+**GT23 Film Workflow** 是一款专为胶片摄影师打造的专业自动化工具。它旨在打破扫描件与数字展示之间的隔阂：通过模拟真实的物理底片排版逻辑，将拍摄元数据（EXIF）以“数码背印”形式还原至画面，并提供工业级的底片索引（Contact Sheet）生成能力。
 
 ---
 
-## 🔥 Featured in v2.3.x | 新特性
+## ✨ Featured in v2.3.x | 新特性
 
 ### 🎞️ 135HF Half-Frame Specialization | 135 半格专题
 - **P/L Layouts**: Supports native vertical (9x8) and horizontal (12x6) half-frame orientations.
@@ -44,10 +44,10 @@
 
 ---
 
-## 🚀 Key Features | 核心功能
+## ✨ Key Features | 核心功能
 
 * **Dual Toolsets | 双重工具集**: 
-    * **Border Tool**: Professional processing for individual scans. Real-time preview, EXIF visibility toggle, and customizable border ratio. | **边框美化工具**: 为单张扫描件提価业业的裁剪、填充及美化。支持实时预览、EXIF 显隐控制。
+    * **Border Tool**: Professional processing for individual scans. Real-time preview, EXIF visibility toggle, and customizable border ratio. | **边框美化工具**: 为单张扫描件提供专业的裁剪、填充及美化。支持实时预览、EXIF 显隐控制。
     * **Contact Sheet (135/120/135HF)**: Automated index sheet generation with physical film simulation. | **底片索引工具**: 自动化生成具备物理底片质感的印像页。现已全面支持半格。
 
 * **Dynamic DataBack | 动态背印**:
@@ -78,7 +78,7 @@
 
 ---
 
-## 📸 Sample Outputs | 示例輳出
+## ✨ Sample Outputs | 示例输出
 
 ### 🎞️ Format Library | 画幅索引示例
 <table>
@@ -109,7 +109,7 @@
 
 ---
 
-## 📦 Installation | 安装指南
+## ✨ Installation | 安装指南
 
 1. **Download**: 获取最新的 `.exe` 独立运行程序。
 2. **One-Click Sync**: 首次运行点击“是/Yes”，自动同步图标与胶片资产库。
@@ -123,12 +123,12 @@
 
 ---
 
-## 🏛️ About the Name | 项目名称由来
+## ✨ About the Name | 项目名称由来
 "GT23" 致敬了 **Contax G2** 和 **T3**。它们曾定义了我的摄影之路，而这款工具旨在让那份对经典硬件的敬畏心在数字世界得以延续。
 
 ---
 
-## 📝 License | 许可证
+## ⚖️ License | 许可证
 MIT License - See [LICENSE](LICENSE) for details.
 
 ---
