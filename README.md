@@ -1,389 +1,115 @@
-# GT23_Workflow
+# GT23 Film Workflow (v2.3.0)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/hugoxxxx/GT23_Workflow/releases)
 
 ### [English] | [中文]
 
-A dedicated tool for film photographers to generate **Digital Contact Sheets** and professionally processed film borders. It organizes your scans into professional physical film strip layouts and automatically restores shooting parameters (EXIF) onto the "DataBack".
+**GT23 Film Workflow** is a professional automation suite designed for film photographers. It bridges the gap between analog scans and digital presentation by simulating physical film aesthetic logic, restoring shooting metadata (EXIF) onto glowing "DataBacks", and generating industrial-grade contact sheets.
 
-专为胶片摄影师设计的 **数字接触印样** 与 **底片边框处理** 工具。它能将扫描件排版为专业的底片切片样式，并自动将拍摄参数（EXIF）还原为"数码背印"。
-
----
-
-## 🔥 What's New — v2.3.0 (Half-Frame & Aesthetics Edition)
-- **🎞️ All-New 135HF Mode | 全新 135 半格模式 (v2.3.0)**
-   - EN: Dedicated engine for 18x24mm half-frame cameras! Supports P/L layouts, fixed 72-frame full sheets, and smart center-cropping.
-   - CN: 专为半格玩家打造。支持横/纵双向排版、强制 72 画幅满额补全及智能居中裁切。
-- **🌈 Artistic Themes | 艺术边框系列 (v2.3.0)**
-   - EN: Introduced **Rainbow**, **Macaron**, and **Dark Border** themes for social sharing.
-   - CN: 新增 **彩虹相纸**、**马卡龙九宫格** 及 **专业深色边框**，为社交媒体分享注入更多个性。
-- **Extreme Optimization | 极致优化 (v2.2.x - v2.3.0)**
-   - EN: Slashed EXE size to ~40MB and introduced **Per-Image State Memory**.
-   - CN: EXE 体积极致精简至 ~40MB，并新增 **单图配置记忆** 功能。
-
-## 🚀 How to Use (EXE Users) | 使用指南 (独立版用户)
-1. **Download & Launch**: Grab the `GT23_Workflow_v2.3.0.exe` (~40MB).
-2. **One-Click Sync**: On first run, a prompt will appear asking to sync assets. Click **Yes**.
-3. **Full Library Restored**: The app will automatically download and install 121+ icons and film profiles into the `GT23_Assets/` folder alongside the EXE.
-4. **Ready to Roll**: Your workflow is now fully populated and ready for professional output!
-
-1. **下载并运行**: 获取 `GT23_Workflow_v2.3.0.exe`（约 40MB）。
-2. **一键同步**: 首次启动时，程序会提示是否同步资源库，点击**是**。
-3. **满血归位**: 程序会自动将 121+ 款图标与胶片配置拉取至 EXE 旁的 `GT23_Assets/` 目录。
-4. **正式使用**: 至此，您的工具已完全就绪，可享受丝滑的专业胶片排版流程。
-
-## 📷 About the Name | 项目名称由来
-
-**EN**: The name "GT23" pays homage to two legendary Contax compact cameras that shaped my film photography journey: the **G2** and **T3**. Both were once part of my collection, but circumstances led me to part with them. Since then, their prices have soared far beyond reach, closing the door on any chance of reunion. The memories of shooting with these exceptional cameras remain vivid, and when it came time to name a tool dedicated to film photography, honoring them felt like the only fitting tribute.
-
-**CN**: 项目名称 "GT23" 致敬了影响我胶片摄影之路的两部 Contax 传奇紧凑型相机：**G2** 和 **T3**。它们曾是我的珍藏，但因缘际会最终出手。此后价格飙升，再也难以企及，重逢无望。用这两部杰出相机拍摄的记忆依然鲜活，当我着手开发一款胶片摄影工具时，用它们的名字致敬，是唯一合适的选择。
+**GT23 Film Workflow** 是一款专为胶片摄影师打造的专业自动化工具。它旨在打破扫描件与数字展示之间的隔阂：通过模拟真实的物理底片排版逻辑，将拍摄元数据（EXIF）以“数码背印”形式还原至画面，并提供工业级的底片索引（Contact Sheet）生成能力。
 
 ---
 
-## 🖼️ GUI Preview | 界面预览
+## 🌟 Core Twin-Engines | 核心双引擎
 
+GT23 由两大核心功能模块驱动，旨在覆盖从单张精修到整卷归档的全流程：
+
+### 1. Border Tool | 专业边框工具
+EN: A precision tool for individual scan processing. Features non-destructive center-cropping, customizable border ratios, and dynamic metadata overlay. 
+CN: 针对单张扫描件的精密处理工具。支持无损居中裁切、自定义边框比例，以及动态元数据层级化展示。
+
+### 2. Contact Sheet Tool | 底片索引工具
+EN: Automated physical film strip simulation. Supports standard 135, 120 (645/66/67), and the brand-new **135HF (Half-Frame)** formats.
+CN: 自动化的物理底片条模拟工具。支持标准 135、120（645/66/67）以及全新的 **135HF（半格）** 索引排版。
+
+---
+
+## 🔥 Featured in v2.3.0 | 新版本特性
+
+### 🎞️ 135HF Half-Frame Specialization | 135 半格专项支持
+- **Native Portrait/Landscape**: Optimized layouts for vertical (9x8) and horizontal (12x6) half-frame orientations.
+- **Fixed 72-Slot Grid**: Automatically fills missing frames with film-base colors to maintain a professional full-sheet aesthetic.
+- **原生横/纵排版**：针对半格相机的原生构图优化，支持 9*8 或 12*6 的逻辑布局。
+- **强制 72 画幅补全**：不足一卷的照片将自动以底片基色填充槽位，保持专业印样的完整视觉感。
+
+<p align="center">
+  <img src="previews/v2.3/135hf_p_mode.jpg" width="80%" alt="135HF Preview">
+</p>
+
+### 🌈 Artistic Boundary System | 全新艺术边框系统
+- **Rainbow & Macaron Themes**: Narrative-driven sequential coloring for social media "Grids".
+- **Dark Border Mode**: Professional cold-midnight aesthetic with high-contrast typography.
+- **彩虹与马卡龙主题**：为社交媒体九宫格设计的叙事性色彩分配方案，支持长卷渐变与随机配色。
+- **专业深色模式**：深邃的冷色调背景配合高对比度排版，赋予照片工业电影质感。
+
+---
+
+## 🏛️ Museum of Logos | 图标博物馆 (121+ Models)
+
+EN: **Authenticity First**. Every single logo in GT23 is manually traced from **original vintage documentation** and service manuals (Mamiya, Rollei, Contax, Hasselblad, etc.). We don't just use icons; we preserve the soul of the equipment.
+
+CN: **极致还原，拒绝平替**。GT23 内置的 121+ 款图标均由开发者一人**从数十年历史的原始纸质说明书与宣传册中手工勾勒还原**。我们不使用通用字体，只保留每一款型号最纯正的工业设计灵魂。
+
+<p align="center">
+  <img src="previews/logos/LOGO_FULL_MAP.jpg" width="100%" alt="Logo Museum">
+</p>
+
+---
+
+## 🖼️ Visual Showcase | 视觉展示
+
+### 🎞️ Format Library | 画幅库
 <table>
   <tr>
-    <td align="center">
-      <strong>Border Tool | 边框工具</strong><br>
-      <img src="https://github.com/hugoxxxx/photos/blob/9bddc22fa9f3dc0b66f95a9e98f5d20c265c3b06/GT23samples/GUI.png" width="100%" alt="GT23 Border Tool">
-    </td>
-    <td align="center">
-      <strong>Contact Sheet | 底片索引</strong><br>
-      <img src="https://github.com/hugoxxxx/photos/blob/9bddc22fa9f3dc0b66f95a9e98f5d20c265c3b06/GT23samples/GUI-2.png" width="100%" alt="GT23 Contact Sheet">
-    </td>
+    <td align="center"><strong>135 Standard (36 Exp)</strong><br><img src="previews/formats/135.jpg" width="100%"></td>
+    <td align="center"><strong>66 Square (12 Exp)</strong><br><img src="previews/formats/66.jpg" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>645 Landscape/Portrait</strong><br><img src="previews/formats/645_L.jpg" width="48%"> <img src="previews/v2.3/rf645_portrait.jpg" width="48%"></td>
+    <td align="center"><strong>67 Ideal Format (10 Exp)</strong><br><img src="previews/formats/67.jpg" width="100%"></td>
+  </tr>
+</table>
+
+### 🔍 Precision Details | 精度细节
+<table>
+  <tr>
+    <td align="center"><strong>Digital DataBack (LED Font)</strong><br><img src="previews/details/sprocket_std.png" width="100%"></td>
+    <td align="center"><strong>Pro Border Layout (66)</strong><br><img src="previews/details/66_border.png" width="100%"></td>
   </tr>
 </table>
 
 ---
 
-## 🚀 Key Features | 核心功能
+## 🚀 Quick Start | 快速上手
 
-* **Dual Toolsets | 双重工具集**: 
-    * **Border Tool**: Professional cropping, padding, and aesthetic border processing for individual scans. Features real-time preview, auto date selection, EXIF visibility toggle, and customizable border ratio. | **边框美化工具**: 为单张扫描件提供专业的裁剪、填充及边框美化处理。支持实时预览、自动选择日期、EXIF 信息显隐控制、自定义边框比例。
-    * **Contact Sheet (135/120/135HF)**: Automated index sheet generation with physical film simulation. Now with full **Half-Frame (135HF)** support. | **底片索引工具**: 自动化生成具备物理底片质感的索引印样。现已全面支持 **135 半格 (135HF)** 模式。
+### EXE Users (Recommended) | 独立版用户（推荐）
+1. **Download**: Grab `GT23_Workflow_v2.3.0.exe` from [Releases](https://github.com/hugoxxxx/GT23_Workflow/releases).
+2. **Launch & Sync**: Double-click to run. On the first launch, click **"Yes"** to automatically download the 121+ logos and film profiles into the `GT23_Assets/` folder.
+3. **Process**: Put your scans in `photos_in/`, adjust settings in GUI, and find results in `photos_out/`.
 
-* **Dynamic DataBack | 动态背印**:
-    * EN: Automatically reads EXIF (Date, Aperture, Shutter, Film stock) for **each individual frame**. Simulated glowing orange LED/Segment font styles. | CN: 自动读取每一帧的 EXIF 信息（日期、光圈、快门、胶片型号）。采用仿真 LED 橙色七段数码管字体。
-
-* **Hand-Extracted Logo Library | 手工提炼图标库 (v2.2+)**:
-    - EN: **Authenticity First**: A massive expansion to 121+ logos. Meticulously traced from **original vintage documentation** (Mamiya, Rollei, Contax, etc.) to capture the soul of each camera brand.
-    - CN: **极致还原**：跨越式更新至 121+ 款机型。每一格图标都来自**相机原始时代的纸质说明书与宣传册**，手工勾勒，留住每一份品牌灵魂。
-
-### 🏛️ Museum of Logos / 图标博物馆 (121+ Models)
-
-<p align="center">
-  <img src="assets/LOGO_FULL_MAP.jpg" width="100%" alt="GT23 Logo Full Map">
-</p>
-
-<details>
-<summary><b>Click to view the full list and 13-page gallery / 点击展开查看完整机型列表与 13 页详细画册</b></summary>
-
-> [!NOTE]
-> All models listed below correspond to manually extracted high-resolution logos in the asset library. / 以下机型均对应资源库中手工提炼的高分辨率图标。
-
-#### 📸 Logo Gallery / 图标画册
-
-<p align="center">
-  <img src="assets/LOGO_PREVIEW_PAGE_1.jpg" width="48%"> <img src="assets/LOGO_PREVIEW_PAGE_2.jpg" width="48%">
-  <img src="assets/LOGO_PREVIEW_PAGE_3.jpg" width="48%"> <img src="assets/LOGO_PREVIEW_PAGE_4.jpg" width="48%">
-  <img src="assets/LOGO_PREVIEW_PAGE_5.jpg" width="48%"> <img src="assets/LOGO_PREVIEW_PAGE_6.jpg" width="48%">
-  <img src="assets/LOGO_PREVIEW_PAGE_7.jpg" width="48%"> <img src="assets/LOGO_PREVIEW_PAGE_8.jpg" width="48%">
-  <img src="assets/LOGO_PREVIEW_PAGE_9.jpg" width="48%"> <img src="assets/LOGO_PREVIEW_PAGE_10.jpg" width="48%">
-  <img src="assets/LOGO_PREVIEW_PAGE_11.jpg" width="48%"> <img src="assets/LOGO_PREVIEW_PAGE_12.jpg" width="48%">
-  <img src="assets/LOGO_PREVIEW_PAGE_13.jpg" width="48%">
-</p>
-
-#### 📝 Supported Models / 支持机型列表
-
-**BRONICA**
-> C, EC, EC-TL, ETRS, ETRSi, GS-1, RF645, S, S2, SQ-A, SQ-B
-
-**CANON / 佳能**
-> A-1, AE-1, Autoboy180, AutoboyS, AutoboySII, EOS 6D, EOS R1, EOS6DII, QL17, R3, R5II, R6II, R6III
-
-**CONTAX / 康泰时**
-> G1, G2, T, T2, T3, TVS, TVSII, TVSIII
-
-**FUJIFILM / 富士**
-> GA645, GA645i, GA645wi, GA645zi, GF670, GS645, GS645S, GS645W, KLASSE, KLASSE-S, KLASSE-W
-
-**HASSELBLAD / 哈苏**
-> 202FA, 203FE, 205FCC, 205TCC, 500C, 500CM, 501CM, 503CW
-
-**KODAK / 柯达**
-> RETINAII, RETINAIIa
-
-**KONICA / 柯尼卡**
-> BIGMINI, BIGMINI-F, HEXAR, HEXAR-RF, RECORDER
-
-**MAMIYA / 玛米亚**
-> 645AFD, 645E, 645PRO, 645PROTL, 645SUPER, 6MF, 7II, C330, RB67PROS, RB67PROSD, RZ67, RZ67PROIID
-
-**MINOLTA / 美能达**
-> A7, A7000, A9, A9000, AUTOCORD, TC-1, X700
-
-**NIKON / 尼康**
-> 35Ti, F, F100, F2, F2S, F2SB, F3, F4, F4S, F5, F6, F70, F70D, F80, F80D, F80S, FE, FM3A
-
-**OLYMPUS / 奥林巴斯**
-> PEN-EED, UII, XA, XA2, XA3, XA4
-
-**PENTAX / 宾得**
-> 645, 645N, 645NII, 67, 67ii, 6X7, ESPIO, ESPIO-MINI, KX, ME, MEF, MESUPER, MX
-
-**ROLLEI / 禄来**
-> 35, 35QZ, 35S, 35T
-
-**ROLLEIFLEX / 禄来双反**
-> 3.5F
-
-**SEAGULL / 海鸥**
-> 4A, 4B, 4B_bak
-
-**YASHICA / 雅西卡**
-> T4, T4D, T5, T5D
-
-*More models coming soon... / 更多型号持续更新中...*
-
-</details>
-
-
-
-* **Expanded Film Library | 扩展胶片库**:
-    * EN: Now supports a significantly larger film database, covering more film stock variants and brands with accurate EdgeCode and color profiles. | CN: 现已支持更大规模的胶片库，涵盖更多胶片品牌与型号，包含准确的喷码与视觉颜色配置。
-
-* **135 Precision Layout with Smart Sprocket Rendering | 135 精准排版与智能齿孔渲染**:
-    * EN: **Optimized sprocket design**: Automatically switches sprocket styles based on film type (ISO 1007 compliant vector rendering). Date placed at inner bottom-right; EXIF centered in outer bottom margin. | CN: **优化的齿孔设计**：根据不同胶片类型自动切换齿孔样式（ISO 1007 标准矢量渲染）。日期位于右下角，EXIF 参数居中显示在下方黑边。
-    * **Smart Global Crop**: Automatic vertical cleanup at the right edge to ensure a clean finish. | CN: **智能全局裁切**：自动清理右侧多余黑边，确保视觉整洁。
-
-* **Fixed Frame Count Indicator | 固定张数黑条提示**:
-    * EN: The black film leader strip is **always generated** according to film format spec (135: 36 frames, 645: 16 frames, 66: 12 frames, 67: 10 frames), **even if fewer photos are merged**. This serves as a visual reminder of how many frames were wasted or not exposed. | CN: 黑色胶片领导条严格按照胶片规格生成（135：36张、645：16张、66：12张、67：10张），**即使合并的照片数量不足也会完整显示**。这可以直观地提醒摄影师一卷有多少张废片或未曝光的底片。
-
-* **High-Performance Rendering Engine (v2.1+) | 高性能渲染引擎**:
-    - EN: **PNG-to-JPEG Transition**: Revolutionized rendering speed (up to 5x faster) by switching to an optimized JPEG pipeline. Specifically hardened for social platforms (e.g., Xiaohongshu) to eliminate "white corner" artifacts. Defaulted to ultra-high-resolution (4500px) at near-lossless quality (98).
-    - CN: **从 PNG 转向 JPEG**：通过重构渲染引擎实现了 5 倍左右的性能飞跃。针对小红书等平台完成了“阴影硬化”处理，彻底杜绝压缩白角问题。默认 4500px 超清分辨率与 98 几乎无损质量。
-
-* **Auto-Rotation**: Intelligent orientation handling for consistent visual flow. | **自动旋转**：智能处理图像方向，确保版面流畅。
+1. **下载**: 从 [Releases](https://github.com/hugoxxxx/GT23_Workflow/releases) 获取 `GT23_Workflow_v2.3.0.exe`。
+2. **启动与同步**: 双击启动。首次运行时点击**“是”**，程序会自动将 121+ 款图标与胶片库拉取至同级的 `GT23_Assets/` 目录。
+3. **使用**: 将照片放入 `photos_in/`，在界面调整参数，处理结果将出现在 `photos_out/`。
 
 ---
 
-## 📦 Installation & Usage | 安装与使用
+## 🏛️ About the Name | 项目名称由来
 
-### Option A: GUI Executable (Recommended) | GUI 可执行程序（推荐）
-
-**EN**: Download the latest `.exe` from Releases, place it in a working folder, then double‑click to launch the GUI.
-
-**CN**: 从 Releases 下载最新 `.exe`，放到工作目录后双击运行即可进入 GUI。
-
-Steps | 步骤：
-1. Create a working directory | 创建工作目录：
-
-   ```
-   MyProject/
-   ├── GT23_Workflow.exe
-   ├── photos_in/          (Put scanned JPG/PNG here | 放入扫描 JPG/PNG)
-   └── photos_out/         (Outputs will appear here | 输出结果在此)
-   ```
-
-2. Launch GUI | 启动 GUI：
-
-   - Border Tool tab: single‑scan border processing | 边框工具：单张扫描的边框美化
-   - Contact Sheet tab: 135/120 contact sheet rendering | 底片索引：135/120 版式渲染
-
-3. Results | 结果：
-   - EN: Processed images are saved into `photos_out/`.
-   - CN: 处理图片输出到 `photos_out/`。
-
----
-
-### Option B: Build From Source | 源码构建（进阶）
-
-**EN**: For developers. Use Conda env `gt23` and run `build_gui.bat`.
-
-**CN**: 面向开发者。使用 Conda 环境 `gt23`，运行 `build_gui.bat` 进行打包。
-
-#### Setup Steps | 设置步骤
-
-1. **Clone the Repository | 克隆代码库**:
-   ```bash
-   git clone https://github.com/yourusername/GT23_Workflow.git
-   cd GT23_Workflow
-   ```
-
-2. **Create/Activate env | 创建/激活环境**:
-   ```powershell
-   conda create -n gt23 python=3.11 -y
-   conda activate gt23
-   pip install -r requirements-gui.txt
-   ```
-
-3. **Build EXE | 打包 EXE**:
-   ```powershell
-   .\build_gui.bat
-   ```
+**EN**: The name "GT23" pays homage to the **Contax G2** and **T3**. These cameras shaped my film journey but are now far beyond financial reach. This tool is my tribute to the memories they created.
+**CN**: "GT23" 致敬了 **Contax G2** 和 **T3**。它们曾定义了我的摄影之路，虽因价格高昂重落凡尘，但通过这款工具，我让那份快感以数字形式得以延续。
 
 ---
 
 ## 🗺️ Roadmap | 路线图
-
-- [x] **v1.0 - v1.8**: Basic layout, Dynamic EXIF, Auto‑rotation | 完成基础排版、动态 EXIF、自动旋转
-- [x] **v1.9 - v2.0**: Multi‑format (66/645/67/135), film library expansion, sprocket rendering, EXE packaging | 多画幅、胶片库扩展、齿孔渲染、EXE 封包
-- [x] **v2.0.0**: Ship GUI desktop app with real-time preview, EXIF/date controls | 正式发布 GUI 桌面版，支持实时预览、EXIF/日期控制
-- [x] **v2.1.x**: PNG-to-JPEG transition (5x speed boost), Vector Logo engine, Zeiss T* red highlight, Ink BBox alignment | 切换为 JPEG 渲染（提速 5 倍）、矢量图标引擎、蔡司 T* 红色高亮、像素级对齐
-- [x] **v2.3.x**: 135HF Half-frame mode (P/L), Rainbow/Macaron themes, Dark border, Pure mode, GUI toolbutton toggle | 135HF 半格模式 (P/L)、彩虹/马卡龙主题、纯净模式、GUI 工具按钮联动
-- [ ] **v2.4.x**: Android version full feature sync, Multi-Roll Merge | 安卓版本全功能同步、多卷合拼 (Multi-Roll Merge)
-
----
-
-## 🖼️ Canvas Size | 画布尺寸
-
-- **English:** The canvas is set to a 10-inch aspect ratio. This specific proportion is chosen because it most closely matches the dimensions of a full roll of film when printed and stored, ensuring a natural and authentic layout.
-- **中文:** 画布设定为 10 寸比例。选择这一比例的原因，是因为它最接近完整一卷底片冲洗、收纳后的物理尺寸，能够确保排版呈现出自然且真实的视觉效果。
-
----
-
-## 🎞️ Supported Film Formats | 支持的胶片格式
-
-| Format | Frames per Roll | Frame Count Display |
-|--------|-----------------|-------------------|
-| **135** | 36 | Always shows 36-frame leader (EN) / 总是显示 36 格黑条 (CN) |
-| **645** | 16 | Always shows 16-frame leader (EN) / 总是显示 16 格黑条 (CN) |
-| **66** | 12 | Always shows 12-frame leader (EN) / 总是显示 12 格黑条 (CN) |
-| **67** | 10 | Always shows 10-frame leader (EN) / 总是显示 10 格黑条 (CN) |
-
----
-
-## 📂 Project Structure | 项目结构
-
-```
-GT23_Workflow/
-├── main.py                      (EN: Entry point | CN: 程序入口)
-├── build.spec                   (EN: PyInstaller config | CN: PyInstaller 配置)
-├── requirements.txt             (EN: Python dependencies | CN: Python 依赖)
-├── README.md                    (This file)
-├── apps/
-│   ├── border_tool.py           (EN: Single-image border processor | CN: 单图边框处理)
-│   └── contact_sheet.py         (EN: Multi-format contact sheet generator | CN: 多格式索引页生成器)
-├── core/
-│   ├── metadata.py              (EN: EXIF extraction & film matching | CN: EXIF 提取与胶片匹配)
-│   ├── renderer.py              (EN: Pro-grade border renderer | CN: 高级边框渲染器)
-│   ├── typo_engine.py           (EN: Typography with kerning | CN: 排版与字距调整)
-│   └── renderers/               (EN: Format-specific renderers | CN: 画幅特定渲染器)
-│       ├── base_renderer.py
-│       ├── renderer_135.py      (EN: 135 format with sprockets | CN: 135 格式含齿孔)
-│       ├── renderer_645.py      (EN: 645 format dual-mode | CN: 645 格式双模式)
-│       ├── renderer_66.py       (EN: 6×6 square format | CN: 6×6 正方形格式)
-│       └── renderer_67.py       (EN: 6×7 landscape format | CN: 6×7 横向格式)
-├── config/
-│   ├── films.json               (EN: Film library with EdgeCode & colors | CN: 胶片库含喷码与颜色)
-│   ├── layouts.json             (EN: Film format layout specs | CN: 画幅版式规格)
-│   └── contact_layouts.json     (EN: Contact sheet layout config | CN: 索引页版式配置)
-├── assets/fonts/                (EN: Typography resources | CN: 排版字体资源)
-├── photos_in/                   (EN: Input scanned images | CN: 输入扫描照片)
-└── photos_out/                  (EN: Output processed sheets | CN: 输出处理结果)
-```
-
----
-
-## 🎞️ 135 Layout Details | 135 排版细节
-
-* **Date (日期)**: Placed at **Inner Bottom-Right** of each frame. | 位于每帧照片内部的 **右下角**。
-* **EXIF (参数)**: Centered in the **Outer Bottom Margin** (under sprockets). | 居中显示在照片下方 **齿孔外的黑边** 中。
-* **Clean Edge (全局截断)**: Trailing black strips are automatically wiped to prevent UI artifacts. | 自动清理右侧多余黑边与序号，确保视觉整洁。
-
----
-
-## 📸 Sample Outputs | 示例输出
-
-### 🎞️ Contact Sheet Examples | 底片索引示例
-
-<table>
-<tr>
-<td width="50%" align="center">
-<b>135 Format</b> (36 frames)<br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_135.jpg" width="100%" alt="135format">
-</td>
-<td width="50%" align="center">
-<b>135HF Format (Half-Frame)</b> (72 frames)<br/>
-<img src="previews/v2.3/135hf_p_mode.jpg" width="100%" alt="135hf_format">
-</td>
-</tr>
-<tr>
-<td width="50%" align="center">
-<b>66 Format</b> (12 frames)<br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_66.jpg" width="100%" alt="66format">
-</td>
-<td width="50%" align="center">
-<b>645 Landscape</b> (16 frames)<br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_645-L.jpg" width="100%" alt="645format_L">
-</td>
-</tr>
-<tr>
-<td width="50%" align="center">
-<b>645 Portrait</b> (16 frames)<br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_645-P.jpg" width="100%" alt="645format_P">
-</td>
-<td width="50%" align="center">
-<b>67 Format</b> (10 frames)<br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/ContactSheet_67.jpg" width="100%" alt="67format">
-</td>
-</tr>
-</table>
-
-### 🔍 Detail Examples | 细节示例
-
-<table>
-<tr>
-<td width="50%" align="center">
-<b>135 Movie Perforation | 电影卷齿孔</b><br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260117185247_87_68.png" width="100%" alt="135_movie_perforation">
-</td>
-<td width="50%" align="center">
-<b>135 Standard Perforation | 标准齿孔</b><br/>
-<img src="https://github.com/hugoxxxx/photos/blob/24e295b82f6a78ca1a877d576b40a4ee5607c1c1/GT23samples/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260117185339_88_68.png" width="100%" alt="135_standard_perforation">
-</td>
-</tr>
-<tr>
-<td colspan="2" align="center">
-<b>66 Border Example | 66 边框示例</b><br/>
-<img src="https://github.com/hugoxxxx/photos/blob/858c3dbadff82bcf6ece7de72a15c25d25f93746/GT23samples/GT23_66.png" width="50%" alt="66_border">
-</td>
-</tr>
-</table>
-
----
-
-## 🛠️ Troubleshooting | 故障排除
-
-**EXE runs but says "No images found" | EXE 运行但提示"没有找到图片"**:
-* EN: Make sure you created `photos_in/` folder next to the EXE, and placed JPG/PNG files inside it.
-* CN: 确保在 EXE 同级目录创建了 `photos_in/` 文件夹，并放入 JPG/PNG 文件。
-
-**Film not recognized | 胶片无法识别**:
-* EN: The tool will prompt you to enter the film name manually. Type the film name or abbreviation (e.g., `Portra 400`, `Fuji Pro`, `HP5`).
-* CN: 工具会提示你手动输入胶片名称。输入胶片名称或简称（如 `Portra 400`、`Fuji Pro`、`HP5`）。
-
-**Permission denied when running | 运行时出现权限拒绝**:
-* EN: On macOS/Linux, you may need to make the script executable: `chmod +x main.py`
-* CN: 在 macOS/Linux 上，可能需要使脚本可执行：`chmod +x main.py`
-
----
-
-## 📧 Support | 技术支持
-
-EN: If you encounter issues, please contact: **xjames007@gmail.com**
-
-CN: 遇到问题请联系：**xjames007@gmail.com**
+- [x] **v2.3.x**: 135HF Specialization, Artistic Themes, 121+ Logo Museum.
+- [ ] **v2.4.x**: Android version full feature sync, Multi-Roll Merge support.
+- [ ] **v3.0.0**: AI-enhanced film grain simulation, Cloud asset sharing.
 
 ---
 
 ## 📝 License | 许可证
-
-MIT License - See LICENSE file for details. | MIT 许可证 - 详见 LICENSE 文件。
+MIT License - See [LICENSE](LICENSE) for details.
 
 ---
-
-## 🙏 Credits | 致谢
-
-EN: Thanks to all film photographers who provided feedback and inspiration for this tool.
-
-CN: 感谢所有胶片摄影师提供的反馈和灵感。
+*Stay analog in a digital world. 🎞️📸*
