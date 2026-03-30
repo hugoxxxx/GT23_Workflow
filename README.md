@@ -75,9 +75,9 @@
 
 ## 🏛️ About the Name / 项目名称由来
 
-"GT23" is a homage to two legendary Contax compact cameras that defined my journey in photography: the **Contax G2** and **T3**. This tool is built to keep that spirit of reverential respect for classic hardware alive in the digital age.
+"GT23" is a homage to the two legendary compact cameras that defined my journey in photography: the **Contax G2** and **T3**. Though they were regretfully parted with due to rising prices and shutter cable concerns, the spirit of reverential respect for classic hardware lives on in this digital workflow.
 
-/ “GT23”致敬了定义我的摄影之路的两款经典紧凑相机：**Contax G2** 与 **T3**。这款工具旨在让那份对经典硬件的敬畏之心在数字时代得以延续。
+/ “GT23” 致敬了 **Contax G2** 和 **T3**。它们曾定义了我的摄影之路，虽因价格与快门排线的问题遗憾离手，但那份对经典硬件的敬畏心在数字时代得以延续。
 
 ---
 
