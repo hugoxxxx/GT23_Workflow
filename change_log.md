@@ -1,5 +1,26 @@
 # Change Log / 变更日志
 
+## [2.3.4-alpha] - 2026-03-30
+
+### ⚡ 瞬时预览与架构重塑 (Instant Preview & Architecture)
+- **[Performance] 全内存渲染管线 / Memory-Only Pipeline**:
+  - EN: Implemented a memory-only rendering pipeline with source image caching, reducing preview latency from 1300ms to <200ms (an 85% speedup).
+  - CN: 实现了“全内存转向”渲染管线与源图缓存机制。通过在内存中驻留 1200px 预缩放底图，消除了参数调整时的磁盘 I/O 与重复缩放开销，反馈延迟从 1.3s 降低至 0.2s 以内。
+- **[Aesthetics] 高保真阴影还原 / High-Fidelity Preview Shadow**:
+  - EN: Restored high-quality GaussianBlur (radius=20) for previews while maintaining instant responsiveness. Fixed alpha-blending issues for memory-only output.
+  - CN: 在保留即时响应的同时，还原了高质量的高斯模糊阴影 (radius=20)。修复了内存模式下由于 Alpha 通道未复合导致的预览黑边问题。
+
+### 📦 资源同步与鲁棒性增强 (Assets Sync & Robustness)
+- **[Assets] Logo 库全量同步 / Logo Library Sync**:
+  - EN: Synchronized 37 new logos (198 total) including Sony A7CII, A7R5, and Leica M11 series.
+  - CN: 全面同步了 198 款相机 Logo 资源，新增对索尼 A7CII、A7R5、徕卡 M11-P/D、M10-R 等最新机型的支持。
+- **[Feature] 索引自动刷新 / Catalog Refresh**:
+  - EN: Regenerated all 20 UI catalog pages and the full map to reflect the updated logo library.
+  - CN: 重新生成了 UI 内部使用的 20 页分页索引图及单张全量预览总表，确保新资源在应用内即刻可见。
+- **[Fix] GBK 环境编码修复 / Windows Encoding Fix**:
+  - EN: Resolved crashes in Windows GBK terminal environments when printing Unicode checkmarks.
+  - CN: 彻底解决了 Windows GBK 环境下因控制台打印 Unicode 勾选字符导致的渲染程序崩溃问题。
+
 ## [2.3.3-alpha] - 2026-03-28
 
 ### 🎞️ 135 半格索引与排版重构 (135HF Precision Contact Sheet)

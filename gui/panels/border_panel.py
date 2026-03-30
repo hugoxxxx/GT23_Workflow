@@ -12,12 +12,13 @@ import json
 import tempfile
 import shutil
 import threading
+import time
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import filedialog, messagebox
 from tkinter import scrolledtext
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps, ImageDraw, ImageFilter
 from core.metadata import MetadataHandler
 from core.renderer import FilmRenderer, bootstrap_logos
 from concurrent.futures import ThreadPoolExecutor
@@ -279,6 +280,7 @@ class BorderPanel:
         self.batch_width_cache = {} # normalized_path -> aspect_ratio
         self.current_batch_paths = [] # Ordered normalized paths
         self._loading_state = False # EN: Guard for trace feedback / CN: 防止监听回环的任务锁
+        self.preview_source_cache = {} # EN: path -> {rotation: pil_img}
         
         # EN: Load layout config for parameter initialization / CN: 加载布局配置用于参数初始化
         self.layout_config = {}
@@ -1079,12 +1081,44 @@ class BorderPanel:
             self._preview_error_msg = None
             self.redraw_preview()
 
-            def worker(img_path, job_mark, is_digital_mode, is_pure_mode, manual_film_keyword):
-                temp_dir = None
+            def worker(img_path, job_mark, is_digital_mode, is_pure_mode, manual_film_keyword, manual_rotation):
+                t_total_start = time.perf_counter()
+                render_timings = {}
                 try:
-                    temp_dir = tempfile.mkdtemp(prefix="gt23_preview_")
+                    # EN: Check if the source image is already cached for this rotation
+                    # CN: 检查该旋转角度下的源图是否已被缓存
+                    cache_entry = self.preview_source_cache.get(img_path, {})
+                    source_img = cache_entry.get(manual_rotation)
+                    
+                    if source_img is None:
+                        # EN: Cache miss - load, rotate, and scale once / CN: 缓存未命中 - 仅执行一次加载、旋转和缩放
+                        t_load_start = time.perf_counter()
+                        with Image.open(img_path) as raw_img:
+                            if raw_img.format == 'JPEG':
+                                raw_img.draft(raw_img.mode, (2400, 2400)) # 2x of 1200
+                            img = ImageOps.exif_transpose(raw_img)
+                            if manual_rotation != 0:
+                                img = img.rotate(-manual_rotation, expand=True)
+                            if img.mode != "RGB":
+                                img = img.convert("RGB")
+                            
+                            # Pre-scale to preview size (1200)
+                            w, h = img.size
+                            scale = 1200 / max(w, h)
+                            source_img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.BILINEAR)
+                        
+                        render_timings['load_rotate'] = time.perf_counter() - t_load_start
+                        render_timings['resize'] = 0 # Included in load_rotate for cache miss
+                        # Store in cache
+                        self.preview_source_cache[img_path] = {manual_rotation: source_img}
+                    else:
+                        render_timings['load_rotate'] = 0
+                        render_timings['resize'] = 0
+                    
+                    t_meta_start = time.perf_counter()
                     meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
                     data = meta.get_data(img_path, is_digital_mode=is_digital_mode, manual_film=manual_film_keyword)
+                    t_meta = time.perf_counter() - t_meta_start
                     
                     # EN: Apply custom layout params to preview / CN: 将自定义布局参数应用到预览
                     custom_layout = {
@@ -1188,24 +1222,20 @@ class BorderPanel:
                             # DEBUG
                             print(f"DEBUG [Preview]: path={os.path.basename(img_path)}, found={found}, r_range={r_range}, total_rel_w={total_rel_w}")
 
-                    out_name = renderer.process_image(img_path, data, temp_dir, 
+                    # EN: Memory-based render call / CN: 基于内存的渲染调用
+                    final_pil = renderer.process_image(img_path, data, None, 
                                                      target_long_edge=1200, 
-                                                     manual_rotation=data.get('manual_rotation', 0),
+                                                     manual_rotation=manual_rotation,
                                                      theme=theme_val,
                                                      is_pure=is_pure_mode,
                                                      rainbow_index=r_index,
                                                      rainbow_total=r_total,
-                                                     rainbow_range=r_range)
+                                                     rainbow_range=r_range,
+                                                     timing_results=render_timings,
+                                                     source_img=source_img)
 
-                    out_path = os.path.join(temp_dir, out_name)
-                    if not os.path.exists(out_path):
-                        raise FileNotFoundError(out_name)
-
-                    with Image.open(out_path) as img:
-                        img = img.convert("RGB")
-                        # Keep high-res bounds
-                        img.thumbnail((2000, 2000))
-                        img_copy = img.copy()
+                    # EN: Final image for display (Already flattened to RGB in renderer)
+                    img_copy = final_pil.copy()
 
                     def apply_image():
                         if job_mark != getattr(self, 'preview_job_id', None):
@@ -1213,10 +1243,30 @@ class BorderPanel:
                         self._is_loading_preview = False
                         self._current_preview_pil = img_copy
                         self.redraw_preview()
+                        
+                        # EN: Log performance report / CN: 记录性能报告
+                        total_time = time.perf_counter() - t_total_start
+                        log_msg = f"\n--- Performance Report ({os.path.basename(img_path)}) ---"
+                        log_msg += f"\n[Step 1] Metadata: {t_meta*1000:.1f}ms"
+                        log_msg += f"\n[Step 2] Render Breakdown:"
+                        log_msg += f"\n  - Load & Rotate: {render_timings.get('load_rotate', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Resize: {render_timings.get('resize', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Layout: {render_timings.get('layout_calc', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Canvas: {render_timings.get('canvas_paste', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Logo Render: {render_timings.get('logo_render', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Text Main (Load/Draw): {render_timings.get('text_main_load', 0)*1000:.1f}/{render_timings.get('text_main_render', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Text Sub (Load/Draw): {render_timings.get('text_sub_load', 0)*1000:.1f}/{render_timings.get('text_sub_render', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Shadow: {render_timings.get('shadow', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Save: {render_timings.get('save', 0)*1000:.1f}ms"
+                        log_msg += f"\n[Step 3] Total Cycle: {total_time*1000:.1f}ms"
+                        log_msg += "\n" + "-"*40
+                        self.log(log_msg)
 
                     self.parent.after(0, apply_image)
 
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
                     error_msg = str(e)
                     def apply_error(msg=error_msg):
                         if job_mark != getattr(self, 'preview_job_id', None):
@@ -1239,13 +1289,10 @@ class BorderPanel:
 
                     self.parent.after(0, apply_error)
 
-                finally:
-                    if temp_dir and os.path.exists(temp_dir):
-                        shutil.rmtree(temp_dir, ignore_errors=True)
-
+            # EN: Start thread / CN: 启动线程
             self.preview_thread = threading.Thread(
-                target=worker,
-                args=(img_path, job_id, is_digital, is_pure, manual_film),
+                target=worker, 
+                args=(img_path, job_id, is_digital, is_pure, manual_film, self.rotation_var.get()),
                 daemon=True
             )
             self.preview_thread.start()

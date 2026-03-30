@@ -22,7 +22,7 @@ def gen_paged_previews():
     font_sub = os.path.join(base_dir, "assets", "fonts", "gara.ttf")
     
     renderer = FilmRenderer(font_main=font_main, font_sub=font_sub)
-    logo_dir = "assets/logo"
+    logo_dir = os.path.join("GT23_Assets", "logos")
     output_temp = "temp_previews"
     if not os.path.exists(output_temp):
         os.makedirs(output_temp)

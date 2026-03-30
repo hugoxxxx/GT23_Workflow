@@ -14,7 +14,7 @@ if os.path.exists(CAIRO_PATH):
 import cairosvg
 
 def gen_pure_logo_map():
-    logo_dir = "assets/logo"
+    logo_dir = os.path.join("GT23_Assets", "logos")
     assets_dir = os.path.abspath("assets")
     output_path = os.path.join(assets_dir, "LOGO_CATALOG_PURE.jpg")
     
