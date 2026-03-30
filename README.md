@@ -11,100 +11,121 @@
 
 ---
 
-## 🌟 Core Twin-Engines | 核心双引擎
+## 🔥 Featured in v2.3.x | 新特性
 
-GT23 由两大核心功能模块驱动，旨在覆盖从单张精修到整卷归档的全流程：
+### 🎞️ 135HF Half-Frame Specialization | 135 半格专题
+- **P/L Layouts**: Supports native vertical (9x8) and horizontal (12x6) half-frame orientations.
+- **Fixed 72-Slot Grid**: Fills missing frames with film-base colors for a professional full-sheet aesthetic.
+- **双向排版**：针对半格相机的构图优化，支持 9*8(P) 或 12*6(L) 的逻辑布局。
+- **强制 72 画幅补全**：不足的部分自动以底片基色填充，保持索引印样的完整视觉。
 
-### 1. Border Tool | 专业边框工具
-EN: A precision tool for individual scan processing. Features non-destructive center-cropping, customizable border ratios, and dynamic metadata overlay. 
-CN: 针对单张扫描件的精密处理工具。支持无损居中裁切、自定义边框比例，以及动态元数据层级化展示。
-
-### 2. Contact Sheet Tool | 底片索引工具
-EN: Automated physical film strip simulation. Supports standard 135, 120 (645/66/67), and the brand-new **135HF (Half-Frame)** formats.
-CN: 自动化的物理底片条模拟工具。支持标准 135、120（645/66/67）以及全新的 **135HF（半格）** 索引排版。
-
----
-
-## 🔥 Featured in v2.3.0 | 新版本特性
-
-### 🎞️ 135HF Half-Frame Specialization | 135 半格专项支持
-- **Native Portrait/Landscape**: Optimized layouts for vertical (9x8) and horizontal (12x6) half-frame orientations.
-- **Fixed 72-Slot Grid**: Automatically fills missing frames with film-base colors to maintain a professional full-sheet aesthetic.
-- **原生横/纵排版**：针对半格相机的原生构图优化，支持 9*8 或 12*6 的逻辑布局。
-- **强制 72 画幅补全**：不足一卷的照片将自动以底片基色填充槽位，保持专业印样的完整视觉感。
-
-<p align="center">
-  <img src="previews/v2.3/135hf_p_mode.jpg" width="80%" alt="135HF Preview">
-</p>
-
-### 🌈 Artistic Boundary System | 全新艺术边框系统
-- **Rainbow & Macaron Themes**: Narrative-driven sequential coloring for social media "Grids".
-- **Dark Border Mode**: Professional cold-midnight aesthetic with high-contrast typography.
-- **彩虹与马卡龙主题**：为社交媒体九宫格设计的叙事性色彩分配方案，支持长卷渐变与随机配色。
-- **专业深色模式**：深邃的冷色调背景配合高对比度排版，赋予照片工业电影质感。
+### 🌈 Artistic Themes | 艺术边框相纸
+- **Rainbow & Macaron**: Narrative-driven sequential coloring for social media grids.
+- **Dark Border**: Professional cold-midnight aesthetic for cinematic presentation.
+- **彩虹与马卡龙**：为社交媒体九宫格设计的叙事性色彩分配方案。
+- **深色模式**：高对比度的冷色调排版，赋予照片工业电影质感。
 
 ---
 
-## 🏛️ Museum of Logos | 图标博物馆 (121+ Models)
+## 🖼️ GUI Preview | 界面预览
 
-EN: **Authenticity First**. Every single logo in GT23 is manually traced from **original vintage documentation** and service manuals (Mamiya, Rollei, Contax, Hasselblad, etc.). We don't just use icons; we preserve the soul of the equipment.
-
-CN: **极致还原，拒绝平替**。GT23 内置的 121+ 款图标均由开发者一人**从数十年历史的原始纸质说明书与宣传册中手工勾勒还原**。我们不使用通用字体，只保留每一款型号最纯正的工业设计灵魂。
-
-<p align="center">
-  <img src="previews/logos/LOGO_FULL_MAP.jpg" width="100%" alt="Logo Museum">
-</p>
-
----
-
-## 🖼️ Visual Showcase | 视觉展示
-
-### 🎞️ Format Library | 画幅库
 <table>
   <tr>
-    <td align="center"><strong>135 Standard (36 Exp)</strong><br><img src="previews/formats/135.jpg" width="100%"></td>
-    <td align="center"><strong>66 Square (12 Exp)</strong><br><img src="previews/formats/66.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>645 Landscape/Portrait</strong><br><img src="previews/formats/645_L.jpg" width="48%"> <img src="previews/v2.3/rf645_portrait.jpg" width="48%"></td>
-    <td align="center"><strong>67 Ideal Format (10 Exp)</strong><br><img src="previews/formats/67.jpg" width="100%"></td>
-  </tr>
-</table>
-
-### 🔍 Precision Details | 精度细节
-<table>
-  <tr>
-    <td align="center"><strong>Digital DataBack (LED Font)</strong><br><img src="previews/details/sprocket_std.png" width="100%"></td>
-    <td align="center"><strong>Pro Border Layout (66)</strong><br><img src="previews/details/66_border.png" width="100%"></td>
+    <td align="center">
+      <strong>Border Tool | 边框工具</strong><br>
+      <img src="previews/GUI.png" width="100%" alt="GT23 Border Tool">
+    </td>
+    <td align="center">
+      <strong>Contact Sheet | 底片索引</strong><br>
+      <img src="previews/GUI-2.png" width="100%" alt="GT23 Contact Sheet">
+    </td>
   </tr>
 </table>
 
 ---
 
-## 🚀 Quick Start | 快速上手
+## 🚀 Key Features | 核心功能
 
-### EXE Users (Recommended) | 独立版用户（推荐）
-1. **Download**: Grab `GT23_Workflow_v2.3.0.exe` from [Releases](https://github.com/hugoxxxx/GT23_Workflow/releases).
-2. **Launch & Sync**: Double-click to run. On the first launch, click **"Yes"** to automatically download the 121+ logos and film profiles into the `GT23_Assets/` folder.
-3. **Process**: Put your scans in `photos_in/`, adjust settings in GUI, and find results in `photos_out/`.
+* **Dual Toolsets | 双重工具集**: 
+    * **Border Tool**: Professional processing for individual scans. Real-time preview, EXIF visibility toggle, and customizable border ratio. | **边框美化工具**: 为单张扫描件提供专业的裁剪、填充及美化。支持实时预览、EXIF 显隐控制。
+    * **Contact Sheet (135/120/135HF)**: Automated index sheet generation with physical film simulation. | **底片索引工具**: 自动化生成具备物理底片质感的印像页。现已全面支持半格。
 
-1. **下载**: 从 [Releases](https://github.com/hugoxxxx/GT23_Workflow/releases) 获取 `GT23_Workflow_v2.3.0.exe`。
-2. **启动与同步**: 双击启动。首次运行时点击**“是”**，程序会自动将 121+ 款图标与胶片库拉取至同级的 `GT23_Assets/` 目录。
-3. **使用**: 将照片放入 `photos_in/`，在界面调整参数，处理结果将出现在 `photos_out/`。
+* **Dynamic DataBack | 动态背印**:
+    * EN: Automatically reads EXIF (Date, Aperture, Shutter, Film stock) for each frame. Simulated glowing orange LED fonts. | CN: 自动读取每一帧的拍摄参数，采用仿真 LED 橙色数码管字体呈现背景标印。
+
+* **Hand-Extracted Museum of Logos | 手工图标博物馆**:
+    - EN: A massive expansion to **121+ logos**. Meticulously traced from **original vintage documentation** (Mamiya, Rollei, Contax, etc.) to capture the soul of each brand.
+    - CN: **核心价值**：跨越式更新至 121+ 款。每一格图标都来自**相机原始时代的纸质说明书与宣传册**，手工勾勒，留住每一份工业设计灵魂。
+
+<p align="center">
+  <img src="previews/logos/LOGO_FULL_MAP.jpg" width="100%" alt="GT23 Logo Full Map">
+</p>
+
+<details>
+<summary><b>Click to view 13-page Gallery / 点击展开查看 13 页图标全画册</b></summary>
+
+<p align="center">
+  <img src="previews/logos/LOGO_PREVIEW_PAGE_1.jpg" width="48%"> <img src="previews/logos/LOGO_PREVIEW_PAGE_2.jpg" width="48%">
+  <img src="previews/logos/LOGO_PREVIEW_PAGE_3.jpg" width="48%"> <img src="previews/logos/LOGO_PREVIEW_PAGE_4.jpg" width="48%">
+  <img src="previews/logos/LOGO_PREVIEW_PAGE_5.jpg" width="48%"> <img src="previews/logos/LOGO_PREVIEW_PAGE_6.jpg" width="48%">
+  <img src="previews/logos/LOGO_PREVIEW_PAGE_7.jpg" width="48%"> <img src="previews/logos/LOGO_PREVIEW_PAGE_8.jpg" width="48%">
+  <img src="previews/logos/LOGO_PREVIEW_PAGE_9.jpg" width="48%"> <img src="previews/logos/LOGO_PREVIEW_PAGE_10.jpg" width="48%">
+  <img src="previews/logos/LOGO_PREVIEW_PAGE_11.jpg" width="48%"> <img src="previews/logos/LOGO_PREVIEW_PAGE_12.jpg" width="48%">
+  <img src="previews/logos/LOGO_PREVIEW_PAGE_13.jpg" width="48%">
+</p>
+
+</details>
 
 ---
 
-## 🏛️ About the Name | 项目名称由来
+## 📸 Sample Outputs | 示例输出
 
-**EN**: The name "GT23" pays homage to the **Contax G2** and **T3**. These cameras shaped my film journey but are now far beyond financial reach. This tool is my tribute to the memories they created.
-**CN**: "GT23" 致敬了 **Contax G2** 和 **T3**。它们曾定义了我的摄影之路，虽因价格高昂重落凡尘，但通过这款工具，我让那份快感以数字形式得以延续。
+### 🎞️ Format Library | 画幅索引示例
+<table>
+<tr>
+<td width="50%" align="center"><b>135 Format</b> (36 frames)<br/><img src="previews/formats/135.jpg" width="100%" alt="135format"></td>
+<td width="50%" align="center"><b>135HF (Half-Frame)</b> (72 frames)<br/><img src="previews/v2.3/135hf_p_mode.jpg" width="100%" alt="135hf_format"></td>
+</tr>
+<tr>
+<td width="50%" align="center"><b>66 Format</b> (12 frames)<br/><img src="previews/formats/66.jpg" width="100%" alt="66format"></td>
+<td width="50%" align="center"><b>645 Landscape</b> (16 frames)<br/><img src="previews/formats/645_L.jpg" width="100%" alt="645format_L"></td>
+</tr>
+<tr>
+<td width="50%" align="center"><b>645 Portrait</b> (16 frames)<br/><img src="previews/formats/645_P.jpg" width="100%" alt="645format_P"></td>
+<td width="50%" align="center"><b>67 Format</b> (10 frames)<br/><img src="previews/formats/67.jpg" width="100%" alt="67format"></td>
+</tr>
+</table>
+
+### 🔍 Detail Examples | 细节示例
+<table>
+<tr>
+<td width="50%" align="center"><b>135 Movie Perforation | 电影卷齿孔</b><br/><img src="previews/details/sprocket_movie.png" width="100%" alt="135_movie"></td>
+<td width="50%" align="center"><b>135 Standard | 标准齿孔</b><br/><img src="previews/details/sprocket_std.png" width="100%" alt="135_std"></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><b>66 Border Example | 66 边框示例</b><br/><img src="previews/details/66_border.png" width="50%" alt="66_border"></td>
+</tr>
+</table>
+
+---
+
+## 📦 Installation | 安装指南
+
+1. **Download**: 获取最新的 `.exe` 独立运行程序。
+2. **One-Click Sync**: 首次运行点击**“是/Yes”**，自动同步图标与胶片资产库。
+3. **Usage**: 照片放入 `photos_in/`，处理结果在 `photos_out/`。
 
 ---
 
 ## 🗺️ Roadmap | 路线图
 - [x] **v2.3.x**: 135HF Specialization, Artistic Themes, 121+ Logo Museum.
 - [ ] **v2.4.x**: Android version full feature sync, Multi-Roll Merge support.
-- [ ] **v3.0.0**: AI-enhanced film grain simulation, Cloud asset sharing.
+- [ ] **v3.0.0**: AI-enhanced film grain simulation.
+
+---
+
+## 🏛️ About the Name | 项目名称由来
+"GT23" 致敬了 **Contax G2** 和 **T3**。它们曾定义了我的摄影之路，而这款工具旨在让那份对经典硬件的敬畏心在数字世界得以延续。
 
 ---
 
