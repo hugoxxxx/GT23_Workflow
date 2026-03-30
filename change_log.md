@@ -1,6 +1,6 @@
 # Change Log / 变更日志
 
-## [2.3.4-alpha] - 2026-03-30
+## [2.3.1] - 2026-03-30
 
 ### ⚡ 瞬时预览与架构重塑 (Instant Preview & Architecture)
 - **[Performance] 全内存渲染管线 / Memory-Only Pipeline**:
