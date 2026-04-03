@@ -1558,13 +1558,20 @@ class BorderPanel:
                 r_range = (t_start, t_end)
                 r_idx = i % 9 # Position-based indexing
 
+                # EN: Generate 001_ prefix for Macaron/Rainbow to follow sorted order
+                # CN: 为马卡龙/彩虹模式生成 001_ 前缀，以遵循调整后的排序
+                out_prefix = ""
+                if theme_val in ["macaron", "rainbow"]:
+                    out_prefix = f"{i+1:03d}_"
+
                 renderer.process_image(img_path, data, output_dir, 
                                      manual_rotation=cfg.get('rotation', global_cfg['rotation']) if cfg else global_cfg['rotation'],
                                      theme=theme_val,
                                      is_pure=is_pure,
                                      rainbow_index=r_idx,
                                      rainbow_total=total,
-                                     rainbow_range=r_range)
+                                     rainbow_range=r_range,
+                                     output_prefix=out_prefix)
 
             self.parent.after(0, lambda: self.on_processing_complete({'success': True, 'processed': total}))
         except Exception as e:

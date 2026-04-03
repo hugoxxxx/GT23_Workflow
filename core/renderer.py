@@ -70,7 +70,7 @@ class FilmRenderer:
 
     def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0, 
                     theme="light", is_pure=False, rainbow_index=0, rainbow_total=1, is_sample=False, 
-                    source_img=None, **kwargs):
+                    source_img=None, output_prefix="", **kwargs):
         """
         EN: Main entry point with theme, global rainbow sequence, and sample mode.
         CN: 主渲染入口，增强主题、全局彩虹长卷与 SAMPLE 样品模式支持。
@@ -216,7 +216,7 @@ class FilmRenderer:
                 return final_output
 
             t_save_start = time.perf_counter()
-            result = self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name)
+            result = self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name, output_prefix=output_prefix)
             timings['save'] = time.perf_counter() - t_save_start
 
             timings['total'] = time.perf_counter() - t_start
@@ -650,11 +650,11 @@ class FilmRenderer:
         full_canvas.paste(canvas_rgba, (shadow_margin // 2, shadow_margin // 2), canvas_rgba)
         return full_canvas
 
-    def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name):
+    def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name, output_prefix=""):
         # EN: Default to JPG for better social media compatibility, fallback to PNG if requested
         # CN: 默认输出 JPG 以获得更好的社交平台兼容性（自动硬化阴影）
         ext = ".jpg"
-        out_name = f"GT23_{os.path.splitext(os.path.basename(original_path))[0]}{ext}"
+        out_name = f"GT23_{output_prefix}{os.path.splitext(os.path.basename(original_path))[0]}{ext}"
         save_path = os.path.join(output_dir, out_name)
         
         try:

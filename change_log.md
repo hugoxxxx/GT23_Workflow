@@ -1,6 +1,11 @@
 # Change Log / 变更日志
 
-## [2.3.1] - 2026-03-30
+## [2.3.1] - 2026-04-03
+
+### 📂 有序批量导出 (Ordered Batch Export)
+- **[Feature] 马卡龙 & 彩虹排序命名 / Ordered Naming for Specialty Themes**:
+  - EN: Output filenames in Macaron and Rainbow modes now follow the adjusted GUI sorting order by including a numeric prefix (e.g., `001_`, `002_`).
+  - CN: 马卡龙与彩虹模式下的批量导出文件名现在会增加数字前缀（如 `001_`, `002_`），以严格遵循用户在 GUI 中手动调整后的样片排序。
 
 ### ⚡ 瞬时预览与架构重塑 (Instant Preview & Architecture)
 - **[Performance] 全内存渲染管线 / Memory-Only Pipeline**:
