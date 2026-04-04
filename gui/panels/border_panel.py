@@ -122,14 +122,20 @@ class ThumbnailStrip(ttk.Frame):
                     draw.rounded_rectangle((0, 0) + img.size, radius=8, fill=255)
                     img.putalpha(mask)
                     
-                    photo = ImageTk.PhotoImage(img)
-                    self.thumbs[path] = photo
+                    # EN: IMPORTANT - Do NOT create PhotoImage in sub-thread
+                    # CN: 重要 - 不要在子线程中创建 PhotoImage，否则会导致 Tcl/Tk 内部报错 (AttributeError)
+                    processed_img = img.copy()
+                    
                     # EN: Safely update UI using the parent frame's after()
                     # CN: 使用父框架的 after() 安全更新 UI
-                    def safe_update(p=photo, target_lbl=lbl):
+                    def safe_update(pil_img=processed_img, target_lbl=lbl):
                         try:
                             if target_lbl.winfo_exists():
-                                target_lbl.configure(image=p, text="")
+                                # EN: Create PhotoImage in MAIN thread
+                                # CN: 在主线程中创建 PhotoImage
+                                photo = ImageTk.PhotoImage(pil_img)
+                                self.thumbs[path] = photo # EN: Persist reference / CN: 保持引用防止 GC
+                                target_lbl.configure(image=photo, text="")
                         except Exception:
                             pass
                     self.after(0, safe_update)
@@ -510,8 +516,9 @@ class BorderPanel:
         # EN: Process button / CN: 处理按钮 (Pinned to left frame bottom)
         process_text = "开始处理" if self.lang == "zh" else "Start Processing"
         self.process_button = ttk.Button(self.bottom_left_frame, text=process_text, 
-                                         command=self.start_processing, bootstyle="success", width=20)
+                                         command=self.on_process_click, bootstyle="success", width=20)
         self.process_button.pack(pady=(5, 5))
+        self.stop_requested = False 
         
         self.progress = ttk.Progressbar(self.bottom_left_frame, mode="determinate", bootstyle="success-striped")
         self.progress.pack(fill=X, pady=(0, 5))
@@ -611,6 +618,9 @@ class BorderPanel:
         """
         self.lang = lang
         
+        # EN: Safe check if worker thread is running / CN: 安全检查工作线程是否正在运行
+        is_running = self.worker_thread is not None and self.worker_thread.is_alive()
+        
         if lang == "zh":
             self.mode_frame.config(text="工作模式")
             self.film_radio.config(text="胶片项目")
@@ -637,7 +647,7 @@ class BorderPanel:
             self.theme_label.configure(width=12)
             self._update_theme_combo_values()
             self.redraw_preview()
-            self.process_button.config(text="开始处理")
+            self.process_button.config(text="开始处理" if not is_running else "停止处理 (Stop)")
             self.log_frame.config(text="处理日志")
             self.update_film_combo_values()
         else:
@@ -666,7 +676,7 @@ class BorderPanel:
             self.exif_frame.config(text="Manual EXIF Overrides (Leave blank to use file EXIF)")
             self.preview_frame.config(text="Preview (First Image in Folder)")
             self.redraw_preview()
-            self.process_button.config(text="Start Processing")
+            self.process_button.config(text="Start Processing" if not is_running else "Stop Processing (Cancel)")
             self.log_frame.config(text="Processing Log")
             self.update_film_combo_values()
         
@@ -869,17 +879,19 @@ class BorderPanel:
 
     def on_thumbnail_delete(self, path):
         """EN: Delete image from the current batch / CN: 从当前批次中删除图片"""
-        if path in self.image_configs:
-            del self.image_configs[path]
+        path_norm = os.path.normcase(os.path.normpath(path))
+        if not hasattr(self, 'deleted_paths'):
+            self.deleted_paths = set()
         
-        # Find new paths
-        folder = self.input_folder_var.get()
-        if not folder: return
+        self.deleted_paths.add(path_norm)
+        if path_norm in self.image_configs:
+            del self.image_configs[path_norm]
         
-        # EN: We don't delete from disk, just from the in-memory batch list if we had one
-        # CN: 我们不从磁盘删除，只是在样片条显示中移除（通过过滤 image_configs 或手动维护列表）
-        # Since we rely on os.listdir, we'll use a hack or a managed list.
-        # Let's use a managed list in image_configs keys.
+        # EN: Clean up current selection if it's the deleted one
+        # CN: 如果删除的是当前选中的，清除状态
+        if self.current_image_path and os.path.normcase(os.path.normpath(self.current_image_path)) == path_norm:
+            self.current_image_path = None
+            
         self.refresh_thumb_strip()
 
     def on_thumbnail_add(self):
@@ -897,6 +909,9 @@ class BorderPanel:
             self.refresh_thumb_strip()
     def refresh_thumb_strip(self):
         """EN: Refresh the strip based on image_configs / CN: 基于配置列表刷新样片条"""
+        if not hasattr(self, 'deleted_paths'):
+            self.deleted_paths = set()
+
         # EN: Always sync with current folder if possible / CN: 如果可能，始终与当前文件夹同步
         folder = self.input_folder_var.get()
         if folder and os.path.exists(folder):
@@ -904,6 +919,9 @@ class BorderPanel:
             print(f"DEBUG [RefreshScan]: scanning {folder}, found {len(files)} files")
             for f in files:
                 p = os.path.normcase(os.path.normpath(os.path.join(folder, f)))
+                # EN: Skip if explicitly deleted / CN: 如果已明确删除，则跳过
+                if p in self.deleted_paths:
+                    continue
                 if p not in self.image_configs:
                     # EN: Pre-fill with defaults / CN: 预填默认配置
                     self.image_configs[p] = {'theme': self.theme_var.get()}
@@ -1167,6 +1185,7 @@ class BorderPanel:
                             "浅色": "light"
                         }
                     theme_map = {
+                        "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
                         "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
                         "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
                         "dark": "dark", "深色": "dark", "Dark": "dark",
@@ -1185,7 +1204,7 @@ class BorderPanel:
                     r_total = 1 
                     r_range = (0.0, 1.0)
                     
-                    if theme_val == "macaron":
+                    if theme_val in ["macaron", "sakura"]:
                         # EN: Macaron Mode is always relative to batch position to support drag updates
                         # CN: 马卡龙模式始终相对于批次位置，以支持拖拽热更新
                         try:
@@ -1374,6 +1393,17 @@ class BorderPanel:
         if self.current_image_path:
             self.update_preview_for_path(self.current_image_path)
 
+    def on_process_click(self):
+        """EN: Toggle between start and stop / CN: 在开始与停止之间切换"""
+        if self.worker_thread and self.worker_thread.is_alive():
+            # EN: Request stop / CN: 请求停止
+            self.stop_requested = True
+            msg = "⚡ 正在停止..." if self.lang == "zh" else "⚡ Stopping..."
+            self.process_button.config(text=msg, bootstyle="danger", state="disabled")
+        else:
+            # EN: Start normal processing / CN: 开始正常处理
+            self.start_processing()
+
     def start_processing(self):
         """
         EN: Start border processing
@@ -1385,25 +1415,26 @@ class BorderPanel:
         
         input_folder = self.input_folder_var.get()
         if not input_folder or not os.path.exists(input_folder):
+            msg = "请先选择输入文件夹！" if self.lang == "zh" else "Please select input folder first!"
+            messagebox.showwarning("警告" if self.lang == "zh" else "Warning", msg)
             return
         
         # 1. EN: Save current active config first / CN: 首先保存当前激活的图片配置
         if self.current_image_path:
             self._save_current_to_state(self.current_image_path)
 
-        # 2. EN: Setup output folder / CN: 设置输出文件夹
+        # 2. EN: Prepare UI / CN: 准备 UI
+        self.stop_requested = False
+        msg = "停止处理 (Stop)" if self.lang == "zh" else "Stop Processing (Cancel)"
+        self.process_button.config(text=msg, bootstyle="danger-outline")
+        
+        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress['value'] = 0
+
+        # 3. EN: Setup output folder / CN: 设置输出文件夹
         working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
         output_folder = os.path.join(working_dir, "photos_out")
         os.makedirs(output_folder, exist_ok=True)
-
-        # 3. EN: UI Setup / CN: UI 设置
-        self.log_text.config(state="normal")
-        self.log_text.delete(1.0, tk.END)
-        self.log("开始处理..." if self.lang == "zh" else "Starting processing...")
-        self.log_text.config(state="disabled")
-        self.progress.pack(fill=X, pady=(0, 10))
-        self.progress['value'] = 0
-        self.process_button.config(state="disabled")
 
         # 4. EN: Collect global fallbacks (from current UI) / CN: 收集全局兜底配置（从当前 UI）
         global_cfg = {
@@ -1489,6 +1520,11 @@ class BorderPanel:
             meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
             
             for i, img_path in enumerate(files):
+                # EN: Check stop flag / CN: 检查停止标志
+                if self.stop_requested:
+                    self.log("\n⚡ 用户手动终止处理" if self.lang == "zh" else "\n⚡ User canceled processing")
+                    break
+
                 # EN: Calculate physical slice / CN: 计算物理切片比例
                 t_start = current_w_accum / total_rel_w
                 current_w_accum += relative_widths[i]
@@ -1538,6 +1574,7 @@ class BorderPanel:
                 # CN: 带有优先级的主题映射 (马卡龙/彩虹优先匹配)
                 # EN: Theme mapping (Support both localized names and internal keys)
                 t_map = {
+                    "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
                     "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
                     "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
                     "dark": "dark", "深色": "dark", "Dark": "dark",
@@ -1561,7 +1598,7 @@ class BorderPanel:
                 # EN: Generate 001_ prefix for Macaron/Rainbow to follow sorted order
                 # CN: 为马卡龙/彩虹模式生成 001_ 前缀，以遵循调整后的排序
                 out_prefix = ""
-                if theme_val in ["macaron", "rainbow"]:
+                if theme_val in ["macaron", "rainbow", "sakura"]:
                     out_prefix = f"{i+1:03d}_"
 
                 renderer.process_image(img_path, data, output_dir, 
@@ -1589,7 +1626,11 @@ class BorderPanel:
         CN: 处理完成回调
         """
         self.progress.pack_forget()
-        self.process_button.config(state="normal")
+        self.process_button.config(
+            text="开始处理" if self.lang == "zh" else "Start Processing",
+            bootstyle="primary-solid",
+            state="normal"
+        )
 
         if result.get('success'):
             self.log("\n✓ " + "="*50)
@@ -1661,9 +1702,9 @@ class BorderPanel:
         CN: 使用当前语言更新主题下拉框选项
         """
         if self.lang == "zh":
-            themes = ["浅色", "深色", "马卡龙", "彩虹"]
+            themes = ["浅色", "深色", "马卡龙", "彩虹", "樱花粉"]
         else:
-            themes = ["Default", "Dark Mode", "Macaron", "Rainbow"]
+            themes = ["Default", "Dark Mode", "Macaron", "Rainbow", "Sakura"]
 
         current = self.theme_var.get()
         self.theme_combo['values'] = themes

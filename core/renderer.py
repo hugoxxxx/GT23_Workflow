@@ -160,6 +160,31 @@ class FilmRenderer:
                 c1 = macaron_palette[c_idx % len(macaron_palette)]
                 c2 = macaron_palette[(c_idx + 1) % len(macaron_palette)]
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
+            elif theme == "sakura":
+                # EN: Sakura Pink Palette (Varying intensities for better visual distinction)
+                # CN: 樱花粉色库：优化明度，让整体色调更轻盈（响应老大反馈：调淡左侧和暗部）
+                sakura_palette = [
+                    # EN: Interleaved shades (Pale, Soft, Classic) - Lightened for better blending
+                    # CN: 交织色序 (淡妆 -> 柔粉 -> 经典)，整体上移明度，确保背景轻盈
+                    (255, 245, 247), (255, 203, 217), (255, 180, 200),
+                    (255, 235, 240), (255, 190, 205), (255, 170, 190),
+                    (255, 220, 235), (255, 185, 200), (255, 160, 180)
+                ]
+                # EN: Resolve color index (Deterministic based on position/path)
+                if rainbow_index >= 0:
+                    c_idx = rainbow_index
+                else:
+                    import hashlib
+                    c_idx = int(hashlib.md5(img_path.encode()).hexdigest(), 16) % len(sakura_palette)
+
+                # EN: Use a step of 2 to ensure we jump between distinctive shades
+                # CN: 使用跨步采样，确保渐变色对具备明显的明度或色相差
+                base_idx = c_idx % len(sakura_palette)
+                next_idx = (base_idx + 1) % len(sakura_palette)
+                
+                c1 = sakura_palette[base_idx]
+                c2 = sakura_palette[next_idx]
+                canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
@@ -205,7 +230,7 @@ class FilmRenderer:
             final_output = self._apply_pro_shadow(canvas, radius=20)
             timings['shadow'] = time.perf_counter() - t_shadow_start
 
-            if target_long_edge <= 1200:
+            if target_long_edge <= 1200 and not output_dir:
                 timings['total'] = time.perf_counter() - t_start
                 # EN: Flatten onto white background to match legacy JPG preview look
                 # CN: 复合纯白底色，以匹配旧版 JPG 预览图的视觉效果
@@ -239,6 +264,10 @@ class FilmRenderer:
             # EN: Logic handled by linear gradient canvas in process_image
             # CN: 实际方案由渲染入口的双色渐变引擎接管
             return (255, 255, 255), (32, 32, 32), (60, 60, 60), (235, 235, 235)
+        elif theme == "sakura":
+            # EN: Sakura Theme base colors (Refined Cherry/Rose Palette)
+            # CN: 樱花主题文字：使用更柔和的“黛樱红”与“落暮粉”，以适应更淡的背景
+            return (255, 245, 247), (125, 45, 65), (165, 95, 110), (255, 215, 225)
         elif theme == "rainbow":
             # EN: Saturated Fujifilm Instax Palette / CN: 高饱和富士拍立得色库
             palette = [
@@ -482,25 +511,27 @@ class FilmRenderer:
                         scaled_w = int(orig_w * (target_h / orig_h))
                         logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
 
-                    # --- EN: LOGO INTELLIGENT ADAPTATION / CN: LOGO 智能适配 ---
-                    # EN: If background is dark (m_color is light), adapt dark parts to white while preserving colors
-                    # CN: 如果背景是深色（文字颜色为浅色），将暗部（黑色文字）适配为白色，同时保留品牌色彩
-                    if m_color[0] > 200:
+                    # --- EN: LOGO INTELLIGENT TINTING / CN: LOGO 智能着色 ---
+                    # EN: If theme color is NOT black, adapt dark parts to match while preserving brand colors
+                    # CN: 如果文字颜色不是黑色，则将 Logo 暗部适配为该颜色，同时保留其品牌特有色彩
+                    is_black_theme = (m_color[0] < 40 and m_color[1] < 40 and m_color[2] < 40)
+                    if not is_black_theme:
                         if logo_img.mode != 'RGBA': logo_img = logo_img.convert('RGBA')
-                        # EN: Pixel-level scan to protect colors like Leica Red or Nikon Yellow
-                        # CN: 像素级扫描，保护徕卡红或尼康黄等品牌色
+                        # EN: Pixel-level scan to protect color brands while tinting "ink" parts
+                        # CN: 像素级扫描，在染色“墨迹”部分的同时保护徕卡红等专业标识
                         pixels = list(logo_img.getdata())
                         new_pixels = []
                         for r, g, b, a in pixels:
-                            # EN: Identify dark neutral pixels (Blacks)
-                            # CN: 识别暗中性色像素（黑色部分）
-                            is_dark = (r < 85 and g < 85 and b < 85)
-                            is_neutral = (abs(r-g) < 20 and abs(g-b) < 20)
+                            # EN: Identify dark neutral pixels (potential candidates for theme tinting)
+                            # CN: 识别暗中性色像素（可能是黑色文字或线条）
+                            is_dark = (r < 100 and g < 100 and b < 100)
+                            is_neutral = (abs(r-g) < 30 and abs(g-b) < 30)
                             if is_dark and is_neutral:
-                                # EN: Flip to white but keep original alpha / CN: 翻转为白色，保留原始透明度
-                                new_pixels.append((255, 255, 255, a))
+                                # EN: Tint to theme color but keep original alpha / CN: 染色为主题色，保留原始透明度
+                                new_pixels.append((*m_color, a))
                             else:
-                                # EN: Preserve brand colors / CN: 保留品牌色
+                                # EN: Preserve brand colors (e.g. Leica Red, Nikon Yellow)
+                                # CN: 保留品牌特有色彩
                                 new_pixels.append((r, g, b, a))
                         logo_img.putdata(new_pixels)
 

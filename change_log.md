@@ -1,5 +1,15 @@
 # Change Log / 变更日志
 
+## [2.3.4-alpha] - 2026-04-04
+
+### 🐛 稳定性与崩溃修复 (Stability & Crash Fixes)
+- [Fix] PhotoImage 线程安全修复 / PhotoImage Thread-Safety:
+  - EN: Fixed `AttributeError: 'PhotoImage' object has no attribute '_PhotoImage__photo'` on startup by ensuring all `ImageTk.PhotoImage` instances are initialized on the main thread.
+  - CN: 彻底修复了启动时可能出现的 `AttributeError: 'PhotoImage' object has no attribute '_PhotoImage__photo'` 报错。通过将 `ThumbnailStrip` 的缩略图生成逻辑解耦，确保所有 `PhotoImage` 实例均在主线程中创建，提升了多线程环境下的 GUI 稳定性。
+- [Fix] 语言切换崩溃修复 / Language Switch Crash Fix:
+  - EN: Resolved `AttributeError: 'NoneType' object has no attribute 'is_alive'` in `update_language()` when checking the worker thread status before initialization.
+  - CN: 修复了 `update_language()` 中由于 `worker_thread` 尚未初始化即调用 `is_alive()` 导致的 `NoneType` 崩溃问题。
+
 ## [2.3.1] - 2026-04-03
 
 ### 📂 有序批量导出 (Ordered Batch Export)
