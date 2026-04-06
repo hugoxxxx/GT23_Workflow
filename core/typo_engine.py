@@ -4,6 +4,7 @@
 
 import os
 import sys
+import time
 from fontTools.ttLib import TTFont
 from PIL import ImageFont
 
@@ -12,6 +13,7 @@ class TypoEngine:
     EN: Dedicated typography engine for kerning.
     CN: 排版引擎，专门处理字间距算法。
     """
+    _font_cache = {}  # EN: Cache for (path, size) -> (pil_font, ttfont)
     @staticmethod
     def get_kerning_offset(ttfont, left, right, font_size):
         # EN: Extract kerning offset from native kern table
@@ -49,28 +51,34 @@ class TypoEngine:
         return os.path.join(project_root, font_path)
 
     @classmethod
-    def draw_text(cls, draw, pos, text, font_path, font_size, fill):
+    def draw_text(cls, draw, pos, text, font_path, font_size, fill, timings=None, key_prefix="text"):
         """EN: Render text with native kern table.
            CN: 调用原生 Kern 表渲染文本。"""
-        # EN: Resolve font path to support both script and EXE environments
-        # CN: 解析字体路径，同时支持脚本和 EXE 环境
+        if timings is None: timings = {}
+        t0 = time.perf_counter()
         font_path = cls._resolve_font_path(font_path)
         
-        try:
-            # EN: Handle TTC collections by defaulting to index 0 / CN: 处理 TTC 字库集合（默认索引 0）
-            if font_path.lower().endswith(".ttc"):
-                ttfont = TTFont(font_path, fontNumber=0)
-                pil_font = ImageFont.truetype(font_path, font_size, index=0)
-            else:
-                ttfont = TTFont(font_path)
-                pil_font = ImageFont.truetype(font_path, font_size)
-        except Exception as e:
-            # EN: Fallback to default font if loading fails
-            # CN: 如果加载失败，回退到默认字体
-            pil_font = ImageFont.load_default()
-            # EN: Draw text without kerning / CN: 不使用字间距绘制文本
-            draw.text(pos, text, font=pil_font, fill=fill, anchor="mm")
-            return
+        cache_key = (font_path, font_size)
+        if cache_key in cls._font_cache:
+            pil_font, ttfont = cls._font_cache[cache_key]
+            timings[f'{key_prefix}_load'] = time.perf_counter() - t0
+        else:
+            try:
+                if font_path.lower().endswith(".ttc"):
+                    ttfont = TTFont(font_path, fontNumber=0)
+                    pil_font = ImageFont.truetype(font_path, font_size, index=0)
+                else:
+                    ttfont = TTFont(font_path)
+                    pil_font = ImageFont.truetype(font_path, font_size)
+                cls._font_cache[cache_key] = (pil_font, ttfont)
+                timings[f'{key_prefix}_load'] = time.perf_counter() - t0
+            except Exception as e:
+                # EN: Fallback to default font if loading fails
+                # CN: 如果加载失败，回退到默认字体
+                pil_font = ImageFont.load_default()
+                # EN: Draw text without kerning / CN: 不使用字间距绘制文本
+                draw.text(pos, text, font=pil_font, fill=fill, anchor="mm")
+                return
         
         chars = list(text)
         
@@ -132,9 +140,12 @@ class TypoEngine:
 
         # EN: Render each character with refined coordinates
         # CN: 使用对齐后的坐标进行逐字渲染
+        t_render = time.perf_counter()
         for i, char in enumerate(chars):
             char_x = start_x + relative_x_positions[i]
             y_offset = font_size * 0.02
             # EN: Use anchor="lm" (left middle) for individual chars to keep vertical centering
             # CN: 对单个字符使用 "lm" 锚点，以保持垂直方向上的居中
             draw.text((char_x, pos[1] + y_offset), char, font=pil_font, fill=colors[i], anchor="lm")
+        timings[f'{key_prefix}_render'] = time.perf_counter() - t_render
+        timings[f'{key_prefix}_total'] = time.perf_counter() - t0

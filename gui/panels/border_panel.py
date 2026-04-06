@@ -12,12 +12,13 @@ import json
 import tempfile
 import shutil
 import threading
+import time
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import filedialog, messagebox
 from tkinter import scrolledtext
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps, ImageDraw, ImageFilter
 from core.metadata import MetadataHandler
 from core.renderer import FilmRenderer, bootstrap_logos
 from concurrent.futures import ThreadPoolExecutor
@@ -121,14 +122,20 @@ class ThumbnailStrip(ttk.Frame):
                     draw.rounded_rectangle((0, 0) + img.size, radius=8, fill=255)
                     img.putalpha(mask)
                     
-                    photo = ImageTk.PhotoImage(img)
-                    self.thumbs[path] = photo
+                    # EN: IMPORTANT - Do NOT create PhotoImage in sub-thread
+                    # CN: 重要 - 不要在子线程中创建 PhotoImage，否则会导致 Tcl/Tk 内部报错 (AttributeError)
+                    processed_img = img.copy()
+                    
                     # EN: Safely update UI using the parent frame's after()
                     # CN: 使用父框架的 after() 安全更新 UI
-                    def safe_update(p=photo, target_lbl=lbl):
+                    def safe_update(pil_img=processed_img, target_lbl=lbl):
                         try:
                             if target_lbl.winfo_exists():
-                                target_lbl.configure(image=p, text="")
+                                # EN: Create PhotoImage in MAIN thread
+                                # CN: 在主线程中创建 PhotoImage
+                                photo = ImageTk.PhotoImage(pil_img)
+                                self.thumbs[path] = photo # EN: Persist reference / CN: 保持引用防止 GC
+                                target_lbl.configure(image=photo, text="")
                         except Exception:
                             pass
                     self.after(0, safe_update)
@@ -279,6 +286,11 @@ class BorderPanel:
         self.batch_width_cache = {} # normalized_path -> aspect_ratio
         self.current_batch_paths = [] # Ordered normalized paths
         self._loading_state = False # EN: Guard for trace feedback / CN: 防止监听回环的任务锁
+        self.preview_source_cache = {} # EN: path -> {rotation: pil_img}
+        
+        # EN: Global EXIF flag (Single master switch)
+        # CN: 全局 EXIF 标志位，一个开关控制所有字段是否“全局同步”
+        self.exif_global_var = tk.BooleanVar(value=False)
         
         # EN: Load layout config for parameter initialization / CN: 加载布局配置用于参数初始化
         self.layout_config = {}
@@ -404,6 +416,10 @@ class BorderPanel:
         self.manual_label.pack(side=LEFT, padx=(0, 10))
         self.film_combo = ttk.Combobox(film_row, state="disabled")
         self.film_combo.pack(side=LEFT, fill=X, expand=YES)
+        # EN: Refresh preview when selection changes or Enter is pressed
+        # CN: 选择改变或敲击回车时刷新预览
+        self.film_combo.bind("<<ComboboxSelected>>", lambda e: self.on_params_changed())
+        self.film_combo.bind("<Return>", lambda e: self.on_params_changed())
 
         # EN: Advanced settings (border parameters) / CN: 高级设置（边框参数）
         advanced_text = "高级设置" if self.lang == "zh" else "Advanced Settings"
@@ -455,6 +471,14 @@ class BorderPanel:
         self.exif_frame = ttk.Labelframe(self.left_frame, text=exif_text, padding=5)
         self.exif_frame.pack(fill=X, pady=(0, 5))
 
+        # EN: Global Sync Switch (Master) / CN: 全局同步主开关
+        sync_text = "全局应用" if self.lang == "zh" else "Apply to All"
+        self.global_sync_check = ttk.Checkbutton(self.exif_frame, text=sync_text, 
+                                               variable=self.exif_global_var, 
+                                               command=self.on_params_changed,
+                                               bootstyle="round-toggle")
+        self.global_sync_check.pack(anchor=W, padx=5, pady=(5, 5))
+
         # Variables for EXIF overrides
         self.exif_make_var = ttk.StringVar()
         self.exif_model_var = ttk.StringVar()
@@ -490,9 +514,10 @@ class BorderPanel:
         def add_exif_field_to_grid(parent, label_text, var, show_var, col):
             container = ttk.Frame(parent)
             container.grid(row=0, column=col, sticky=EW)
-            # EN: Small toggle / CN: 小型勾选框
-            cb = ttk.Checkbutton(container, variable=show_var, command=self.on_params_changed)
-            cb.pack(side=LEFT, padx=(2, 0))
+            # EN: Visibility toggle / CN: 显示开关
+            cb_show = ttk.Checkbutton(container, variable=show_var, command=self.on_params_changed)
+            cb_show.pack(side=LEFT, padx=(2, 0))
+            
             ttk.Label(container, text=label_text, width=8).pack(side=LEFT)
             entry = ttk.Entry(container, textvariable=var, width=18)
             entry.pack(side=LEFT, padx=(0, 10), fill=X, expand=YES)
@@ -508,8 +533,9 @@ class BorderPanel:
         # EN: Process button / CN: 处理按钮 (Pinned to left frame bottom)
         process_text = "开始处理" if self.lang == "zh" else "Start Processing"
         self.process_button = ttk.Button(self.bottom_left_frame, text=process_text, 
-                                         command=self.start_processing, bootstyle="success", width=20)
+                                         command=self.on_process_click, bootstyle="success", width=20)
         self.process_button.pack(pady=(5, 5))
+        self.stop_requested = False 
         
         self.progress = ttk.Progressbar(self.bottom_left_frame, mode="determinate", bootstyle="success-striped")
         self.progress.pack(fill=X, pady=(0, 5))
@@ -609,6 +635,9 @@ class BorderPanel:
         """
         self.lang = lang
         
+        # EN: Safe check if worker thread is running / CN: 安全检查工作线程是否正在运行
+        is_running = self.worker_thread is not None and self.worker_thread.is_alive()
+        
         if lang == "zh":
             self.mode_frame.config(text="工作模式")
             self.film_radio.config(text="胶片项目")
@@ -630,12 +659,13 @@ class BorderPanel:
             self.font_label.config(text="字体基础")
             self.font_label.configure(width=12)
             self.exif_frame.config(text="手动 EXIF 覆盖 (留空则读取原图)")
+            self.global_sync_check.config(text="全局应用")
             self.preview_frame.config(text="预览（显示文件夹第一张图片）")
             self.theme_label.config(text="边框主题")
             self.theme_label.configure(width=12)
             self._update_theme_combo_values()
             self.redraw_preview()
-            self.process_button.config(text="开始处理")
+            self.process_button.config(text="开始处理" if not is_running else "停止处理 (Stop)")
             self.log_frame.config(text="处理日志")
             self.update_film_combo_values()
         else:
@@ -662,9 +692,10 @@ class BorderPanel:
             self.theme_label.configure(width=15)
             self._update_theme_combo_values()
             self.exif_frame.config(text="Manual EXIF Overrides (Leave blank to use file EXIF)")
+            self.global_sync_check.config(text="Apply to All")
             self.preview_frame.config(text="Preview (First Image in Folder)")
             self.redraw_preview()
-            self.process_button.config(text="Start Processing")
+            self.process_button.config(text="Start Processing" if not is_running else "Stop Processing (Cancel)")
             self.log_frame.config(text="Processing Log")
             self.update_film_combo_values()
         
@@ -867,17 +898,19 @@ class BorderPanel:
 
     def on_thumbnail_delete(self, path):
         """EN: Delete image from the current batch / CN: 从当前批次中删除图片"""
-        if path in self.image_configs:
-            del self.image_configs[path]
+        path_norm = os.path.normcase(os.path.normpath(path))
+        if not hasattr(self, 'deleted_paths'):
+            self.deleted_paths = set()
         
-        # Find new paths
-        folder = self.input_folder_var.get()
-        if not folder: return
+        self.deleted_paths.add(path_norm)
+        if path_norm in self.image_configs:
+            del self.image_configs[path_norm]
         
-        # EN: We don't delete from disk, just from the in-memory batch list if we had one
-        # CN: 我们不从磁盘删除，只是在样片条显示中移除（通过过滤 image_configs 或手动维护列表）
-        # Since we rely on os.listdir, we'll use a hack or a managed list.
-        # Let's use a managed list in image_configs keys.
+        # EN: Clean up current selection if it's the deleted one
+        # CN: 如果删除的是当前选中的，清除状态
+        if self.current_image_path and os.path.normcase(os.path.normpath(self.current_image_path)) == path_norm:
+            self.current_image_path = None
+            
         self.refresh_thumb_strip()
 
     def on_thumbnail_add(self):
@@ -895,6 +928,9 @@ class BorderPanel:
             self.refresh_thumb_strip()
     def refresh_thumb_strip(self):
         """EN: Refresh the strip based on image_configs / CN: 基于配置列表刷新样片条"""
+        if not hasattr(self, 'deleted_paths'):
+            self.deleted_paths = set()
+
         # EN: Always sync with current folder if possible / CN: 如果可能，始终与当前文件夹同步
         folder = self.input_folder_var.get()
         if folder and os.path.exists(folder):
@@ -902,6 +938,9 @@ class BorderPanel:
             print(f"DEBUG [RefreshScan]: scanning {folder}, found {len(files)} files")
             for f in files:
                 p = os.path.normcase(os.path.normpath(os.path.join(folder, f)))
+                # EN: Skip if explicitly deleted / CN: 如果已明确删除，则跳过
+                if p in self.deleted_paths:
+                    continue
                 if p not in self.image_configs:
                     # EN: Pre-fill with defaults / CN: 预填默认配置
                     self.image_configs[p] = {'theme': self.theme_var.get()}
@@ -988,7 +1027,9 @@ class BorderPanel:
                 'show_shutter': self.show_shutter_var.get(),
                 'show_aperture': self.show_aperture_var.get(),
                 'show_iso': self.show_iso_var.get(),
-                'show_lens': self.show_lens_var.get()
+                'show_lens': self.show_lens_var.get(),
+                # EN: Store global synchronization flag / CN: 存储全局同步标志位
+                'global_lock': self.exif_global_var.get()
             }
         }
 
@@ -1019,13 +1060,6 @@ class BorderPanel:
                 self.rotation_var.set(cfg.get('rotation', 0))
                 self.auto_detect_var.set(cfg.get('auto_detect', True))
                 exif = cfg.get('exif', {})
-                self.exif_make_var.set(exif.get('Make', ''))
-                self.exif_model_var.set(exif.get('Model', ''))
-                self.exif_lens_var.set(exif.get('Lens', ''))
-                self.exif_shutter_var.set(exif.get('Shutter', ''))
-                self.exif_aperture_var.set(exif.get('Aperture', ''))
-                self.exif_iso_var.set(exif.get('ISO', ''))
-                
                 # Show flags with default=1
                 self.show_make_var.set(exif.get('show_make', 1))
                 self.show_model_var.set(exif.get('show_model', 1))
@@ -1033,6 +1067,16 @@ class BorderPanel:
                 self.show_aperture_var.set(exif.get('show_aperture', 1))
                 self.show_iso_var.set(exif.get('show_iso', 1))
                 self.show_lens_var.set(exif.get('show_lens', 1))
+
+                # EN: Load EXIF content - ONLY if not globally locked
+                # CN: 加载 EXIF 内容 - 仅在未处于“全局应用”状态时从图片配置中加载
+                if not self.exif_global_var.get():
+                    self.exif_make_var.set(exif.get('Make', ''))
+                    self.exif_model_var.set(exif.get('Model', ''))
+                    self.exif_lens_var.set(exif.get('Lens', ''))
+                    self.exif_shutter_var.set(exif.get('Shutter', ''))
+                    self.exif_aperture_var.set(exif.get('Aperture', ''))
+                    self.exif_iso_var.set(exif.get('ISO', ''))
                 
                 self.on_auto_detect_changed() # Update combo state
                 # EN: We no longer set mode_var here to keep it global
@@ -1079,12 +1123,44 @@ class BorderPanel:
             self._preview_error_msg = None
             self.redraw_preview()
 
-            def worker(img_path, job_mark, is_digital_mode, is_pure_mode, manual_film_keyword):
-                temp_dir = None
+            def worker(img_path, job_mark, is_digital_mode, is_pure_mode, manual_film_keyword, manual_rotation):
+                t_total_start = time.perf_counter()
+                render_timings = {}
                 try:
-                    temp_dir = tempfile.mkdtemp(prefix="gt23_preview_")
+                    # EN: Check if the source image is already cached for this rotation
+                    # CN: 检查该旋转角度下的源图是否已被缓存
+                    cache_entry = self.preview_source_cache.get(img_path, {})
+                    source_img = cache_entry.get(manual_rotation)
+                    
+                    if source_img is None:
+                        # EN: Cache miss - load, rotate, and scale once / CN: 缓存未命中 - 仅执行一次加载、旋转和缩放
+                        t_load_start = time.perf_counter()
+                        with Image.open(img_path) as raw_img:
+                            if raw_img.format == 'JPEG':
+                                raw_img.draft(raw_img.mode, (2400, 2400)) # 2x of 1200
+                            img = ImageOps.exif_transpose(raw_img)
+                            if manual_rotation != 0:
+                                img = img.rotate(-manual_rotation, expand=True)
+                            if img.mode != "RGB":
+                                img = img.convert("RGB")
+                            
+                            # Pre-scale to preview size (1200)
+                            w, h = img.size
+                            scale = 1200 / max(w, h)
+                            source_img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.BILINEAR)
+                        
+                        render_timings['load_rotate'] = time.perf_counter() - t_load_start
+                        render_timings['resize'] = 0 # Included in load_rotate for cache miss
+                        # Store in cache
+                        self.preview_source_cache[img_path] = {manual_rotation: source_img}
+                    else:
+                        render_timings['load_rotate'] = 0
+                        render_timings['resize'] = 0
+                    
+                    t_meta_start = time.perf_counter()
                     meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
                     data = meta.get_data(img_path, is_digital_mode=is_digital_mode, manual_film=manual_film_keyword)
+                    t_meta = time.perf_counter() - t_meta_start
                     
                     # EN: Apply custom layout params to preview / CN: 将自定义布局参数应用到预览
                     custom_layout = {
@@ -1133,6 +1209,7 @@ class BorderPanel:
                             "浅色": "light"
                         }
                     theme_map = {
+                        "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
                         "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
                         "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
                         "dark": "dark", "深色": "dark", "Dark": "dark",
@@ -1151,7 +1228,7 @@ class BorderPanel:
                     r_total = 1 
                     r_range = (0.0, 1.0)
                     
-                    if theme_val == "macaron":
+                    if theme_val in ["macaron", "sakura"]:
                         # EN: Macaron Mode is always relative to batch position to support drag updates
                         # CN: 马卡龙模式始终相对于批次位置，以支持拖拽热更新
                         try:
@@ -1188,24 +1265,20 @@ class BorderPanel:
                             # DEBUG
                             print(f"DEBUG [Preview]: path={os.path.basename(img_path)}, found={found}, r_range={r_range}, total_rel_w={total_rel_w}")
 
-                    out_name = renderer.process_image(img_path, data, temp_dir, 
+                    # EN: Memory-based render call / CN: 基于内存的渲染调用
+                    final_pil = renderer.process_image(img_path, data, None, 
                                                      target_long_edge=1200, 
-                                                     manual_rotation=data.get('manual_rotation', 0),
+                                                     manual_rotation=manual_rotation,
                                                      theme=theme_val,
                                                      is_pure=is_pure_mode,
                                                      rainbow_index=r_index,
                                                      rainbow_total=r_total,
-                                                     rainbow_range=r_range)
+                                                     rainbow_range=r_range,
+                                                     timing_results=render_timings,
+                                                     source_img=source_img)
 
-                    out_path = os.path.join(temp_dir, out_name)
-                    if not os.path.exists(out_path):
-                        raise FileNotFoundError(out_name)
-
-                    with Image.open(out_path) as img:
-                        img = img.convert("RGB")
-                        # Keep high-res bounds
-                        img.thumbnail((2000, 2000))
-                        img_copy = img.copy()
+                    # EN: Final image for display (Already flattened to RGB in renderer)
+                    img_copy = final_pil.copy()
 
                     def apply_image():
                         if job_mark != getattr(self, 'preview_job_id', None):
@@ -1213,10 +1286,30 @@ class BorderPanel:
                         self._is_loading_preview = False
                         self._current_preview_pil = img_copy
                         self.redraw_preview()
+                        
+                        # EN: Log performance report / CN: 记录性能报告
+                        total_time = time.perf_counter() - t_total_start
+                        log_msg = f"\n--- Performance Report ({os.path.basename(img_path)}) ---"
+                        log_msg += f"\n[Step 1] Metadata: {t_meta*1000:.1f}ms"
+                        log_msg += f"\n[Step 2] Render Breakdown:"
+                        log_msg += f"\n  - Load & Rotate: {render_timings.get('load_rotate', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Resize: {render_timings.get('resize', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Layout: {render_timings.get('layout_calc', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Canvas: {render_timings.get('canvas_paste', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Logo Render: {render_timings.get('logo_render', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Text Main (Load/Draw): {render_timings.get('text_main_load', 0)*1000:.1f}/{render_timings.get('text_main_render', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Text Sub (Load/Draw): {render_timings.get('text_sub_load', 0)*1000:.1f}/{render_timings.get('text_sub_render', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Shadow: {render_timings.get('shadow', 0)*1000:.1f}ms"
+                        log_msg += f"\n  - Save: {render_timings.get('save', 0)*1000:.1f}ms"
+                        log_msg += f"\n[Step 3] Total Cycle: {total_time*1000:.1f}ms"
+                        log_msg += "\n" + "-"*40
+                        self.log(log_msg)
 
                     self.parent.after(0, apply_image)
 
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
                     error_msg = str(e)
                     def apply_error(msg=error_msg):
                         if job_mark != getattr(self, 'preview_job_id', None):
@@ -1239,13 +1332,10 @@ class BorderPanel:
 
                     self.parent.after(0, apply_error)
 
-                finally:
-                    if temp_dir and os.path.exists(temp_dir):
-                        shutil.rmtree(temp_dir, ignore_errors=True)
-
+            # EN: Start thread / CN: 启动线程
             self.preview_thread = threading.Thread(
-                target=worker,
-                args=(img_path, job_id, is_digital, is_pure, manual_film),
+                target=worker, 
+                args=(img_path, job_id, is_digital, is_pure, manual_film, self.rotation_var.get()),
                 daemon=True
             )
             self.preview_thread.start()
@@ -1317,6 +1407,31 @@ class BorderPanel:
                 'theme': self.theme_var.get()
             })
             
+            # EN: Handle EXIF Global Synchronization / CN: 处理 EXIF 全局同步逻辑
+            if self.exif_global_var.get() and self.current_batch_paths:
+                # EN: Map internal keys to UI variables / CN: 映射内部键名到 UI 变量
+                exif_map = {
+                    'Make': self.exif_make_var,
+                    'Model': self.exif_model_var,
+                    'Shutter': self.exif_shutter_var,
+                    'Aperture': self.exif_aperture_var,
+                    'ISO': self.exif_iso_var,
+                    'Lens': self.exif_lens_var
+                }
+                
+                # EN: Broadcast values to ALL image configs / CN: 将值广播到所有图片配置中
+                for p in self.current_batch_paths:
+                    if p not in self.image_configs:
+                        self.image_configs[p] = {}
+                    if 'exif' not in self.image_configs[p]:
+                        self.image_configs[p]['exif'] = {}
+                    
+                    for field, var in exif_map.items():
+                        self.image_configs[p]['exif'][field] = var.get().strip()
+                    
+                    # Also sync the lock state itself
+                    self.image_configs[p]['exif']['global_lock'] = True
+
             self.update_preview_for_path(self.current_image_path)
 
     def notify_order_changed(self, new_paths):
@@ -1326,6 +1441,17 @@ class BorderPanel:
         
         if self.current_image_path:
             self.update_preview_for_path(self.current_image_path)
+
+    def on_process_click(self):
+        """EN: Toggle between start and stop / CN: 在开始与停止之间切换"""
+        if self.worker_thread and self.worker_thread.is_alive():
+            # EN: Request stop / CN: 请求停止
+            self.stop_requested = True
+            msg = "⚡ 正在停止..." if self.lang == "zh" else "⚡ Stopping..."
+            self.process_button.config(text=msg, bootstyle="danger", state="disabled")
+        else:
+            # EN: Start normal processing / CN: 开始正常处理
+            self.start_processing()
 
     def start_processing(self):
         """
@@ -1338,25 +1464,26 @@ class BorderPanel:
         
         input_folder = self.input_folder_var.get()
         if not input_folder or not os.path.exists(input_folder):
+            msg = "请先选择输入文件夹！" if self.lang == "zh" else "Please select input folder first!"
+            messagebox.showwarning("警告" if self.lang == "zh" else "Warning", msg)
             return
         
         # 1. EN: Save current active config first / CN: 首先保存当前激活的图片配置
         if self.current_image_path:
             self._save_current_to_state(self.current_image_path)
 
-        # 2. EN: Setup output folder / CN: 设置输出文件夹
+        # 2. EN: Prepare UI / CN: 准备 UI
+        self.stop_requested = False
+        msg = "停止处理 (Stop)" if self.lang == "zh" else "Stop Processing (Cancel)"
+        self.process_button.config(text=msg, bootstyle="danger-outline")
+        
+        self.progress.pack(fill=X, pady=(0, 10))
+        self.progress['value'] = 0
+
+        # 3. EN: Setup output folder / CN: 设置输出文件夹
         working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
         output_folder = os.path.join(working_dir, "photos_out")
         os.makedirs(output_folder, exist_ok=True)
-
-        # 3. EN: UI Setup / CN: UI 设置
-        self.log_text.config(state="normal")
-        self.log_text.delete(1.0, tk.END)
-        self.log("开始处理..." if self.lang == "zh" else "Starting processing...")
-        self.log_text.config(state="disabled")
-        self.progress.pack(fill=X, pady=(0, 10))
-        self.progress['value'] = 0
-        self.process_button.config(state="disabled")
 
         # 4. EN: Collect global fallbacks (from current UI) / CN: 收集全局兜底配置（从当前 UI）
         global_cfg = {
@@ -1442,6 +1569,11 @@ class BorderPanel:
             meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
             
             for i, img_path in enumerate(files):
+                # EN: Check stop flag / CN: 检查停止标志
+                if self.stop_requested:
+                    self.log("\n⚡ 用户手动终止处理" if self.lang == "zh" else "\n⚡ User canceled processing")
+                    break
+
                 # EN: Calculate physical slice / CN: 计算物理切片比例
                 t_start = current_w_accum / total_rel_w
                 current_w_accum += relative_widths[i]
@@ -1491,6 +1623,7 @@ class BorderPanel:
                 # CN: 带有优先级的主题映射 (马卡龙/彩虹优先匹配)
                 # EN: Theme mapping (Support both localized names and internal keys)
                 t_map = {
+                    "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
                     "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
                     "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
                     "dark": "dark", "深色": "dark", "Dark": "dark",
@@ -1511,13 +1644,20 @@ class BorderPanel:
                 r_range = (t_start, t_end)
                 r_idx = i % 9 # Position-based indexing
 
+                # EN: Generate 001_ prefix for Macaron/Rainbow to follow sorted order
+                # CN: 为马卡龙/彩虹模式生成 001_ 前缀，以遵循调整后的排序
+                out_prefix = ""
+                if theme_val in ["macaron", "rainbow", "sakura"]:
+                    out_prefix = f"{i+1:03d}_"
+
                 renderer.process_image(img_path, data, output_dir, 
                                      manual_rotation=cfg.get('rotation', global_cfg['rotation']) if cfg else global_cfg['rotation'],
                                      theme=theme_val,
                                      is_pure=is_pure,
                                      rainbow_index=r_idx,
                                      rainbow_total=total,
-                                     rainbow_range=r_range)
+                                     rainbow_range=r_range,
+                                     output_prefix=out_prefix)
 
             self.parent.after(0, lambda: self.on_processing_complete({'success': True, 'processed': total}))
         except Exception as e:
@@ -1535,7 +1675,11 @@ class BorderPanel:
         CN: 处理完成回调
         """
         self.progress.pack_forget()
-        self.process_button.config(state="normal")
+        self.process_button.config(
+            text="开始处理" if self.lang == "zh" else "Start Processing",
+            bootstyle="primary-solid",
+            state="normal"
+        )
 
         if result.get('success'):
             self.log("\n✓ " + "="*50)
@@ -1607,9 +1751,9 @@ class BorderPanel:
         CN: 使用当前语言更新主题下拉框选项
         """
         if self.lang == "zh":
-            themes = ["浅色", "深色", "马卡龙", "彩虹"]
+            themes = ["浅色", "深色", "马卡龙", "彩虹", "樱花粉"]
         else:
-            themes = ["Default", "Dark Mode", "Macaron", "Rainbow"]
+            themes = ["Default", "Dark Mode", "Macaron", "Rainbow", "Sakura"]
 
         current = self.theme_var.get()
         self.theme_combo['values'] = themes
