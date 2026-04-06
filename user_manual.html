@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GT23 胶片工作流 - 使用说明书</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e67e22;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --muted-color: #7f8c8d;
+            --border-color: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            line-height: 1.8;
+            color: var(--text-color);
+            background-color: #f9fbfd;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 50px auto;
+            background: var(--bg-color);
+            padding: 60px 80px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border-radius: 8px;
+        }
+
+        @media print {
+            body { background: white; }
+            .container { 
+                box-shadow: none; 
+                margin: 0; 
+                padding: 40px; 
+                max-width: 100%;
+            }
+            .no-print { display: none; }
+        }
+
+        header {
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--muted-color);
+            font-size: 1.1rem;
+        }
+
+        h2 {
+            border-left: 5px solid var(--accent-color);
+            padding-left: 15px;
+            margin-top: 40px;
+            font-size: 1.6rem;
+            color: var(--primary-color);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            margin-top: 25px;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 30px 0;
+        }
+
+        ul, ol {
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        code {
+            background: #f4f7f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95em;
+            color: #d63384;
+        }
+
+        strong {
+            color: var(--primary-color);
+        }
+
+        .tip {
+            background: #fff8f0;
+            border-left: 4px solid var(--accent-color);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .footer {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--muted-color);
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+
+        .btn-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <button class="btn-print no-print" onclick="window.print()">📥 导出 PDF / 打印</button>
+
+    <div class="container">
+        <header>
+            <h1>GT23 胶片工作流</h1>
+            <div class="subtitle">完整使用说明书 (v2.3.1)</div>
+        </header>
+
+        <p>欢迎使用 <strong>GT23 胶片工作流 (GT23 Film Workflow)</strong>。本工具专为胶片摄影师设计，旨在提供专业、优雅的影像后期呈现方案，包括全卷底片索引生成与高度自定义的影像边框处理。</p>
+
+        <hr>
+
+        <h2>1. 快速入门 (Quick Start)</h2>
+        
+        <h3>目录与资源准备</h3>
+        <p>程序首次运行会自动在根目录下创建以下文件夹：</p>
+        <ul>
+            <li><code>photos_in/</code>: 存放待处理的原始照片（支持 JPG/PNG）。</li>
+            <li><code>photos_out/</code>: 处理后的成品照片将保存在此。</li>
+            <li><code>GT23_Assets/</code>: 核心配置与资源目录，包含相机品牌图标、字体及配置文件。</li>
+        </ul>
+
+        <div class="tip">
+            <strong>提示：</strong> 首次运行建议点击 <strong>[帮助] -> [同步边框资源]</strong>。系统将从云端下载数以百计的相机 Logo、镜头配置文件及胶片预设。
+        </div>
+
+        <hr>
+
+        <h2>2. 边框工具 (Border Tool)</h2>
+        <p>此面板提供专业、精美的影像边框和 EXIF 数据标签。具备强大的自动识别与手动覆盖功能。</p>
+
+        <h3>影像管理</h3>
+        <ul>
+            <li><strong>样片导航条</strong>：实时预览待处理图片，支持鼠标拖拽排序。</li>
+            <li><strong>工作模式</strong>：
+                <ul>
+                    <li><strong>胶片项目</strong>: 侧重显示胶片品牌，自动开启颗粒质感。</li>
+                    <li><strong>数码项目</strong>: 显示拍摄参数（ISO、焦距等），侧重器材展示。</li>
+                    <li><strong>纯净模式</strong>: 仅保留边框线条，不添加任何文字。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>高级设置</h3>
+        <ul>
+            <li><strong>边框主题</strong>: 提供 <code>Default (浅色)</code>, <code>Dark (深色)</code>, <code>Macaron (马卡龙)</code>, <code>Rainbow (彩虹)</code> 等多种艺术主题。</li>
+            <li><strong>比例微调</strong>: 自由控制四周留白的厚度与字体比例。</li>
+        </ul>
+
+        <h3>EXIF 元数据录入</h3>
+        <ul>
+            <li><strong>原图保留</strong>: 导出时完整保留拍摄日期、GPS 等关键信息。</li>
+            <li><strong>全局应用</strong>: 一键同步手动输入的品牌、镜头信息至全批次。</li>
+        </ul>
+
+        <hr>
+
+        <h2>3. 底片索引 (Contact Sheet)</h2>
+        <p>专为“全卷底片”设计的排版工具，将多张样片自动排版成一张索引页。</p>
+        <ul>
+            <li><strong>智能格式识别</strong>: 支持自动识别 135、120 (6x6, 6x7, 6x9) 等主流底片格式。</li>
+            <li><strong>乳剂号 (Emulsion No.)</strong>: 允许为每卷胶片设置唯一的批次喷码。</li>
+            <li><strong>有序排列</strong>: 严格遵循文件名或拍摄时间的逻辑顺序。</li>
+        </ul>
+
+        <hr>
+
+        <h2>4. 系统与资源</h2>
+        <ul>
+            <li><strong>双语切换</strong>: 全局支持中英文界面与输出文本。</li>
+            <li><strong>多源同步</strong>: 支持通过 Gitee 或 GitHub 更新相机资源库。</li>
+        </ul>
+
+        <div class="footer">
+            如果您在使用过程中遇到任何问题，欢迎联系开发者。<br>
+            📧 <strong>Email:</strong> xjames007@gmail.com | <strong>Version:</strong> v2.3.1
+        </div>
+    </div>
+
+</body>
+</html>
