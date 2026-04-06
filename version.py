@@ -11,7 +11,7 @@ __email__ = "xjames007@gmail.com"
 __license__ = "MIT"
 
 # EN: Release type / CN: 发布类型
-RELEASE_TYPE = "alpha"  # Options: alpha, beta, rc, stable
+RELEASE_TYPE = "stable"  # Options: alpha, beta, rc, stable
 
 # EN: Full version string / CN: 完整版本字符串
 def get_version_string():

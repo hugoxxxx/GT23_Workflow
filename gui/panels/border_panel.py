@@ -288,6 +288,10 @@ class BorderPanel:
         self._loading_state = False # EN: Guard for trace feedback / CN: 防止监听回环的任务锁
         self.preview_source_cache = {} # EN: path -> {rotation: pil_img}
         
+        # EN: Global EXIF flag (Single master switch)
+        # CN: 全局 EXIF 标志位，一个开关控制所有字段是否“全局同步”
+        self.exif_global_var = tk.BooleanVar(value=False)
+        
         # EN: Load layout config for parameter initialization / CN: 加载布局配置用于参数初始化
         self.layout_config = {}
         self.load_layout_config()
@@ -412,6 +416,10 @@ class BorderPanel:
         self.manual_label.pack(side=LEFT, padx=(0, 10))
         self.film_combo = ttk.Combobox(film_row, state="disabled")
         self.film_combo.pack(side=LEFT, fill=X, expand=YES)
+        # EN: Refresh preview when selection changes or Enter is pressed
+        # CN: 选择改变或敲击回车时刷新预览
+        self.film_combo.bind("<<ComboboxSelected>>", lambda e: self.on_params_changed())
+        self.film_combo.bind("<Return>", lambda e: self.on_params_changed())
 
         # EN: Advanced settings (border parameters) / CN: 高级设置（边框参数）
         advanced_text = "高级设置" if self.lang == "zh" else "Advanced Settings"
@@ -463,6 +471,14 @@ class BorderPanel:
         self.exif_frame = ttk.Labelframe(self.left_frame, text=exif_text, padding=5)
         self.exif_frame.pack(fill=X, pady=(0, 5))
 
+        # EN: Global Sync Switch (Master) / CN: 全局同步主开关
+        sync_text = "全局应用" if self.lang == "zh" else "Apply to All"
+        self.global_sync_check = ttk.Checkbutton(self.exif_frame, text=sync_text, 
+                                               variable=self.exif_global_var, 
+                                               command=self.on_params_changed,
+                                               bootstyle="round-toggle")
+        self.global_sync_check.pack(anchor=W, padx=5, pady=(5, 5))
+
         # Variables for EXIF overrides
         self.exif_make_var = ttk.StringVar()
         self.exif_model_var = ttk.StringVar()
@@ -498,9 +514,10 @@ class BorderPanel:
         def add_exif_field_to_grid(parent, label_text, var, show_var, col):
             container = ttk.Frame(parent)
             container.grid(row=0, column=col, sticky=EW)
-            # EN: Small toggle / CN: 小型勾选框
-            cb = ttk.Checkbutton(container, variable=show_var, command=self.on_params_changed)
-            cb.pack(side=LEFT, padx=(2, 0))
+            # EN: Visibility toggle / CN: 显示开关
+            cb_show = ttk.Checkbutton(container, variable=show_var, command=self.on_params_changed)
+            cb_show.pack(side=LEFT, padx=(2, 0))
+            
             ttk.Label(container, text=label_text, width=8).pack(side=LEFT)
             entry = ttk.Entry(container, textvariable=var, width=18)
             entry.pack(side=LEFT, padx=(0, 10), fill=X, expand=YES)
@@ -642,6 +659,7 @@ class BorderPanel:
             self.font_label.config(text="字体基础")
             self.font_label.configure(width=12)
             self.exif_frame.config(text="手动 EXIF 覆盖 (留空则读取原图)")
+            self.global_sync_check.config(text="全局应用")
             self.preview_frame.config(text="预览（显示文件夹第一张图片）")
             self.theme_label.config(text="边框主题")
             self.theme_label.configure(width=12)
@@ -674,6 +692,7 @@ class BorderPanel:
             self.theme_label.configure(width=15)
             self._update_theme_combo_values()
             self.exif_frame.config(text="Manual EXIF Overrides (Leave blank to use file EXIF)")
+            self.global_sync_check.config(text="Apply to All")
             self.preview_frame.config(text="Preview (First Image in Folder)")
             self.redraw_preview()
             self.process_button.config(text="Start Processing" if not is_running else "Stop Processing (Cancel)")
@@ -1008,7 +1027,9 @@ class BorderPanel:
                 'show_shutter': self.show_shutter_var.get(),
                 'show_aperture': self.show_aperture_var.get(),
                 'show_iso': self.show_iso_var.get(),
-                'show_lens': self.show_lens_var.get()
+                'show_lens': self.show_lens_var.get(),
+                # EN: Store global synchronization flag / CN: 存储全局同步标志位
+                'global_lock': self.exif_global_var.get()
             }
         }
 
@@ -1039,13 +1060,6 @@ class BorderPanel:
                 self.rotation_var.set(cfg.get('rotation', 0))
                 self.auto_detect_var.set(cfg.get('auto_detect', True))
                 exif = cfg.get('exif', {})
-                self.exif_make_var.set(exif.get('Make', ''))
-                self.exif_model_var.set(exif.get('Model', ''))
-                self.exif_lens_var.set(exif.get('Lens', ''))
-                self.exif_shutter_var.set(exif.get('Shutter', ''))
-                self.exif_aperture_var.set(exif.get('Aperture', ''))
-                self.exif_iso_var.set(exif.get('ISO', ''))
-                
                 # Show flags with default=1
                 self.show_make_var.set(exif.get('show_make', 1))
                 self.show_model_var.set(exif.get('show_model', 1))
@@ -1053,6 +1067,16 @@ class BorderPanel:
                 self.show_aperture_var.set(exif.get('show_aperture', 1))
                 self.show_iso_var.set(exif.get('show_iso', 1))
                 self.show_lens_var.set(exif.get('show_lens', 1))
+
+                # EN: Load EXIF content - ONLY if not globally locked
+                # CN: 加载 EXIF 内容 - 仅在未处于“全局应用”状态时从图片配置中加载
+                if not self.exif_global_var.get():
+                    self.exif_make_var.set(exif.get('Make', ''))
+                    self.exif_model_var.set(exif.get('Model', ''))
+                    self.exif_lens_var.set(exif.get('Lens', ''))
+                    self.exif_shutter_var.set(exif.get('Shutter', ''))
+                    self.exif_aperture_var.set(exif.get('Aperture', ''))
+                    self.exif_iso_var.set(exif.get('ISO', ''))
                 
                 self.on_auto_detect_changed() # Update combo state
                 # EN: We no longer set mode_var here to keep it global
@@ -1383,6 +1407,31 @@ class BorderPanel:
                 'theme': self.theme_var.get()
             })
             
+            # EN: Handle EXIF Global Synchronization / CN: 处理 EXIF 全局同步逻辑
+            if self.exif_global_var.get() and self.current_batch_paths:
+                # EN: Map internal keys to UI variables / CN: 映射内部键名到 UI 变量
+                exif_map = {
+                    'Make': self.exif_make_var,
+                    'Model': self.exif_model_var,
+                    'Shutter': self.exif_shutter_var,
+                    'Aperture': self.exif_aperture_var,
+                    'ISO': self.exif_iso_var,
+                    'Lens': self.exif_lens_var
+                }
+                
+                # EN: Broadcast values to ALL image configs / CN: 将值广播到所有图片配置中
+                for p in self.current_batch_paths:
+                    if p not in self.image_configs:
+                        self.image_configs[p] = {}
+                    if 'exif' not in self.image_configs[p]:
+                        self.image_configs[p]['exif'] = {}
+                    
+                    for field, var in exif_map.items():
+                        self.image_configs[p]['exif'][field] = var.get().strip()
+                    
+                    # Also sync the lock state itself
+                    self.image_configs[p]['exif']['global_lock'] = True
+
             self.update_preview_for_path(self.current_image_path)
 
     def notify_order_changed(self, new_paths):

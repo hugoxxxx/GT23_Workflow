@@ -1,21 +1,34 @@
 # Change Log / 变更日志
 
-## [2.3.4-alpha] - 2026-04-04
+## [2.3.1] - 2026-04-06
 
-### 🐛 稳定性与崩溃修复 (Stability & Crash Fixes)
+### 📸 EXIF 元数据增强 (EXIF Metadata Enhancement)
+- **[Feature] 原图 EXIF 保留与回写 / EXIF Preservation & Write-back**:
+  - EN: Exported JPEG images now preserve original EXIF metadata (Date, GPS, etc.) and support manual overrides for Make, Model, Lens, Shutter, Aperture, and ISO using `piexif`.
+  - CN: 导出 JPEG 图片现在能完整保留原图 EXIF 信息（如日期、地理位置等），并支持通过 `piexif` 库将手动输入的品牌、型号、镜头、快门、光圈、ISO 等参数精准回写至图片底层。
+- **[Feature] 全局应用锁定系统 / Global Sync Lock System**:
+  - EN: Added a "Apply to All" toggle for EXIF overrides. When locked, the override values are synchronized across all images in the current batch.
+  - CN: 为 EXIF 覆盖字段新增了“全局应用”开关。开启后，填写的参数将自动同步至当前批次内的所有图片，实现一处修改、全量生效。
+
+### 🐛 稳定性与修复 (Stability & Fixes)
 - [Fix] PhotoImage 线程安全修复 / PhotoImage Thread-Safety:
   - EN: Fixed `AttributeError: 'PhotoImage' object has no attribute '_PhotoImage__photo'` on startup by ensuring all `ImageTk.PhotoImage` instances are initialized on the main thread.
-  - CN: 彻底修复了启动时可能出现的 `AttributeError: 'PhotoImage' object has no attribute '_PhotoImage__photo'` 报错。通过将 `ThumbnailStrip` 的缩略图生成逻辑解耦，确保所有 `PhotoImage` 实例均在主线程中创建，提升了多线程环境下的 GUI 稳定性。
+  - CN: 彻底修复了启动时可能出现的 `AttributeError: 'PhotoImage' object has no attribute '_PhotoImage__photo'` 报错。
 - [Fix] 语言切换崩溃修复 / Language Switch Crash Fix:
-  - EN: Resolved `AttributeError: 'NoneType' object has no attribute 'is_alive'` in `update_language()` when checking the worker thread status before initialization.
-  - CN: 修复了 `update_language()` 中由于 `worker_thread` 尚未初始化即调用 `is_alive()` 导致的 `NoneType` 崩溃问题。
+  - EN: Resolved `AttributeError: 'NoneType' object has no attribute 'is_alive'` in `update_language()` before worker thread initialization.
+  - CN: 修复了 `update_language()` 中由于 `worker_thread` 尚未初始化即调用 `is_alive()` 导致的崩溃问题。
+- [Fix] 列表删除同步修复 / List Deletion Sync Fix:
+  - EN: Fixed a bug where deleting items from the thumbnail strip did not correctly update the export batch list.
+  - CN: 修复了在样片条中点击删除后，后台导出路径列表未实时同步更新的 Bug。
 
-## [2.3.1] - 2026-04-03
 
 ### 📂 有序批量导出 (Ordered Batch Export)
 - **[Feature] 马卡龙 & 彩虹排序命名 / Ordered Naming for Specialty Themes**:
   - EN: Output filenames in Macaron and Rainbow modes now follow the adjusted GUI sorting order by including a numeric prefix (e.g., `001_`, `002_`).
   - CN: 马卡龙与彩虹模式下的批量导出文件名现在会增加数字前缀（如 `001_`, `002_`），以严格遵循用户在 GUI 中手动调整后的样片排序。
+- **[UX] 胶片选择交互优化 / Film Selection UX Optimization**:
+  - EN: Selecting an item from the film dropdown or pressing Enter after manual input now triggers an immediate preview refresh.
+  - CN: 胶片下拉选择框支持在选择项变更或敲击回车时自动触发预览刷新。
 
 ### ⚡ 瞬时预览与架构重塑 (Instant Preview & Architecture)
 - **[Performance] 全内存渲染管线 / Memory-Only Pipeline**:
