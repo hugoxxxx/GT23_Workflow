@@ -231,22 +231,28 @@ class FilmRenderer:
             
             # --- EN: FINAL POLISH ---
             t_shadow_start = time.perf_counter()
-            # EN: Restore high-quality shadow for preview as requested / CN: 按要求还原预览图的高质量阴影
-            final_output = self._apply_pro_shadow(canvas, radius=20)
+            # EN: Disable shadow for Dark Mode to avoid edge artifacts and match user's clean aesthetic
+            # CN: 深色模式下不加阴影，避免边缘白边产生且符合老大的纯净审美（黑色阴影在黑底上不可见）
+            if theme == "dark":
+                final_output = canvas.convert("RGBA")
+            else:
+                # EN: Restore high-quality shadow for preview as requested
+                final_output = self._apply_pro_shadow(canvas, radius=20)
             timings['shadow'] = time.perf_counter() - t_shadow_start
 
             if target_long_edge <= 1200 and not output_dir:
                 timings['total'] = time.perf_counter() - t_start
-                # EN: Flatten onto white background to match legacy JPG preview look
-                # CN: 复合纯白底色，以匹配旧版 JPG 预览图的视觉效果
+                # EN: Flatten onto matching background color
+                # CN: 复合底色，避免阴影产生边缘白边（深色模式用黑底，其余用白底）
                 if final_output.mode == 'RGBA':
-                    bg = Image.new("RGB", final_output.size, (255, 255, 255))
+                    flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
+                    bg = Image.new("RGB", final_output.size, flatten_bg_color)
                     bg.paste(final_output, mask=final_output.split()[3])
                     return bg
                 return final_output
 
             t_save_start = time.perf_counter()
-            result = self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name, output_prefix=output_prefix)
+            result = self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name, output_prefix=output_prefix, theme=theme)
             timings['save'] = time.perf_counter() - t_save_start
 
             timings['total'] = time.perf_counter() - t_start
@@ -686,7 +692,7 @@ class FilmRenderer:
         full_canvas.paste(canvas_rgba, (shadow_margin // 2, shadow_margin // 2), canvas_rgba)
         return full_canvas
 
-    def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name, output_prefix=""):
+    def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name, output_prefix="", theme="light"):
         # EN: Default to JPG for better social media compatibility, fallback to PNG if requested
         # CN: 默认输出 JPG 以获得更好的社交平台兼容性（自动硬化阴影）
         ext = ".jpg"
@@ -695,9 +701,10 @@ class FilmRenderer:
         
         try:
             if img.mode == 'RGBA':
-                # EN: Flatten onto white background for JPEG
-                # CN: 为 JPG 复合纯白底色，强制“硬化”阴影效果
-                background = Image.new("RGB", img.size, (255, 255, 255))
+                # EN: Flatten onto matching background color for JPEG
+                # CN: 为 JPG 复合底色，强制“硬化”阴影效果（深色模式用黑底，其余用白底）
+                flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
+                background = Image.new("RGB", img.size, flatten_bg_color)
                 background.paste(img, mask=img.split()[3]) # Use alpha channel as mask
                 img_to_save = background
             else:
