@@ -47,3 +47,6 @@
 - **内存优化 / Memory Efficiency**：
   - CN: 微调了批量导出时的内存分配逻辑，在高强度任务下运行更稳。
   - EN: Refined the memory allocation logic for batch processing, ensuring smoother operation during heavy rendering tasks.
+- **深色模式白边修复 / Dark Mode Edge Fix**：
+  - CN: 针对 Dark 主题优化了渲染逻辑，通过在深色模式下禁用阴影并使用黑色背景复合，彻底消除了在手机 OLED 屏上可能出现的边缘白条。
+  - EN: Optimized rendering for the Dark theme by disabling shadows and using a black flattening background, completely eliminating potential white edge artifacts on mobile OLED screens.

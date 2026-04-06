@@ -20,6 +20,9 @@
 - [Fix] 列表删除同步修复 / List Deletion Sync Fix:
   - EN: Fixed a bug where deleting items from the thumbnail strip did not correctly update the export batch list.
   - CN: 修复了在样片条中点击删除后，后台导出路径列表未实时同步更新的 Bug。
+- [Fix] 深色模式白边修复 / Dark Mode Edge Artifact Fix:
+  - EN: Automatically skips shadow rendering and utilizes a black flattening background in Dark theme to eliminate white edge artifacts on mobile OLED screens.
+  - CN: 在 Dark 主题下自动跳过阴影渲染，并使用黑色背景进行 JPG 复合，彻底消除移动端 OLED 屏上的边缘白脏边。
 
 
 ### 📂 有序批量导出 (Ordered Batch Export)
