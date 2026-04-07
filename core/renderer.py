@@ -2,8 +2,19 @@ import os
 import io
 import sys
 import shutil
+import time
+from fractions import Fraction
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
+try:
+    import piexif
+except ImportError:
+    piexif = None
 from utils.config_manager import config_manager
+
+try:
+    import cairosvg
+except ImportError:
+    cairosvg = None
 
 class FilmRenderer:
     """
@@ -63,29 +74,51 @@ class FilmRenderer:
 
 
     def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0, 
-                    theme="light", is_pure=False, rainbow_index=0, rainbow_total=1, is_sample=False, **kwargs):
+                    theme="light", is_pure=False, rainbow_index=0, rainbow_total=1, is_sample=False, 
+                    source_img=None, output_prefix="", **kwargs):
         """
         EN: Main entry point with theme, global rainbow sequence, and sample mode.
         CN: 主渲染入口，增强主题、全局彩虹长卷与 SAMPLE 样品模式支持。
         """
+        timings = kwargs.get('timing_results', {})
+        t_start = time.perf_counter()
+        
         try:
-            if not os.path.exists(output_dir):
+            if output_dir and not os.path.exists(output_dir):
                 os.makedirs(output_dir)
 
-            img = Image.open(img_path)
-            
-            # EN: Handle EXIF orientation automatically / CN: 自动处理 EXIF 旋转信息
-            img = ImageOps.exif_transpose(img)
-            
-            # EN: Apply manual rotation (0, 90, 180, 270) / CN: 应用手动旋转
-            if manual_rotation != 0:
-                img = img.rotate(-manual_rotation, expand=True)
+            if source_img:
+                img = source_img
+                # EN: Skip rotation and initial resize as it's assumed pre-processed
+                # CN: 跳过旋转和初始缩放，假定已预处理
+            else:
+                t_load_start = time.perf_counter()
+                # EN: Use draft mode for faster loading if it's a preview
+                # CN: 如果是预览模式，使用 draft 模式加速加载
+                img = Image.open(img_path)
+                if target_long_edge <= 1200 and img.format == 'JPEG':
+                    # EN: Target approx 2x preview size for draft to keep some head room
+                    # CN: 为 draft 设置约 2 倍预览尺寸的目标，保留一定的余量
+                    img.draft(img.mode, (target_long_edge * 2, target_long_edge * 2))
+                
+                # EN: Handle EXIF orientation automatically / CN: 自动处理 EXIF 旋转信息
+                img = ImageOps.exif_transpose(img)
+                
+                # EN: Apply manual rotation (0, 90, 180, 270) / CN: 应用手动旋转
+                if manual_rotation != 0:
+                    img = img.rotate(-manual_rotation, expand=True)
 
-            if img.mode != "RGB": img = img.convert("RGB")
-            img = self._smart_resize(img, target_long_edge)
+                if img.mode != "RGB": img = img.convert("RGB")
+                timings['load_rotate'] = time.perf_counter() - t_load_start
+
+                t_resize_start = time.perf_counter()
+                img = self._smart_resize(img, target_long_edge)
+                timings['resize'] = time.perf_counter() - t_resize_start
+            
             w, h = img.size
             
             # --- EN: THEME SETUP / CN: 主题颜色设置 ---
+            t_layout_start = time.perf_counter()
             # EN: Support rainbow_index for sequential coloring
             bg_color, main_color, sub_color, line_color = self._apply_theme_colors(theme, index=rainbow_index)
             
@@ -103,8 +136,10 @@ class FilmRenderer:
             bottom_splice = int(h * bottom_ratio)
             
             new_w, new_h = w + (side_pad * 2), h + top_pad + side_pad + bottom_splice
+            timings['layout_calc'] = time.perf_counter() - t_layout_start
             
             # --- EN: DRAWING ---
+            t_canvas_start = time.perf_counter()
             # EN: Rainbow mode uses a global sliced gradient canvas
             # CN: 彩虹模式使用全局分段横向渐变画布
             # EN: Rainbow modes (Macaron/Rainbow) use different gradient engines
@@ -112,8 +147,6 @@ class FilmRenderer:
             if theme == "rainbow":
                 # EN: Pass specific t_start/t_end for physical continuity / CN: 传递具体的起始/结束比例以实现物理连贯
                 t_range = kwargs.get('rainbow_range', (0.0, 1.0))
-                # DEBUG
-                print(f"DEBUG [Renderer]: theme=rainbow, t_range={t_range}, size={new_w}x{new_h}")
                 canvas = self._create_fuji_rainbow_canvas(new_w, new_h, t_range[0], t_range[1])
             elif theme == "macaron":
                 # EN: Dynamic 2-color gradient for Macaron / CN: 马卡龙系统：动态双色随机渐变
@@ -123,21 +156,41 @@ class FilmRenderer:
                     (200, 255, 255), (255, 220, 255), (220, 255, 180)
                 ]
                 # EN: Resolve color index (Must be deterministic)
-                # CN: 解析色彩索引 (必须是确定性的)
                 if rainbow_index >= 0:
                     c_idx = rainbow_index
                 else:
-                    # EN: Fallback to MD5 hash of path to ensure identical photo always gets identical color
-                    # CN: 降级到路径的 MD5 哈希，确保同一张图始终获得相同色彩
                     import hashlib
                     c_idx = int(hashlib.md5(img_path.encode()).hexdigest(), 16) % len(macaron_palette)
 
                 c1 = macaron_palette[c_idx % len(macaron_palette)]
                 c2 = macaron_palette[(c_idx + 1) % len(macaron_palette)]
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
+            elif theme == "sakura":
+                # EN: Sakura Pink Palette (Varying intensities for better visual distinction)
+                # CN: 樱花粉色库：优化明度，让整体色调更轻盈（响应老大反馈：调淡左侧和暗部）
+                sakura_palette = [
+                    # EN: Interleaved shades (Pale, Soft, Classic) - Lightened for better blending
+                    # CN: 交织色序 (淡妆 -> 柔粉 -> 经典)，整体上移明度，确保背景轻盈
+                    (255, 245, 247), (255, 203, 217), (255, 180, 200),
+                    (255, 235, 240), (255, 190, 205), (255, 170, 190),
+                    (255, 220, 235), (255, 185, 200), (255, 160, 180)
+                ]
+                # EN: Resolve color index (Deterministic based on position/path)
+                if rainbow_index >= 0:
+                    c_idx = rainbow_index
+                else:
+                    import hashlib
+                    c_idx = int(hashlib.md5(img_path.encode()).hexdigest(), 16) % len(sakura_palette)
+
+                # EN: Use a step of 2 to ensure we jump between distinctive shades
+                # CN: 使用跨步采样，确保渐变色对具备明显的明度或色相差
+                base_idx = c_idx % len(sakura_palette)
+                next_idx = (base_idx + 1) % len(sakura_palette)
+                
+                c1 = sakura_palette[base_idx]
+                c2 = sakura_palette[next_idx]
+                canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
             else:
-                # EN: Use solid background for light/dark/macaron
-                # CN: 浅色/深色/普通彩虹使用纯色背景
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
             canvas.paste(img, (side_pad, top_pad))
@@ -145,23 +198,20 @@ class FilmRenderer:
             
             # EN: 1px inner border
             draw.rectangle([side_pad, top_pad, side_pad + w, top_pad + h], outline=line_color, width=1)
+            timings['canvas_paste'] = time.perf_counter() - t_canvas_start
             
             # --- EN: TYPOGRAPHY HIERARCHY ---
+            t_draw_start = time.perf_counter()
             main_text, sub_text = self._prepare_strings(data)
             
-            # EN: SAMPLE mode override / CN: SAMPLE 模式强制覆盖
-            # 老大特别强调：相机、镜头、光圈、快门、胶卷信息全部显示 SAMPLE
             if is_sample:
                 main_text = "SAMPLE SAMPLE"
                 sub_text = "SAMPLE SAMPLE | SAMPLE | SAMPLE"
             
             # --- EN: RENDERING PIPELINE / CN: 渲染流水线 ---
             if is_pure:
-                # EN: Pure Border Mode skips all text/logo layers
-                # CN: 纯边框模式跳过所有文本与 Logo 图层
                 pass
             else:
-                # EN: Prepare Typography Hierarchy / CN: 准备字体层级
                 long_edge = max(new_w, new_h)
                 base_main_font_size = int(long_edge * font_base_scale)
                 base_sub_font_size = int(base_main_font_size * 0.78)
@@ -172,16 +222,44 @@ class FilmRenderer:
                     base_main_font_size, base_sub_font_size
                 )
 
+                t_logo_start = time.perf_counter()
                 self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
                                 main_text, sub_text, actual_main_size, actual_sub_size, 
-                                data=data, main_color=main_color, sub_color=sub_color)
+                                data=data, main_color=main_color, sub_color=sub_color, timings=timings)
+                timings['text_logo_total'] = time.perf_counter() - t_logo_start
+            timings['draw_text_outer'] = time.perf_counter() - t_draw_start
             
             # --- EN: FINAL POLISH ---
-            final_output = self._apply_pro_shadow(canvas)
-            return self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name)
+            t_shadow_start = time.perf_counter()
+            # EN: Disable shadow for Dark Mode to avoid edge artifacts and match user's clean aesthetic
+            # CN: 深色模式下不加阴影，避免边缘白边产生且符合老大的纯净审美（黑色阴影在黑底上不可见）
+            if theme == "dark":
+                final_output = canvas.convert("RGBA")
+            else:
+                # EN: Restore high-quality shadow for preview as requested
+                final_output = self._apply_pro_shadow(canvas, radius=20)
+            timings['shadow'] = time.perf_counter() - t_shadow_start
+
+            if target_long_edge <= 1200 and not output_dir:
+                timings['total'] = time.perf_counter() - t_start
+                # EN: Flatten onto matching background color
+                # CN: 复合底色，避免阴影产生边缘白边（深色模式用黑底，其余用白底）
+                if final_output.mode == 'RGBA':
+                    flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
+                    bg = Image.new("RGB", final_output.size, flatten_bg_color)
+                    bg.paste(final_output, mask=final_output.split()[3])
+                    return bg
+                return final_output
+
+            t_save_start = time.perf_counter()
+            result = self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name, output_prefix=output_prefix, theme=theme)
+            timings['save'] = time.perf_counter() - t_save_start
+
+            timings['total'] = time.perf_counter() - t_start
+            return result
 
         except Exception as e:
-            print(f"CN: [×] 渲染程序出错: {e}")
+            print(f"CN: [ERR] 渲染程序出错: {e}")
             return False
 
     def _apply_theme_colors(self, theme, index=0):
@@ -197,6 +275,10 @@ class FilmRenderer:
             # EN: Logic handled by linear gradient canvas in process_image
             # CN: 实际方案由渲染入口的双色渐变引擎接管
             return (255, 255, 255), (32, 32, 32), (60, 60, 60), (235, 235, 235)
+        elif theme == "sakura":
+            # EN: Sakura Theme base colors (Refined Cherry/Rose Palette)
+            # CN: 樱花主题文字：使用更柔和的“黛樱红”与“落暮粉”，以适应更淡的背景
+            return (255, 245, 247), (125, 45, 65), (165, 95, 110), (255, 215, 225)
         elif theme == "rainbow":
             # EN: Saturated Fujifilm Instax Palette / CN: 高饱和富士拍立得色库
             palette = [
@@ -380,7 +462,8 @@ class FilmRenderer:
         
         return camera_text, "  |  ".join(info_parts)
 
-    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None):
+    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, timings=None):
+        if timings is None: timings = {}
         # EN: Use provided colors or fallback to defaults
         # CN: 使用提供的颜色，或回退至默认值
         m_color = main_color or self.main_color
@@ -405,8 +488,10 @@ class FilmRenderer:
             logo_path = self._find_logo_path(make, model)
             
             if logo_path:
+                t_logo_sub_start = time.perf_counter()
                 try:
-                    import cairosvg
+                    # EN: cairosvg is now imported at top level or handled gracefully
+                    # CN: cairosvg 现在在顶层导入
                     from .typo_engine import TypoEngine
                     resolved_main_font = TypoEngine._resolve_font_path(resolved_main)
                     main_font = self._get_font(resolved_main_font, m_size)
@@ -437,25 +522,27 @@ class FilmRenderer:
                         scaled_w = int(orig_w * (target_h / orig_h))
                         logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
 
-                    # --- EN: LOGO INTELLIGENT ADAPTATION / CN: LOGO 智能适配 ---
-                    # EN: If background is dark (m_color is light), adapt dark parts to white while preserving colors
-                    # CN: 如果背景是深色（文字颜色为浅色），将暗部（黑色文字）适配为白色，同时保留品牌色彩
-                    if m_color[0] > 200:
+                    # --- EN: LOGO INTELLIGENT TINTING / CN: LOGO 智能着色 ---
+                    # EN: If theme color is NOT black, adapt dark parts to match while preserving brand colors
+                    # CN: 如果文字颜色不是黑色，则将 Logo 暗部适配为该颜色，同时保留其品牌特有色彩
+                    is_black_theme = (m_color[0] < 40 and m_color[1] < 40 and m_color[2] < 40)
+                    if not is_black_theme:
                         if logo_img.mode != 'RGBA': logo_img = logo_img.convert('RGBA')
-                        # EN: Pixel-level scan to protect colors like Leica Red or Nikon Yellow
-                        # CN: 像素级扫描，保护徕卡红或尼康黄等品牌色
+                        # EN: Pixel-level scan to protect color brands while tinting "ink" parts
+                        # CN: 像素级扫描，在染色“墨迹”部分的同时保护徕卡红等专业标识
                         pixels = list(logo_img.getdata())
                         new_pixels = []
                         for r, g, b, a in pixels:
-                            # EN: Identify dark neutral pixels (Blacks)
-                            # CN: 识别暗中性色像素（黑色部分）
-                            is_dark = (r < 85 and g < 85 and b < 85)
-                            is_neutral = (abs(r-g) < 20 and abs(g-b) < 20)
+                            # EN: Identify dark neutral pixels (potential candidates for theme tinting)
+                            # CN: 识别暗中性色像素（可能是黑色文字或线条）
+                            is_dark = (r < 100 and g < 100 and b < 100)
+                            is_neutral = (abs(r-g) < 30 and abs(g-b) < 30)
                             if is_dark and is_neutral:
-                                # EN: Flip to white but keep original alpha / CN: 翻转为白色，保留原始透明度
-                                new_pixels.append((255, 255, 255, a))
+                                # EN: Tint to theme color but keep original alpha / CN: 染色为主题色，保留原始透明度
+                                new_pixels.append((*m_color, a))
                             else:
-                                # EN: Preserve brand colors / CN: 保留品牌色
+                                # EN: Preserve brand colors (e.g. Leica Red, Nikon Yellow)
+                                # CN: 保留品牌特有色彩
                                 new_pixels.append((r, g, b, a))
                         logo_img.putdata(new_pixels)
 
@@ -471,6 +558,7 @@ class FilmRenderer:
                     # draw.line([(new_w // 2, top_pad + h), (new_w // 2, new_h)], fill="red", width=2)
 
                     logo_drawn = True
+                    timings['logo_render'] = time.perf_counter() - t_logo_sub_start
                 except Exception as e:
                     print(f"CN: [!] Logo 渲染失败 fallback to text: {e}")
 
@@ -490,16 +578,18 @@ class FilmRenderer:
                     i += 1
 
         # EN: Text drawing / CN: 文字绘制
+        t_text_sub_start = time.perf_counter()
         try:
             from .typo_engine import TypoEngine
             if not logo_drawn:
-                TypoEngine.draw_text(draw, main_draw_pos, main_text, resolved_main, m_size, m_color)
-            TypoEngine.draw_text(draw, sub_draw_pos, sub_text, resolved_sub, s_size, sub_colors)
+                TypoEngine.draw_text(draw, main_draw_pos, main_text, resolved_main, m_size, m_color, timings=timings, key_prefix='text_main')
+            TypoEngine.draw_text(draw, sub_draw_pos, sub_text, resolved_sub, s_size, sub_colors, timings=timings, key_prefix='text_sub')
         except Exception as e:
             if not logo_drawn:
                 draw.text(main_draw_pos, main_text, fill=m_color, anchor="mm")
             # Fallback for sub_text: just use the base sub_color as a single fill
             draw.text(sub_draw_pos, sub_text, fill=s_color, anchor="mm")
+        timings['text_render_pure'] = time.perf_counter() - t_text_sub_start
 
 
     def _find_logo_path(self, make, model):
@@ -571,9 +661,12 @@ class FilmRenderer:
     def _smart_resize(self, img, target):
         w, h = img.size
         scale = target / max(w, h)
-        return img.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
+        # EN: Use BILINEAR for fast preview, LANCZOS for high-quality production
+        # CN: 预览使用 BILINEAR 加速，正式输出使用 LANCZOS 保证质量
+        algo = Image.Resampling.BILINEAR if target <= 1200 else Image.Resampling.LANCZOS
+        return img.resize((int(w * scale), int(h * scale)), algo)
 
-    def _apply_pro_shadow(self, canvas):
+    def _apply_pro_shadow(self, canvas, radius=20):
         shadow_margin = 80
         # EN: Use transparent black (0,0,0,0) to avoid white corners on compression
         # CN: 使用透明黑 (0,0,0,0) 作为基色，防止压缩后出现白角
@@ -581,29 +674,46 @@ class FilmRenderer:
         shadow_mask = Image.new("RGBA", canvas.size, (0, 0, 0, 140))
         shadow_pos = (shadow_margin // 2, shadow_margin // 2 + 10)
         full_canvas.paste(shadow_mask, shadow_pos)
-        full_canvas = full_canvas.filter(ImageFilter.GaussianBlur(radius=20))
+        full_canvas = full_canvas.filter(ImageFilter.GaussianBlur(radius=radius))
         canvas_rgba = canvas.convert("RGBA")
         full_canvas.paste(canvas_rgba, (shadow_margin // 2, shadow_margin // 2), canvas_rgba)
         return full_canvas
 
-    def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name):
+    def _apply_pro_shadow_fast(self, canvas, radius=5):
+        # EN: Fast version for preview using BoxBlur
+        # CN: 预览专用快速版，使用 BoxBlur
+        shadow_margin = 60
+        full_canvas = Image.new("RGBA", (canvas.width + shadow_margin, canvas.height + shadow_margin), (0, 0, 0, 0))
+        shadow_mask = Image.new("RGBA", canvas.size, (0, 0, 0, 120))
+        shadow_pos = (shadow_margin // 2, shadow_margin // 2 + 6)
+        full_canvas.paste(shadow_mask, shadow_pos)
+        full_canvas = full_canvas.filter(ImageFilter.BoxBlur(radius=radius))
+        canvas_rgba = canvas.convert("RGBA")
+        full_canvas.paste(canvas_rgba, (shadow_margin // 2, shadow_margin // 2), canvas_rgba)
+        return full_canvas
+
+    def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name, output_prefix="", theme="light"):
         # EN: Default to JPG for better social media compatibility, fallback to PNG if requested
         # CN: 默认输出 JPG 以获得更好的社交平台兼容性（自动硬化阴影）
         ext = ".jpg"
-        out_name = f"GT23_{os.path.splitext(os.path.basename(original_path))[0]}{ext}"
+        out_name = f"GT23_{output_prefix}{os.path.splitext(os.path.basename(original_path))[0]}{ext}"
         save_path = os.path.join(output_dir, out_name)
         
         try:
             if img.mode == 'RGBA':
-                # EN: Flatten onto white background for JPEG
-                # CN: 为 JPG 复合纯白底色，强制“硬化”阴影效果
-                background = Image.new("RGB", img.size, (255, 255, 255))
+                # EN: Flatten onto matching background color for JPEG
+                # CN: 为 JPG 复合底色，强制“硬化”阴影效果（深色模式用黑底，其余用白底）
+                flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
+                background = Image.new("RGB", img.size, flatten_bg_color)
                 background.paste(img, mask=img.split()[3]) # Use alpha channel as mask
                 img_to_save = background
             else:
                 img_to_save = img
 
-            img_to_save.save(save_path, "JPEG", quality=98, subsampling=0)
+            # EN: Build updated EXIF bytes / CN: 构建更新后的 EXIF 字节流
+            exif_bytes = self._build_exif_bytes(original_path, data)
+
+            img_to_save.save(save_path, "JPEG", quality=98, subsampling=0, exif=exif_bytes)
         except Exception as e:
             print(f"CN: [!] JPG 保存失败，回退至 PNG: {e}")
             save_path = save_path.replace(".jpg", ".png")
@@ -615,11 +725,70 @@ class FilmRenderer:
         # CN: 对于 JPG，10MB 限制非常充裕，若超标仅需微调质量
         if f_size > 10.0:
             print(f"CN: [!] 文件较大 ({f_size:.1f}MB)，正尝试以 Quality 92 重新保存...")
-            img_to_save.save(save_path, "JPEG", quality=92, subsampling=0)
+            img_to_save.save(save_path, "JPEG", quality=92, subsampling=0, exif=exif_bytes)
         
         # EN: Log the identified format clearly / CN: 明确记录识别出的画幅
-        print(f"CN: [✔] 渲染完成: {out_name} | 画幅: {layout_name}")
+        print(f"CN: [OK] 渲染完成: {out_name} | 画幅: {layout_name}")
         return out_name
+
+    def _build_exif_bytes(self, original_path, data):
+        """
+        EN: Extract original EXIF and patch it with manual UI overrides.
+        CN: 提取原始 EXIF 并根据 UI 手动覆盖参数进行 Patch。
+        """
+        raw_fallback = b""
+        try:
+            with Image.open(original_path) as test_img:
+                raw_fallback = test_img.info.get("exif", b"")
+        except: pass
+
+        if not piexif:
+            return raw_fallback
+        
+        try:
+            # 1. EN: Load original EXIF / CN: 加载原始 EXIF
+            exif_dict = piexif.load(original_path)
+            
+            # 2. EN: Patch 0th IFD (Make, Model) / CN: 更新 0th IFD (品牌、型号)
+            # ... (lines 740-784) ...
+            # (Note: I'll use a larger block to ensure correct context)
+            if data.get('Make'):
+                exif_dict["0th"][piexif.ImageIFD.Make] = data['Make'].encode('utf-8')
+            if data.get('Model'):
+                exif_dict["0th"][piexif.ImageIFD.Model] = data['Model'].encode('utf-8')
+                
+            if "Exif" not in exif_dict: exif_dict["Exif"] = {}
+            if data.get('LensModel'):
+                exif_dict["Exif"][piexif.ExifIFD.LensModel] = data['LensModel'].encode('utf-8')
+            if data.get('ISO'):
+                try: exif_dict["Exif"][piexif.ExifIFD.ISOSpeedRatings] = int(float(data['ISO']))
+                except: pass
+            
+            shutter = data.get('ExposureTimeStr')
+            if shutter:
+                try:
+                    if "/" in shutter:
+                        num, den = map(int, shutter.split("/"))
+                        exif_dict["Exif"][piexif.ExifIFD.ExposureTime] = (num, den)
+                    else:
+                        val = float(shutter)
+                        f = Fraction(val).limit_denominator(1000000)
+                        exif_dict["Exif"][piexif.ExifIFD.ExposureTime] = (f.numerator, f.denominator)
+                except: pass
+            
+            aperture = data.get('FNumber')
+            if aperture:
+                try:
+                    val = float(aperture)
+                    exif_dict["Exif"][piexif.ExifIFD.FNumber] = (int(val * 100), 100)
+                except: pass
+
+            if "thumbnail" in exif_dict: del exif_dict["thumbnail"]
+
+            return piexif.dump(exif_dict)
+        except Exception as e:
+            print(f"CN: [!] EXIF 处理失败 (降级回退): {e}")
+            return raw_fallback
     
     def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
         """

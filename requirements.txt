@@ -8,6 +8,7 @@ ExifRead>=3.5.0         # EXIF metadata reading / EXIF元数据读取
 fonttools>=4.60.0       # Font file handling / 字体文件处理
 
 # Optional but recommended / 可选但推荐
+piexif>=1.1.3           # EXIF Metadata writing / EXIF元数据回写
 numpy>=2.0.0            # Image array operations / 图像数组操作
 aggdraw>=1.3.0          # Anti-aliased drawing / 抗锯齿绘图（可选）
 
