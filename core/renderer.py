@@ -74,7 +74,7 @@ class FilmRenderer:
 
 
     def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0, 
-                    theme="light", is_pure=False, rainbow_index=0, rainbow_total=1, is_sample=False, 
+                    theme="light", is_pure=False, use_lens_branding=True, rainbow_index=0, rainbow_total=1, is_sample=False, 
                     source_img=None, output_prefix="", **kwargs):
         """
         EN: Main entry point with theme, global rainbow sequence, and sample mode.
@@ -190,14 +190,21 @@ class FilmRenderer:
                 c1 = sakura_palette[base_idx]
                 c2 = sakura_palette[next_idx]
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
+            elif theme == "frosted":
+                # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
+                canvas = self._create_frosted_canvas(img, new_w, new_h)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
-            canvas.paste(img, (side_pad, top_pad))
-            draw = ImageDraw.Draw(canvas)
+            if theme == "frosted":
+                # EN: Floating Photo Effect (Inner Shadow + Image + Border)
+                self._draw_floating_photo(canvas, img, side_pad, top_pad, line_color)
+            else:
+                canvas.paste(img, (side_pad, top_pad))
+                # EN: 1px inner border
+                ImageDraw.Draw(canvas).rectangle([side_pad, top_pad, side_pad + w, top_pad + h], outline=line_color, width=1)
             
-            # EN: 1px inner border
-            draw.rectangle([side_pad, top_pad, side_pad + w, top_pad + h], outline=line_color, width=1)
+            draw = ImageDraw.Draw(canvas)
             timings['canvas_paste'] = time.perf_counter() - t_canvas_start
             
             # --- EN: TYPOGRAPHY HIERARCHY ---
@@ -217,6 +224,29 @@ class FilmRenderer:
                 base_sub_font_size = int(base_main_font_size * 0.78)
 
                 available_width = new_w - (side_pad * 4)
+                
+                # EN: Adaptive Text Coloring for Frosted Mode
+                # CN: 磨砂模式下的文字颜色自适应逻辑 (强化对比度版)
+                if theme == "frosted":
+                    from PIL import ImageStat
+                    # EN: Sample the footer area where text is drawn
+                    # CN: 采样底部文字绘制区域的亮度
+                    footer_rect = [0, new_h - bottom_splice, new_w, new_h]
+                    footer_rect = [max(0, int(v)) for v in footer_rect]
+                    footer_sample = canvas.crop(footer_rect).convert("L")
+                    avg_lum = ImageStat.Stat(footer_sample).mean[0]
+                    
+                    # EN: Dynamic 5-level Grayscale Palette logic
+                    # CN: 动态五阶灰阶调色板逻辑
+                    if avg_lum > 180: # Very Light
+                        main_color, sub_color = (0, 0, 0), (45, 45, 45)
+                    elif avg_lum > 135: # Fairly Light
+                        main_color, sub_color = (15, 15, 15), (70, 70, 70)
+                    elif avg_lum > 90: # Neutral/Mid
+                        main_color, sub_color = (255, 255, 255), (190, 190, 190)
+                    else: # Dark
+                        main_color, sub_color = (255, 255, 255), (210, 210, 210)
+                
                 actual_main_size, actual_sub_size = self._adjust_font_sizes_to_fit(
                     draw, main_text, sub_text, available_width, 
                     base_main_font_size, base_sub_font_size
@@ -225,7 +255,8 @@ class FilmRenderer:
                 t_logo_start = time.perf_counter()
                 self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
                                 main_text, sub_text, actual_main_size, actual_sub_size, 
-                                data=data, main_color=main_color, sub_color=sub_color, timings=timings)
+                                data=data, main_color=main_color, sub_color=sub_color, 
+                                use_lens_branding=use_lens_branding, timings=timings)
                 timings['text_logo_total'] = time.perf_counter() - t_logo_start
             timings['draw_text_outer'] = time.perf_counter() - t_draw_start
             
@@ -233,7 +264,7 @@ class FilmRenderer:
             t_shadow_start = time.perf_counter()
             # EN: Disable shadow for Dark Mode to avoid edge artifacts and match user's clean aesthetic
             # CN: 深色模式下不加阴影，避免边缘白边产生且符合老大的纯净审美（黑色阴影在黑底上不可见）
-            if theme == "dark":
+            if theme in ["dark", "frosted"]:
                 final_output = canvas.convert("RGBA")
             else:
                 # EN: Restore high-quality shadow for preview as requested
@@ -289,6 +320,9 @@ class FilmRenderer:
             bg = palette[index % len(palette)]
             # EN: Always use dark text (Light mode style) as requested / CN: 响应老大要求：始终使用深色文字（浅色模式审美）
             return bg, (26, 26, 26), (85, 85, 85), (255, 255, 255)
+        elif theme == "frosted":
+            # EN: Glassmorphism / CN: 磨砂玻璃（使用图片虚化背景，深色文字）
+            return (240, 240, 240), (26, 26, 26), (85, 85, 85), (200, 200, 200)
         else:
             # Light
             return (255, 255, 255), (26, 26, 26), (85, 85, 85), (238, 238, 238)
@@ -308,7 +342,132 @@ class FilmRenderer:
             draw.line([(x, 0), (x, h)], fill=(r, g, b))
         return canvas
 
-    def _create_fuji_rainbow_canvas(self, w, h, t_start, t_end):
+    def _create_frosted_canvas(self, source_img, w, h):
+        """
+        EN: Create glassmorphism background using blurred original.
+        CN: 使用模糊后的原图生成磨砂玻璃质感背景。
+        """
+        from PIL import Image, ImageFilter, ImageEnhance
+        
+        # 1. EN: Scale and center-crop to fill target canvas / CN: 缩放并居中裁剪以填满画布
+        iw, ih = source_img.size
+        # EN: Avoid zero division / CN: 避免除以零
+        if ih == 0 or h == 0: return source_img
+        aspect = iw / ih
+        target_aspect = w / h
+        
+        if aspect > target_aspect:
+            # EN: Source is wider / CN: 原图过宽，裁剪两侧
+            new_ih = h
+            new_iw = int(h * aspect)
+            # EN: Use cheaper resizing for background but keep quality / CN: 背景渲染可适当优化性能
+            resized = source_img.resize((new_iw, new_ih), Image.Resampling.BILINEAR)
+            left = (new_iw - w) // 2
+            canvas = resized.crop((left, 0, left + w, h))
+        else:
+            # EN: Source is taller / CN: 原图过高，裁剪上下
+            new_iw = w
+            new_ih = int(w / aspect)
+            resized = source_img.resize((new_iw, new_ih), Image.Resampling.BILINEAR)
+            top = (new_ih - h) // 2
+            canvas = resized.crop((0, top, w, top + h))
+            
+        # 2. EN: Apply heavy blur / CN: 应用强力高斯模糊 (极致通透感 160px)
+        canvas = canvas.filter(ImageFilter.GaussianBlur(radius=160))
+        
+        # 3. EN: Brighten and add a white "frost" tint / CN: 提亮并添加白色磨砂蒙版
+        enhancer = ImageEnhance.Brightness(canvas)
+        canvas = enhancer.enhance(1.15)
+        
+        overlay = Image.new('RGB', (w, h), (255, 255, 255))
+        canvas = Image.blend(canvas, overlay, alpha=0.12) # 12% white frost
+        
+        return canvas
+
+    def _draw_floating_photo(self, canvas, img, x, y, outline_color):
+        """
+        EN: Draw premium floating shadows using rounded masks and multi-layer composites.
+        CN: 使用圆角遮罩和多层离屏复合绘制高级悬浮投影，彻底消除硬影边缘。
+        """
+        from PIL import Image, ImageFilter, ImageDraw
+        
+        # 0. EN: Calculate shadow scale factor
+        long_edge = max(img.width, img.height)
+        sf = long_edge / 2000.0
+        
+        # --- 1. EN: OFF-SCREEN SHADOW COMPOSITE / CN: 离屏阴影复合 ---
+        # EN: Create a large RGBA buffer to composite ALL shadows first
+        # CN: 创建一个大型 RGBA 缓冲区，先在这里复合所有投影层
+        # EN: Increase margin to 4x blur to avoid hard-edge clipping on large offsets
+        # CN: 将边距增加到 4 倍模糊半径，避免在大偏移量下出现阴影裁断硬边
+        max_blur = int(200 * sf)
+        margin = max_blur * 4
+        shadow_buf = Image.new("RGBA", (img.width + margin * 2, img.height + margin * 2), (0, 0, 0, 0))
+        
+        def draw_layer(radius, opacity, off_x, off_y, spread_neg, fade_strength=0.0):
+            """EN: Draw a rounded soft shadow layer with optional fading / CN: 绘制一层带可选消隐效果的圆角软阴影"""
+            nonlocal shadow_buf
+            from PIL import ImageChops
+            # EN: Calculate mask size with Negative Spread / CN: 计算具有负扩张的遮罩尺寸
+            s_w = max(10, img.width - int(spread_neg * sf) * 2)
+            s_h = max(10, img.height - int(spread_neg * sf) * 2)
+            
+            # EN: Create a ROUNDED mask for the core shape
+            mask_l = Image.new("L", (s_w, s_h), 0)
+            d = ImageDraw.Draw(mask_l)
+            r = int(60 * sf)
+            d.rounded_rectangle([0, 0, s_w, s_h], radius=r, fill=255)
+            
+            # EN: Apply "Air Falloff" self-fading if requested
+            # CN: 为阴影应用“空气衰减”自消隐渐变
+            if fade_strength > 0:
+                # EN: Generate 2D gradient via bilinear multiplication (Fast & Smooth)
+                # CN: 通过双向线性相乘生成 2D 渐变 (快速且顺滑)
+                h_grad = Image.new("L", (s_w, 1))
+                for x_px in range(s_w): 
+                    h_grad.putpixel((x_px, 0), int(255 * (1.0 - (x_px / s_w) * fade_strength)))
+                h_grad = h_grad.resize((s_w, s_h))
+                
+                v_grad = Image.new("L", (1, s_h))
+                for y_px in range(s_h):
+                    v_grad.putpixel((0, y_px), int(255 * (1.0 - (y_px / s_h) * fade_strength)))
+                v_grad = v_grad.resize((s_w, s_h))
+                
+                grad = ImageChops.multiply(h_grad, v_grad)
+                mask_l = ImageChops.multiply(mask_l, grad)
+
+            # EN: Convert L to RGBA with the specified base opacity
+            mask_cv = Image.new("RGBA", (s_w, s_h), (0, 0, 0, 0))
+            # EN: Use mask_l as alpha channel / CN: 使用 mask_l 作为 Alpha 通道
+            mask_cv.putalpha(Image.eval(mask_l, lambda x: int(x * opacity / 255)))
+            
+            # EN: Position on buffer
+            pos_x = margin + int(spread_neg * sf) + int(off_x * sf)
+            pos_y = margin + int(spread_neg * sf) + int(off_y * sf)
+            
+            layer = Image.new("RGBA", shadow_buf.size, (0, 0, 0, 0))
+            layer.paste(mask_cv, (pos_x, pos_y))
+            layer = layer.filter(ImageFilter.GaussianBlur(radius=radius))
+            
+            shadow_buf = Image.alpha_composite(shadow_buf, layer)
+
+        # --- 2. EN: STACK LAYERS (Self-Vanishing Depth) / CN: 堆叠投影层 (自消隐深度感) ---
+        # Layer A: EN: Massive Ambient (Subtle Fade) / CN: 广域环境影（弱消隐）
+        # EN: Stronger throw to the right (off_x=130) and more solid (fade=0.2)
+        # CN: 向右投射更强 (off_x=135)，且右侧更扎实 (消隐仅 20%)
+        draw_layer(radius=int(180 * sf), opacity=130, off_x=135, off_y=180, spread_neg=50, fade_strength=0.2)
+        
+        # Layer B: EN: Soft Floating (Balanced) / CN: 柔和悬浮层（平衡）
+        draw_layer(radius=int(80 * sf), opacity=160, off_x=70, off_y=100, spread_neg=30, fade_strength=0.1)
+        
+        # Layer C: EN: Anchoring Core (Solid Contact) / CN: 锚定核心影（扎实落座）
+        draw_layer(radius=int(25 * sf), opacity=180, off_x=15, off_y=20, spread_neg=0, fade_strength=0.0)
+        
+        # --- 3. EN: PASTE TO CANVAS & FINAL PHOTO / CN: 粘贴至画布与最终照片 ---
+        canvas.paste(shadow_buf, (x - margin, y - margin), shadow_buf)
+        canvas.paste(img, (x, y))
+
+    def _create_fuji_rainbow_canvas(self, w, h, t_start=0, t_end=1):
         """
         EN: Generate a global rainbow slice for the Rainbow theme using range [t_start, t_end].
         CN: 使用范围 [t_start, t_end] 为“彩虹”主题生成全局彩虹切片。
@@ -411,8 +570,136 @@ class FilmRenderer:
         # CN: 使用较小的模糊半径，保持“条纹感”且柔和
         return canvas.filter(ImageFilter.GaussianBlur(radius=15))
 
+    def _prepare_lens_segments(self, data, sub_color, use_lens_branding=True):
+        """EN: Parse lens string into styled segments / CN: 将镜头字符串解析为带样式的片段"""
+        lens = str(data.get('LensModel') or "").strip()
+        make = str(data.get('Make') or "").strip().upper()
+        
+        # EN: Basic info parts / CN: 基础信息部分
+        info_parts = []
+        is_digi = data.get('is_digital', False)
+        
+        focal = data.get('FocalLength')
+        if focal: info_parts.append(focal)
+        aperture = data.get('FNumber')
+        if aperture: info_parts.append(f"f/{aperture}")
+        shutter = data.get('ExposureTimeStr')
+        if shutter: info_parts.append(f"{shutter}s")
+        iso = data.get('ISO')
+        if iso: info_parts.append(f"ISO {iso}")
+        
+        # EN: Digital systems should not display film info
+        # CN: 数码系统不展示胶片信息
+        if not is_digi:
+            film_name = str(data.get('Film') or "").upper()
+            if film_name: info_parts.append(film_name)
+        
+        base_info = "  |  ".join(info_parts)
+        
+        segments = []
+        
+        # EN: Early return if branding is disabled / CN: 如果禁用标识则提前返回
+        if not use_lens_branding:
+            segments.append({"type": "text", "content": lens + "  |  " + base_info, "color": sub_color})
+            return segments
+
+        # --- EN: Brand Specific Logic / CN: 品牌特定逻辑 ---
+        
+        # 1. CANON L (Red L)
+        if "CANON" in make:
+            import re
+            # EN: Match standalone "L" (Luxury series) - Not surrounded by letters
+            # CN: 匹配独立的 "L" 红圈标识 - 前后不能是字母（允许数字/符号）
+            match = re.search(r'(?<![a-zA-Z])L(?![a-zA-Z])', lens)
+            if match:
+                start, end = match.span()
+                segments.append({"type": "text", "content": lens[:start], "color": sub_color})
+                segments.append({"type": "text", "content": lens[start:end], "color": (196, 30, 58)}) # Pantone 186 C
+                segments.append({"type": "text", "content": lens[end:] + "  |  " + base_info, "color": sub_color})
+                return segments
+
+        # 2. NIKON GOLD (Gold N)
+        if "NIKON" in make:
+            import re
+            # EN: Match standalone "N" (Nano Coating) - Not surrounded by letters
+            match = re.search(r'(?<![a-zA-Z])N(?![a-zA-Z])', lens, re.IGNORECASE)
+            if match:
+                start, end = match.span()
+                segments.append({"type": "text", "content": lens[:start], "color": sub_color})
+                # EN: Refined Gold for better visibility / CN: 优化金色的可见度
+                segments.append({"type": "text", "content": lens[start:end], "color": (172, 147, 78)}) # Brighter Pantone 871 C
+                segments.append({"type": "text", "content": lens[end:] + "  |  " + base_info, "color": sub_color})
+                return segments
+
+        # 3. SONY GM (Token)
+        if "SONY" in make:
+            import re
+            # EN: Use word boundaries for GM to avoid partial matches within "SIGMA"
+            if re.search(r'\bGM\b', lens.upper()):
+                token_path = self._resolve_path(os.path.join("assets", "lenses", "SONY-GM.png"))
+                if os.path.exists(token_path):
+                    clean_lens = re.sub(r'\bGM\b', '', lens, flags=re.IGNORECASE).strip()
+                    segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
+                    segments.append({"type": "image", "path": token_path})
+                    segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
+                    return segments
+
+        # 4. SIGMA (Art/S/C Token)
+        # EN: More lenient check to capture Sigma series even if brand string is missing
+        # CN: 更宽泛的检测逻辑，捕获即便没有 "SIGMA" 字样的适马系列
+        keywords_art = ["ART", "| A", "(A)"]
+        keywords_sport = ["SPORT", "| S", "(S)"]
+        keywords_contemp = ["CONTEMP", "| C", "(C)"]
+        
+        upper_lens = lens.upper()
+        token_file = None
+        if any(k in upper_lens for k in keywords_art):
+            token_file = "SIGMA-ART.png"
+        elif any(k in upper_lens for k in keywords_sport):
+            token_file = "SIGMA-SPORTS.png"
+        elif any(k in upper_lens for k in keywords_contemp):
+            token_file = "SIGMA-CONTEMPORARY.png"
+        
+        if token_file:
+            token_path = self._resolve_path(os.path.join("assets", "lenses", token_file))
+            if os.path.exists(token_path):
+                    import re
+                    # EN: Dynamic cleaning for Sigma series markers / CN: 动态清洗适马系列标识
+                    all_k = ["ART", "SPORTS", "SPORT", "CONTEMPORARY", "CONTEMP"]
+                    pattern = r'\b(?:' + r'|'.join([re.escape(k) for k in all_k]) + r')\b|\|\s*[ASC]\b|\([ASC]\)'
+                    clean_lens = re.sub(pattern, '', lens, flags=re.IGNORECASE)
+                    clean_lens = re.sub(r'\|\s*$', '', clean_lens.strip()).strip()
+                    clean_lens = re.sub(r'\s{2,}', ' ', clean_lens)
+                    
+                    segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
+                    segments.append({"type": "image", "path": token_path})
+                    segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
+                    return segments
+
+        # EN: Default Fallback
+        full_text = lens + "  |  " + base_info
+        if "T*" in full_text:
+            segments.append({"type": "text", "content": full_text, "color": self._get_zeiss_colors(full_text, sub_color)})
+        else:
+            segments.append({"type": "text", "content": full_text, "color": sub_color})
+            
+        return segments
+
+    def _get_zeiss_colors(self, text, base_color):
+        colors = [base_color] * len(text)
+        zeiss_red = (237, 31, 37)
+        i = 0
+        while i < len(text) - 1:
+            if text[i:i+2] == "T*":
+                colors[i] = zeiss_red
+                colors[i+1] = zeiss_red
+                i += 2
+            else:
+                i += 1
+        return colors
+
     def _prepare_strings(self, data):
-        """EN: Dual-Engine Typography / CN: 胶片/数码双引擎排版"""
+        """EN: Legacy signature support / CN: 保留旧版签名支持"""
         # EN: Handle visibility toggles / CN: 处理显示开关
         show_make = data.get('show_make', 1)
         show_model = data.get('show_model', 1)
@@ -422,47 +709,21 @@ class FilmRenderer:
         make = make_raw.upper()
         model = model_raw.upper()
 
-        # EN: Deduplicate brand prefix in model (e.g., CANON CANON EOS R6 -> CANON EOS R6)
-        # CN: 去重型号里的品牌前缀
+        # EN: Deduplicate brand prefix in model
         dedup_model = model
         if make and model and model.startswith(make):
             dedup_model = model[len(make):].lstrip(" -_/") or model
 
         if "HASSELBLAD" in make:
-            camera_text = f"HASSELBLAD {dedup_model or model or make}".strip()
+            main_text = f"HASSELBLAD {dedup_model or model or make}".strip()
         else:
-            if make and dedup_model:
-                camera_text = f"{make} {dedup_model}".strip()
-            else:
-                camera_text = dedup_model or make
+            main_text = f"{make} {dedup_model}".strip() if make and dedup_model else (dedup_model or make)
         
-        info_parts = []
-        is_digi = data.get('is_digital', False)
-        
-        # 1. EN: Lens / CN: 镜头
-        if data.get('show_lens', 1) and data.get('LensModel'): 
-            info_parts.append(data['LensModel'])
-        
-        # 2. EN: Focal Length (Digital only) / CN: 焦距 (仅数码)
-        if data.get('show_lens', 1) and is_digi and data.get('FocalLength'):
-            info_parts.append(data['FocalLength'])
-        
-        # 3. EN: Exposure (Shutter + Aperture + ISO for Digital)
-        # CN: 曝光组件 (快门 + 光圈 + 数码模式下的 ISO)
-        params = []
-        if data.get('show_shutter', 1) and data.get('ExposureTimeStr'): params.append(f"{data['ExposureTimeStr']}s")
-        if data.get('show_aperture', 1) and data.get('FNumber'): params.append(f"f/{data['FNumber']}")
-        if data.get('show_iso', 1) and is_digi and data.get('ISO'): params.append(f"ISO {data['ISO']}")
-        if params: info_parts.append(" ".join(params))
-        
-        # 4. EN: Film (Film mode only) / CN: 胶片名称 (仅胶片模式)
-        if not is_digi:
-            film_name = str(data.get('Film') or "").upper()
-            if film_name: info_parts.append(film_name)
-        
-        return camera_text, "  |  ".join(info_parts)
+        sub_segments = self._prepare_lens_segments(data, (0,0,0))
+        sub_text = "".join([s["content"] for s in sub_segments if s["type"] == "text"])
+        return main_text, sub_text
 
-    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, timings=None):
+    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, use_lens_branding=True, timings=None):
         if timings is None: timings = {}
         # EN: Use provided colors or fallback to defaults
         # CN: 使用提供的颜色，或回退至默认值
@@ -535,10 +796,10 @@ class FilmRenderer:
                         for r, g, b, a in pixels:
                             # EN: Identify dark neutral pixels (potential candidates for theme tinting)
                             # CN: 识别暗中性色像素（可能是黑色文字或线条）
-                            is_dark = (r < 100 and g < 100 and b < 100)
-                            is_neutral = (abs(r-g) < 30 and abs(g-b) < 30)
+                            is_dark = (r < 180 and g < 180 and b < 180) # EN: Wider range / CN: 更宽的识别范围
+                            is_neutral = (abs(r-g) < 40 and abs(g-b) < 40)
                             if is_dark and is_neutral:
-                                # EN: Tint to theme color but keep original alpha / CN: 染色为主题色，保留原始透明度
+                                # EN: Tint to theme color / CN: 染色为主题色
                                 new_pixels.append((*m_color, a))
                             else:
                                 # EN: Preserve brand colors (e.g. Leica Red, Nikon Yellow)
@@ -581,30 +842,44 @@ class FilmRenderer:
         t_text_sub_start = time.perf_counter()
         try:
             from .typo_engine import TypoEngine
+            # EN: Draw Main Text (Camera) / CN: 绘制主标题（相机）
             if not logo_drawn:
-                TypoEngine.draw_text(draw, main_draw_pos, main_text, resolved_main, m_size, m_color, timings=timings, key_prefix='text_main')
-            TypoEngine.draw_text(draw, sub_draw_pos, sub_text, resolved_sub, s_size, sub_colors, timings=timings, key_prefix='text_sub')
+                # EN: Construct segments for main text / CN: 为主标题构建片段
+                main_segments = [{"type": "text", "content": main_text, "color": m_color}]
+                TypoEngine.draw_mixed_text(draw, main_draw_pos, main_segments, resolved_main, m_size, m_color, timings=timings, key_prefix='text_main')
+            
+            # EN: Draw Sub Text (Lens + Info) using structured segments / CN: 使用结构化片段绘制副标题（镜头+参数）
+            sub_segments = self._prepare_lens_segments(data, s_color, use_lens_branding=use_lens_branding)
+            TypoEngine.draw_mixed_text(draw, sub_draw_pos, sub_segments, resolved_sub, s_size, s_color, timings=timings, key_prefix='text_sub')
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             if not logo_drawn:
                 draw.text(main_draw_pos, main_text, fill=m_color, anchor="mm")
-            # Fallback for sub_text: just use the base sub_color as a single fill
-            draw.text(sub_draw_pos, sub_text, fill=s_color, anchor="mm")
+            # Fallback for sub_text: try to extract plain text from segments
+            try:
+                sub_segments = self._prepare_lens_segments(data, s_color, use_lens_branding=use_lens_branding)
+                plain_sub = "".join([s["content"] for s in sub_segments if s["type"] == "text"])
+                draw.text(sub_draw_pos, plain_sub, fill=s_color, anchor="mm")
+            except:
+                draw.text(sub_draw_pos, str(data.get('LensModel')), fill=s_color, anchor="mm")
         timings['text_render_pure'] = time.perf_counter() - t_text_sub_start
 
 
     def _find_logo_path(self, make, model):
         """EN: Universal case-insensitive logo lookup.
-           CN: 通用的不区分大小写 Logo 检索逻辑。支持“品牌-型号”自动识别。"""
-        if not os.path.exists(self.logo_dir):
-            return None
+           CN: 通用的不区分大小写 Logo 检索逻辑。支持多路径（源码 + dist）搜索。"""
+        # EN: Multi-path search (Source + Dist fallback)
+        search_dirs = [self.logo_dir]
+        dist_logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist", "GT23_Assets", "logos")
+        if os.path.exists(dist_logo_path) and dist_logo_path not in search_dirs:
+            search_dirs.append(dist_logo_path)
         
-        # 1. EN: Prepare and normalize search metadata / CN: 准备并正则化搜索信息
+        # 1. EN: Normalize input / CN: 正则化输入
         make_u = str(make or "").upper().strip()
         model_u = str(model or "").upper().strip()
         if not model_u: return None
 
-        # EN: Function to strip non-alphanumeric for extreme fuzzy matching
-        # CN: 定义简单的正则化函数，去除空格和符号，用于极端模糊匹配
         def _norm(s): return "".join(c for c in s if c.isalnum())
         norm_model = _norm(model_u)
 
@@ -614,48 +889,30 @@ class FilmRenderer:
             search_stems.append(f"{make_u}_{model_u}")
             search_stems.append(f"{make_u}{model_u}")
         search_stems.append(model_u)
-            
-        try:
-            files = os.listdir(self.logo_dir)
-            supported_exts = [".svg", ".png", ".jpg", ".jpeg"]
-            file_map = {f.upper(): f for f in files if any(f.lower().endswith(ext) for ext in supported_exts)}
-            
-            # 2. EN: First pass - strict matching with candidate stems
-            # CN: 第一轮：基于候选名的严格匹配
-            for stem in search_stems:
-                for ext in [".svg", ".png", ".jpg"]:
-                    target_key = f"{stem}{ext.upper()}"
-                    if target_key in file_map:
-                        return os.path.join(self.logo_dir, file_map[target_key])
-            
-            # 3. EN: Second pass - Suffix matching for "BRAND-MODEL" pattern
-            # CN: 第二轮：针对“品牌-型号”规则的后缀匹配
-            for file_key, actual_name in file_map.items():
-                name_stem = os.path.splitext(file_key)[0]
-                if name_stem.endswith(f"-{model_u}") or name_stem.endswith(f"_{model_u}"):
-                    return os.path.join(self.logo_dir, actual_name)
 
-            # 4. EN: Third pass - Extreme fuzzy (Normalized) match
-            # CN: 第三轮：极端模糊（正则化）匹配，忽略空格和横杠，但要求完全相等以防止子串误伤 (例如 TVS -> TVSII)
-            for file_key, actual_name in file_map.items():
-                name_stem = os.path.splitext(file_key)[0]
-                # EN: Extract the model part if it contains a brand prefix separated by dash
-                # CN: 如果文件名包含带横杠的品牌前缀，尝试只提取型号部分进行正则化对比
-                parts = name_stem.split('-')
-                potential_model_str = parts[-1] if len(parts) > 1 else name_stem
+        for l_dir in search_dirs:
+            if not os.path.exists(l_dir): continue
+            try:
+                files = os.listdir(l_dir)
+                supported_exts = [".svg", ".png", ".jpg", ".jpeg"]
+                file_map = {f.upper(): f for f in files if any(f.lower().endswith(ext) for ext in supported_exts)}
                 
-                # Check 1: Does the normalized full name end with the normalized model? (Safer suffix check)
-                if _norm(name_stem).endswith(norm_model):
-                    # Check 2: ensure it's an exact match of the model part to prevent 67 -> 67ii
-                    if _norm(potential_model_str) == norm_model:
-                        return os.path.join(self.logo_dir, actual_name)
+                # EN: First pass - strict matching with candidate stems
+                for stem in search_stems:
+                    for ext in [".svg", ".png", ".jpg"]:
+                        target_key = f"{stem}{ext.upper()}"
+                        if target_key in file_map:
+                            return os.path.join(l_dir, file_map[target_key])
                 
-                # Check 3: Absolute exact match of the entire normalized string (e.g. user just named file "TVS.svg")
-                if _norm(name_stem) == norm_model:
-                    return os.path.join(self.logo_dir, actual_name)
-                    
-        except Exception as e:
-            pass
+                # EN: Second pass - Suffix matching
+                for file_key, actual_name in file_map.items():
+                    name_stem = os.path.splitext(file_key)[0]
+                    if name_stem.endswith(f"-{model_u}") or name_stem.endswith(f"_{model_u}"):
+                        return os.path.join(l_dir, actual_name)
+                    if _norm(name_stem) == norm_model:
+                        return os.path.join(l_dir, actual_name)
+            except:
+                continue
         return None
 
     def _smart_resize(self, img, target):
@@ -794,6 +1051,7 @@ class FilmRenderer:
         """
         调整字体大小使其适应可用宽度
         """
+        if available_width <= 0: return 10, 8
         # EN: Resolve font paths including CJK fallback / CN: 解析字体路径，包含中文字库回退
         resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
 

@@ -381,13 +381,13 @@ class BorderPanel:
         no_folder_text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
         self.file_count_label = ttk.Label(self.folder_frame, text=no_folder_text, foreground="gray")
         self.file_count_label.pack(anchor=W)
-
-        # EN: Selection changed listener / CN: 参数变更监听
+                        # EN: Selection changed listener / CN: 参数变更监听
         self.side_ratio_var = ttk.DoubleVar(value=0.04)
         self.top_ratio_var = ttk.DoubleVar(value=0.04)
         self.bottom_ratio_var = ttk.DoubleVar(value=0.13)
-        self.font_scale_var = ttk.DoubleVar(value=0.032)
-        self.theme_var = ttk.StringVar(value="light")
+        self.font_scale_var = tk.DoubleVar(value=0.032)
+        self.theme_var = tk.StringVar(value="light")
+        self.use_lens_branding_var = tk.BooleanVar(value=True) # EN: Global lens branding toggle / CN: 镜头专属标识全局开关
 
         # EN: Setup traces for sync / CN: 设置同步监听
         self.side_ratio_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
@@ -451,13 +451,24 @@ class BorderPanel:
         self.bottom_label = add_setting_to_grid(row2, "底部留白" if self.lang == "zh" else "Bottom Margin", self.bottom_ratio_var, 0)
         self.font_label = add_setting_to_grid(row2, "字体基础" if self.lang == "zh" else "Font Scale", self.font_scale_var, 1)
         
+        # EN: Global toggles row / CN: 全局开关行
         row3 = ttk.Frame(self.advanced_frame)
-        row3.pack(fill=X, pady=2)
-        row3.columnconfigure(0, weight=1, uniform="adv")
-        row3.columnconfigure(1, weight=1, uniform="adv")
+        row3.pack(fill=X, pady=(5, 2))
+        
+        self.branding_toggle = ttk.Checkbutton(row3, 
+                                            text="开启镜头专属标识" if self.lang == "zh" else "Enable Lens Branding",
+                                            variable=self.use_lens_branding_var,
+                                            command=lambda: self.on_params_changed(),
+                                            bootstyle="round-toggle")
+        self.branding_toggle.pack(side=LEFT, padx=2)
+
+        row4 = ttk.Frame(self.advanced_frame)
+        row4.pack(fill=X, pady=2)
+        row4.columnconfigure(0, weight=1, uniform="adv")
+        row4.columnconfigure(1, weight=1, uniform="adv")
 
         # EN: Border Theme selector / CN: 边框主题选择
-        theme_container = ttk.Frame(row3)
+        theme_container = ttk.Frame(row4)
         theme_container.grid(row=0, column=0, sticky=EW, padx=2)
         self.theme_label = ttk.Label(theme_container, text="边框主题" if self.lang == "zh" else "Border Theme", width=12)
         self.theme_label.pack(side=LEFT)
@@ -666,6 +677,7 @@ class BorderPanel:
             self._update_theme_combo_values()
             self.redraw_preview()
             self.process_button.config(text="开始处理" if not is_running else "停止处理 (Stop)")
+            self.branding_toggle.config(text="开启镜头专属标识")
             self.log_frame.config(text="处理日志")
             self.update_film_combo_values()
         else:
@@ -696,6 +708,7 @@ class BorderPanel:
             self.preview_frame.config(text="Preview (First Image in Folder)")
             self.redraw_preview()
             self.process_button.config(text="Start Processing" if not is_running else "Stop Processing (Cancel)")
+            self.branding_toggle.config(text="Enable Lens Branding")
             self.log_frame.config(text="Processing Log")
             self.update_film_combo_values()
         
@@ -1006,9 +1019,11 @@ class BorderPanel:
     def _save_current_to_state(self, path):
         """EN: Save UI values to per-image config / CN: 将 UI 值存入单图配置"""
         self.image_configs[path] = {
-            'side_ratio': self.side_ratio_var.get(),
-            'top_ratio': self.top_ratio_var.get(),
-            'bottom_ratio': self.bottom_ratio_var.get(),
+            # EN: Use safe getters to avoid TclError when entry boxes are temporarily empty during typing
+            # CN: 使用安全获取方法，避免用户在输入时输入框临时为空导致的 TclError
+            'side_ratio': self._get_float_safe(self.side_ratio_var),
+            'top_ratio': self._get_float_safe(self.top_ratio_var),
+            'bottom_ratio': self._get_float_safe(self.bottom_ratio_var),
             'font_scale': self.font_scale_var.get(),
             'theme': self.theme_var.get(),
             'rotation': self.rotation_var.get(),
@@ -1164,10 +1179,10 @@ class BorderPanel:
                     
                     # EN: Apply custom layout params to preview / CN: 将自定义布局参数应用到预览
                     custom_layout = {
-                        "side": self.side_ratio_var.get(),
-                        "top": self.top_ratio_var.get(),
-                        "bottom": self.bottom_ratio_var.get(),
-                        "font_scale": self.font_scale_var.get()
+                        "side": self._get_float_safe(self.side_ratio_var, 0.05),
+                        "top": self._get_float_safe(self.top_ratio_var, 0.05),
+                        "bottom": self._get_float_safe(self.bottom_ratio_var, 0.15),
+                        "font_scale": self._get_float_safe(self.font_scale_var, 0.35)
                     }
                     if 'layout' in data:
                         data['layout'].update(custom_layout)
@@ -1200,18 +1215,11 @@ class BorderPanel:
                     # EN: Downscale target edge for faster preview while keeping shadow / CN: 降低分辨率加快预览同时保留阴影
                     # EN: Pass the selected theme / CN: 传递当前选中的主题 (light/dark/rainbow/fuji_rainbow)
                     theme_str = self.theme_var.get()
-                    if self.lang == "zh":
-                        # EN: Mapping for Chinese UI items / CN: 中文 UI 项映射
-                        theme_map = {
-                            "富士": "fuji_rainbow",
-                            "马卡龙": "rainbow",
-                            "深色": "dark", 
-                            "浅色": "light"
-                        }
                     theme_map = {
                         "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
                         "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
                         "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
+                        "frosted": "frosted", "磨砂": "frosted", "glass": "frosted",
                         "dark": "dark", "深色": "dark", "Dark": "dark",
                         "light": "light", "浅色": "light", "Light": "light", "Default": "light"
                     }
@@ -1271,6 +1279,7 @@ class BorderPanel:
                                                      manual_rotation=manual_rotation,
                                                      theme=theme_val,
                                                      is_pure=is_pure_mode,
+                                                     use_lens_branding=self.use_lens_branding_var.get(),
                                                      rainbow_index=r_index,
                                                      rainbow_total=r_total,
                                                      rainbow_range=r_range,
@@ -1278,7 +1287,12 @@ class BorderPanel:
                                                      source_img=source_img)
 
                     # EN: Final image for display (Already flattened to RGB in renderer)
-                    img_copy = final_pil.copy()
+                    if final_pil and hasattr(final_pil, 'copy'):
+                        img_copy = final_pil.copy()
+                    else:
+                        print("CN: [!] 预览渲染失败，跳过本次更新")
+                        self._is_loading_preview = False
+                        return
 
                     def apply_image():
                         if job_mark != getattr(self, 'preview_job_id', None):
@@ -1387,7 +1401,9 @@ class BorderPanel:
             curr_theme = self.theme_var.get().lower()
             is_macaron = "macaron" in curr_theme or "马卡龙" in curr_theme
             is_rainbow = "rainbow" in curr_theme or "彩虹" in curr_theme
-            theme_str = "rainbow" if is_rainbow else ("macaron" if is_macaron else self.theme_var.get())
+            is_frosted = "frosted" in curr_theme or "磨砂" in curr_theme or "glass" in curr_theme
+            
+            theme_str = "rainbow" if is_rainbow else ("macaron" if is_macaron else ("frosted" if is_frosted else self.theme_var.get()))
             
             for p in self.current_batch_paths:
                 if p not in self.image_configs:
@@ -1400,9 +1416,9 @@ class BorderPanel:
                 self.image_configs[self.current_image_path] = {}
             
             self.image_configs[self.current_image_path].update({
-                'side_ratio': self.side_ratio_var.get(),
-                'top_ratio': self.top_ratio_var.get(),
-                'bottom_ratio': self.bottom_ratio_var.get(),
+                'side_ratio': self._get_float_safe(self.side_ratio_var),
+                'top_ratio': self._get_float_safe(self.top_ratio_var),
+                'bottom_ratio': self._get_float_safe(self.bottom_ratio_var),
                 'font_scale': self.font_scale_var.get(),
                 'theme': self.theme_var.get()
             })
@@ -1510,7 +1526,8 @@ class BorderPanel:
                 'show_aperture': self.show_aperture_var.get(),
                 'show_iso': self.show_iso_var.get(),
                 'show_lens': self.show_lens_var.get()
-            }
+            },
+            'use_branding': self.use_lens_branding_var.get()
         }
         # Film specific fallback
         manual_film = None
@@ -1626,6 +1643,7 @@ class BorderPanel:
                     "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
                     "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
                     "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
+                    "frosted": "frosted", "磨砂": "frosted", "glass": "frosted",
                     "dark": "dark", "深色": "dark", "Dark": "dark",
                     "light": "light", "浅色": "light", "Light": "light", "Default": "light"
                 }
@@ -1654,6 +1672,7 @@ class BorderPanel:
                                      manual_rotation=cfg.get('rotation', global_cfg['rotation']) if cfg else global_cfg['rotation'],
                                      theme=theme_val,
                                      is_pure=is_pure,
+                                     use_lens_branding=global_cfg['use_branding'],
                                      rainbow_index=r_idx,
                                      rainbow_total=total,
                                      rainbow_range=r_range,
@@ -1751,9 +1770,9 @@ class BorderPanel:
         CN: 使用当前语言更新主题下拉框选项
         """
         if self.lang == "zh":
-            themes = ["浅色", "深色", "马卡龙", "彩虹", "樱花粉"]
+            themes = ["浅色", "深色", "磨砂玻璃", "马卡龙", "彩虹", "樱花粉"]
         else:
-            themes = ["Default", "Dark Mode", "Macaron", "Rainbow", "Sakura"]
+            themes = ["Default", "Dark Mode", "Frosted Glass", "Macaron", "Rainbow", "Sakura"]
 
         current = self.theme_var.get()
         self.theme_combo['values'] = themes
@@ -1764,8 +1783,8 @@ class BorderPanel:
         if current:
             for i, theme in enumerate(themes):
                 # EN: Search by keyword / CN: 通过关键词搜索进行对齐
-                for kw in ["Light", "Default", "Dark", "Macaron", "Rainbow", "浅色", "深色", "马卡龙", "彩虹"]:
-                    if kw in current and kw in theme:
+                for kw in ["Light", "Default", "Dark", "Macaron", "Rainbow", "Frosted", "Glass", "浅色", "深色", "马卡龙", "彩虹", "磨砂"]:
+                    if kw.lower() in current.lower() and kw.lower() in theme.lower():
                         # EN: Rainbow vs Macaron disambiguation / CN: 区分彩虹与马卡龙
                         if "Rainbow" in current and "Rainbow" not in theme: continue
                         if "彩虹" in current and "彩虹" not in theme: continue
@@ -1776,3 +1795,11 @@ class BorderPanel:
 
         if not selected and themes:
             self.theme_combo.current(0)
+
+    def _get_float_safe(self, var, default=0.0):
+        """EN: Safe get for Tkinter DoubleVar / CN: 安全获取 Tkinter DoubleVar 内容"""
+        try:
+            val = var.get()
+            return float(val) if val is not None else default
+        except:
+            return default

@@ -1,5 +1,43 @@
 # Change Log / 变更日志
 
+## [2.4.0] - 2026-04-17
+
+### 📸 品牌专属镜头设计 (Brand-Specific Lens Styling)
+- **[Feature] 旗舰镜头视觉增强 / Flagship Lens Enhancements**:
+  - EN: Implemented robust, regex-based detection for Canon L (Red), Nikon N (Gold), Sony GM (Token), and Sigma Art/Sports/Contemporary (Tokens). Added a global toggle in GUI with unified styling to enable/disable these stylings.
+  - CN: 为旗舰镜头引入了专属视觉风格与勋章系统。通过正则精准识别 Canon L（红）、Nikon N（金）、Sony GM 与 Sigma A/S/C（勋章），并在“高级设置”中增加了全局开关（已统一视觉风格），支持随时切换至纯文本模式。
+## [2.5.0] - 2026-04-17
+
+### 💎 磨砂玻璃极致视觉重构 (Frosted Glass Depth Overhaul)
+- **[Feature] 物理级悬浮投影 / Physical Floating Shadow**:
+  - EN: Implemented **Negative Spread + Rounded Masks** to eliminate gray ring artifacts and hard edges.
+  - EN: Introduced **Air Falloff (Self-Vanishing)** algorithm where shadow opacity naturally decays from 100% to 20% along the displacement vector for realistic perspective.
+  - CN: 实现了**负扩张 + 超大圆角遮罩**，物理级解决了投影中的“灰环”与生硬边缘问题。
+  - CN: 引入**“空气衰减”自消隐算法**，阴影不透明度随位移自动降阶（从 100% 渐变至 20%），完美模拟真实侧光下的透视虚化感。
+- **[Feature] 离屏复合渲染 / Off-screen Composite Pipeline**:
+  - EN: Shifted to a 4-layer off-screen RGBA composite buffer with `Image.alpha_composite` for sub-pixel smooth gradients.
+  - CN: 切换为 4 层离屏 RGBA 复合渲染。先在透明缓冲区完成投影层的物理融合，再整体贴回背景，彻底消除层叠处的“阶跃”感。
+- **[Optimization] 文字配色智能自适应 / Adaptive Contrast Typography**:
+  - EN: Added **Footer Brightness Sensing**. Automatically toggles between 5-level grayscale palettes (Carbon Black/Silver White) based on sampled background luminance.
+  - CN: 接入**底部区域亮度感应系统**。自动根据背景明度切换文字配色（深碳黑/亮银白等五阶动态灰度），确保在任何复杂背景下均清晰可读。
+- **[Stabilization] GUI 鲁棒性加固 / GUI Robustness**:
+  - EN: Implemented global `_get_float_safe` fuses for all layout parameters. Fixed crashes caused by `float division by zero` and empty Tkinter entries during live preview.
+  - CN: 为所有布局参数加装了 `_get_float_safe` 全链路“保险丝”。修复了因输入框删空导致的 Tkinter `TclError` 及渲染内核的“除以零”崩溃，显著提升预览稳定性。
+- **[Optimization] 数码系统去胶片化 / Digital Metadata De-filming**:
+  - EN: Automatically excludes film-specific metadata for digital camera systems to maintain a clean, professional parameters line.
+  - CN: 针对数码摄影系统，在识别到数码机身时自动屏蔽胶片信息（不再显示 Film Name），使整体排版更符合现代数字摄影审美。
+- **[Feature] 多路径 Logo 检索 / Multi-Path Logo Resolver**:
+  - EN: Upgraded asset lookup to check both root source and distribution distribution folders, resolving missing logos for flagship models like Sony A1.
+  - CN: 升级了相机 Logo 检索引擎，支持多路径（源码 + dist 离线库）同步搜索，彻底解决了部分旗舰机型（如 Sony A1）Logo 无法匹配的路径识别死角。
+
+### 🎨 样片与演示系统 (Samples & Showcase)
+- **[Feature] 18 度灰专业样片 / 18° Gray Samples**:
+  - EN: Updated official sample backgrounds to 18% gray with hardware-matched focal lengths and apertures for professional reference.
+  - CN: 将演示样片背景升级为专业 18 度中性灰，并实现了元数据（焦距、光圈等）与当前镜头规格的 1:1 动态匹配，显著提升演示样片的拟真度。
+- **[Feature] 品牌勋章全家桶 / Branding Showreel**:
+  - EN: Added a vertically stacked branding showcase image in `assets/samples/branding_v241.jpg` for quick layout review. Includes a global toggle in GUI with unified styling to enable/disable these stylings.
+  - CN: 在 `assets/samples` 目录下新增了品牌勋章全家桶展示图（branding_v241.jpg），一屏看全主流品牌与勋章的排版效果。并在 GUI 增加了风格统一的全局开关。
+
 ## [2.3.1] - 2026-04-06
 
 ### 📸 EXIF 元数据增强 (EXIF Metadata Enhancement)

@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from fontTools.ttLib import TTFont
-from PIL import ImageFont
+from PIL import ImageFont, Image
 
 class TypoEngine:
     """
@@ -51,9 +51,13 @@ class TypoEngine:
         return os.path.join(project_root, font_path)
 
     @classmethod
-    def draw_text(cls, draw, pos, text, font_path, font_size, fill, timings=None, key_prefix="text"):
-        """EN: Render text with native kern table.
-           CN: 调用原生 Kern 表渲染文本。"""
+    def draw_mixed_text(cls, draw, pos, segments, font_path, font_size, default_fill, timings=None, key_prefix="mixed"):
+        """
+        EN: Render a mix of text segments and image tokens (badges).
+        CN: 渲染混合了文本片段和图片标识（勋章）的内容。
+        args:
+            segments: List of dicts, e.g. [{"type": "text", "content": "FE 24-70mm ", "color": (rgb)}, {"type": "image", "path": "path/to/gm.png"}]
+        """
         if timings is None: timings = {}
         t0 = time.perf_counter()
         font_path = cls._resolve_font_path(font_path)
@@ -61,7 +65,6 @@ class TypoEngine:
         cache_key = (font_path, font_size)
         if cache_key in cls._font_cache:
             pil_font, ttfont = cls._font_cache[cache_key]
-            timings[f'{key_prefix}_load'] = time.perf_counter() - t0
         else:
             try:
                 if font_path.lower().endswith(".ttc"):
@@ -71,81 +74,82 @@ class TypoEngine:
                     ttfont = TTFont(font_path)
                     pil_font = ImageFont.truetype(font_path, font_size)
                 cls._font_cache[cache_key] = (pil_font, ttfont)
-                timings[f'{key_prefix}_load'] = time.perf_counter() - t0
-            except Exception as e:
-                # EN: Fallback to default font if loading fails
-                # CN: 如果加载失败，回退到默认字体
+            except:
                 pil_font = ImageFont.load_default()
-                # EN: Draw text without kerning / CN: 不使用字间距绘制文本
-                draw.text(pos, text, font=pil_font, fill=fill, anchor="mm")
-                return
-        
-        chars = list(text)
-        
-        # EN: Calculate width for each character
-        # CN: 计算每个字符的宽度
-        widths = [draw.textlength(c, font=pil_font) for c in chars]
-        
-        # EN: Calculate kerning offsets for character pairs
-        # CN: 计算字符对之间的字间距偏移
-        offsets = [0]
-        for i in range(len(chars) - 1):
-            offsets.append(cls.get_kerning_offset(ttfont, chars[i], chars[i+1], font_size))
-        
-        # EN: Calculate total text width including kerning
-        # CN: 计算包括字间距的总文本宽度
-        total_advance = sum(widths) + sum(offsets)
-        
-        # --- EN: VISUAL CENTERING REFINEMENT / CN: 视觉居中优化 ---
-        # EN: We need to know the actual ink bounds to perfectly match the Logo's centering.
-        # CN: 我们需要知道实际墨迹边界，以完美匹配 Logo 的居中。
-        
-        # EN: Calculate character positions (relative to start)
-        # CN: 计算每个字符相对于起始点的坐标
-        relative_x_positions = []
-        curr_rel_x = 0
-        for i in range(len(chars)):
-            curr_rel_x += offsets[i]
-            relative_x_positions.append(curr_rel_x)
-            curr_rel_x += widths[i]
-            
-        # EN: Estimate actual ink bounds for the whole line
-        # CN: 预估整行文字的像素边界
-        all_lefts = []
-        all_rights = []
-        for i, char in enumerate(chars):
-            # EN: getmask(...).getbbox() gives (left, top, right, bottom) of glyph ink
-            # CN: getmask(...).getbbox() 提供字形的像素包围盒
-            char_bbox = pil_font.getmask(char).getbbox()
-            if char_bbox:
-                # char_bbox[0] is the ink offset from left, char_bbox[2] is ink right
-                all_lefts.append(relative_x_positions[i] + char_bbox[0])
-                all_rights.append(relative_x_positions[i] + char_bbox[2])
-        
-        if not all_lefts:
-            # EN: Fallback to basic centering if no ink found / CN: 如果无墨迹则回退到基础居中
-            start_x = pos[0] - total_advance / 2
-        else:
-            visual_left = min(all_lefts)
-            visual_right = max(all_rights)
-            visual_w = visual_right - visual_left
-            # EN: Centering based on visual width / CN: 基于视觉宽度进行居中
-            start_x = pos[0] - visual_w / 2 - visual_left
+                ttfont = None
 
-        # EN: Handle per-character coloring / CN: 处理逐字着色
-        if isinstance(fill, list) and len(fill) == len(chars):
-            colors = fill
-        else:
-            colors = [fill] * len(chars)
+        # 1. EN: Pre-calculate widths and load images / CN: 预计算宽度并加载图片
+        prepared_segments = []
+        total_w = 0
+        ascent, descent = pil_font.getmetrics()
+        line_h = ascent + descent
 
-        # EN: Render each character with refined coordinates
-        # CN: 使用对齐后的坐标进行逐字渲染
-        t_render = time.perf_counter()
-        for i, char in enumerate(chars):
-            char_x = start_x + relative_x_positions[i]
-            y_offset = font_size * 0.02
-            # EN: Use anchor="lm" (left middle) for individual chars to keep vertical centering
-            # CN: 对单个字符使用 "lm" 锚点，以保持垂直方向上的居中
-            draw.text((char_x, pos[1] + y_offset), char, font=pil_font, fill=colors[i], anchor="lm")
-        timings[f'{key_prefix}_render'] = time.perf_counter() - t_render
+        for seg in segments:
+            if seg["type"] == "text":
+                content = seg["content"]
+                color = seg.get("color", default_fill)
+                
+                chars = list(content)
+                widths = [draw.textlength(c, font=pil_font) for c in chars]
+                offsets = [0]
+                if ttfont:
+                    for i in range(len(chars) - 1):
+                        offsets.append(cls.get_kerning_offset(ttfont, chars[i], chars[i+1], font_size))
+                
+                seg_w = sum(widths) + sum(offsets)
+                prepared_segments.append({
+                    "type": "text",
+                    "content": content,
+                    "color": color,
+                    "width": seg_w,
+                    "char_widths": widths,
+                    "offsets": offsets
+                })
+                total_w += seg_w
+            elif seg["type"] == "image":
+                img_path = seg["path"]
+                try:
+                    token_img = Image.open(img_path).convert("RGBA")
+                    # EN: Scale to match text height / CN: 缩放以匹配文字高度
+                    orig_w, orig_h = token_img.size
+                    scaled_w = int(orig_w * (line_h / orig_h))
+                    token_img = token_img.resize((scaled_w, line_h), Image.Resampling.LANCZOS)
+                    
+                    prepared_segments.append({
+                        "type": "image",
+                        "img": token_img,
+                        "width": scaled_w
+                    })
+                    total_w += scaled_w
+                except Exception as e:
+                    print(f"CN: [!] 无法加载混合 Token: {e}")
+                    continue
+
+        # 2. EN: Global Start Position (Center aligned) / CN: 全局起始点（居中对齐）
+        curr_x = pos[0] - total_w / 2
+        base_y = pos[1]
+
+        # 3. EN: Sequential Rendering / CN: 顺序渲染
+        for seg in prepared_segments:
+            if seg["type"] == "text":
+                # EN: Draw text character by character for precision / CN: 逐字精准绘制文本
+                content = seg["content"]
+                colors = seg["color"] if isinstance(seg["color"], list) else [seg["color"]] * len(content)
+                char_widths = seg["char_widths"]
+                offsets = seg["offsets"]
+                
+                for i, char in enumerate(content):
+                    curr_x += offsets[i]
+                    y_offset = font_size * 0.02
+                    draw.text((curr_x, base_y + y_offset), char, font=pil_font, fill=colors[i], anchor="lm")
+                    curr_x += char_widths[i]
+            elif seg["type"] == "image":
+                # EN: Paste image token / CN: 粘贴图片 Token
+                img = seg["img"]
+                # EN: Vertical alignment - anchor="lm" equivalent for images
+                # CN: 垂直对齐 - 图片的等效 "lm" 居中
+                paste_y = int(base_y - img.height // 2)
+                draw._image.paste(img, (int(curr_x), paste_y), img)
+                curr_x += seg["width"]
+        
         timings[f'{key_prefix}_total'] = time.perf_counter() - t0
