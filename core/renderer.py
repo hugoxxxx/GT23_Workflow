@@ -204,15 +204,10 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Dark Obsidian Gradient / CN: 曜石黑（深色垂直渐变层叠加磨砂图片层）
-                # 1. EN: Get frosted base / CN: 获取磨砂底座
-                frost_base = self._create_frosted_canvas(img, new_w, new_h)
-                # 2. EN: Create vertical gradient overlay / CN: 创建深灰垂直渐变层
+                # EN: Premium Grey Gradient (Solid) / CN: 曜石黑（纯色垂直渐变层，无原图磨砂层）
                 c_top = (142, 142, 147) # Apple System Gray 1 / 浅中灰
                 c_bottom = (99, 99, 102) # Apple System Gray 2 / 深中灰
-                grad_overlay = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
-                # 3. EN: Blend together / CN: 大幅降低叠加比例，让原图磨砂感占主导 (40% 渐变 + 60% 磨砂底色)
-                canvas = Image.blend(frost_base, grad_overlay, 0.40)
+                canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
