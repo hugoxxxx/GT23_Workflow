@@ -334,9 +334,26 @@ class FilmRenderer:
                     return bg, timings
                 return final_output, timings
 
-            t_save_start = time.perf_counter()
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+                save_name = f"GT_{os.path.basename(img_path)}"
+                if not save_name.lower().endswith('.jpg'):
+                    save_name = os.path.splitext(save_name)[0] + ".jpg"
+                save_path = os.path.join(output_dir, save_name)
+
+                # EN: Flatten before saving / CN: 保存前进行底色复合处理
+                flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
+                bg = Image.new("RGB", final_output.size, flatten_bg_color)
+                if final_output.mode == 'RGBA':
+                    bg.paste(final_output, mask=final_output.split()[3])
+                else:
+                    bg.paste(final_output)
+                bg.save(save_path, quality=95, subsampling=0)
+                timings['save'] = time.perf_counter() - t_save_start
+                final_output = bg
+
             timings['total'] = time.perf_counter() - t_start
-            return result, timings
+            return final_output, timings
 
         except Exception as e:
             print(f"CN: [ERR] 渲染程序出错: {e}")
