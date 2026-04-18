@@ -66,6 +66,12 @@ class BorderPanel:
         self.layout_config = self.controller.load_layout_config()
         self.setup_ui()
         self.load_film_library()
+
+        # EN: Auto-load photos_in if exists / CN: 自动加载 photos_in 文件夹（如果存在）
+        default_in = os.path.join(os.getcwd(), "photos_in")
+        if os.path.exists(default_in):
+            self.input_folder_var.set(default_in)
+            self.refresh_input_folder()
     
     def setup_ui(self):
         """
