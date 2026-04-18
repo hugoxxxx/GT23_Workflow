@@ -9,8 +9,6 @@ import sys
 import platform
 import subprocess
 import json
-import tempfile
-import shutil
 import threading
 import time
 import tkinter as tk
@@ -19,244 +17,11 @@ from ttkbootstrap.constants import *
 from tkinter import filedialog, messagebox
 from tkinter import scrolledtext
 from PIL import Image, ImageTk, ImageOps, ImageDraw, ImageFilter
-from core.metadata import MetadataHandler
-from core.renderer import FilmRenderer, bootstrap_logos
-from concurrent.futures import ThreadPoolExecutor
 
 
-class ThumbnailStrip(ttk.Frame):
-    """
-    EN: XHS-style horizontal thumbnail strip for image selection
-    CN: 小红书风格的水平样片导航条，用于图片选择
-    """
-    def __init__(self, parent, lang="en", on_select=None, on_delete=None, on_add=None, on_order_changed=None):
-        super().__init__(parent)
-        self.lang = lang
-        self.on_select = on_select
-        self.on_delete = on_delete
-        self.on_add = on_add
-        self.on_order_changed = on_order_changed
-        self.thumbs = {} # path -> photoimage
-        self.active_path = None
-        self.drag_widget = None # EN: Currently dragging widget / CN: 当前正在拖拽的组件
-        self._drag_data = {"x": 0, "y": 0}
-        
-        # UI Components
-        self.canvas = tk.Canvas(self, height=185, bg=ttk.Style().colors.bg, highlightthickness=0)
-        self.canvas.pack(side=TOP, fill=X, expand=YES)
-        
-        self.scrollbar = ttk.Scrollbar(self, orient=HORIZONTAL, command=self.canvas.xview, bootstyle="round")
-        self.scrollbar.pack(side=BOTTOM, fill=X)
-        self.canvas.configure(xscrollcommand=self.scrollbar.set)
-        
-        self.inner_frame = ttk.Frame(self.canvas)
-        self.canvas.create_window((0, 0), window=self.inner_frame, anchor=NW)
-        
-        self.inner_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        
-        self.executor = ThreadPoolExecutor(max_workers=4)
 
-    def _on_mousewheel(self, event):
-        # EN: Support horizontal scrolling with mouse wheel / CN: 支持滚轮水平滑动
-        self.canvas.xview_scroll(int(-1*(event.delta/120)), "units")
-
-    def update_images(self, paths):
-        """EN: Load and render thumbnails from list of paths / CN: 从路径列表加载并渲染缩略图"""
-        # Clear old
-        for widget in self.inner_frame.winfo_children():
-            widget.destroy()
-        
-        if not paths:
-            return
-            
-        for idx, path in enumerate(paths):
-            self._create_thumb_widget(path, idx)
-            
-        # EN: Add "+" button at the end / CN: 在末尾添加“+”按钮
-        self._create_add_button()
-
-    def _create_add_button(self):
-        frame = ttk.Frame(self.inner_frame, padding=5)
-        frame.pack(side=LEFT)
-        
-        # EN: Square placeholder for + / CN: 用于 + 的方型占位符
-        btn = ttk.Label(frame, text="+", font=("Segoe UI", 28, "bold"), 
-                       width=5, anchor=CENTER, cursor="hand2", 
-                       bootstyle="secondary", padding=40)
-        btn.pack()
-        btn.bind("<Button-1>", lambda e: self.on_add() if self.on_add else None)
-        
-        ttk.Label(frame, text="Add" if self.lang == "en" else "添加", 
-                 font=("Segoe UI", 8), foreground="gray").pack()
-
-    def _create_thumb_widget(self, path, index):
-        from PIL import ImageOps, ImageDraw
-        
-        container = ttk.Frame(self.inner_frame, padding=2)
-        container.pack(side=LEFT)
-        
-        # EN: Actual frame for the thumbnail with 3px border space / CN: 带有 3px 描边空间的样片容器
-        frame = ttk.Frame(container, padding=3, bootstyle="default")
-        frame.pack()
-        
-        lbl = ttk.Label(frame, text="...", cursor="hand2")
-        lbl.pack()
-        
-        # EN: Small Delete button at top-right (Hidden by default, hover to show)
-        # CN: 右上角的小删除按钮 (默认隐藏，悬停显示)
-        del_btn = ttk.Label(frame, text="×", cursor="hand2", font=("Segoe UI", 12), foreground="gray")
-        # del_btn.place() is called in hover events
-        del_btn.bind("<Button-1>", lambda e: self.on_delete(path) if self.on_delete else None)
-
-        # EN: Async thumbnail generation / CN: 异步生成缩略图
-        def generate():
-            try:
-                with Image.open(path) as img:
-                    # EN: Force 1:1 Square Crop (Increased size) / CN: 强制 1:1 方型裁切 (增加尺寸)
-                    img = ImageOps.fit(img, (120, 120), Image.Resampling.LANCZOS)
-                    
-                    # EN: Create rounded corners with PIL / CN: 使用 PIL 制作 8px 圆角
-                    mask = Image.new('L', img.size, 0)
-                    draw = ImageDraw.Draw(mask)
-                    draw.rounded_rectangle((0, 0) + img.size, radius=8, fill=255)
-                    img.putalpha(mask)
-                    
-                    # EN: IMPORTANT - Do NOT create PhotoImage in sub-thread
-                    # CN: 重要 - 不要在子线程中创建 PhotoImage，否则会导致 Tcl/Tk 内部报错 (AttributeError)
-                    processed_img = img.copy()
-                    
-                    # EN: Safely update UI using the parent frame's after()
-                    # CN: 使用父框架的 after() 安全更新 UI
-                    def safe_update(pil_img=processed_img, target_lbl=lbl):
-                        try:
-                            if target_lbl.winfo_exists():
-                                # EN: Create PhotoImage in MAIN thread
-                                # CN: 在主线程中创建 PhotoImage
-                                photo = ImageTk.PhotoImage(pil_img)
-                                self.thumbs[path] = photo # EN: Persist reference / CN: 保持引用防止 GC
-                                target_lbl.configure(image=photo, text="")
-                        except Exception:
-                            pass
-                    self.after(0, safe_update)
-            except Exception:
-                pass
-                
-        self.executor.submit(generate)
-        
-        # EN: Interaction Events / CN: 交互事件
-        def on_enter(e):
-            del_btn.place(relx=1.0, rely=0.0, anchor=NE, x=-5, y=5)
-            
-        def on_leave(e):
-            del_btn.place_forget()
-
-        # EN: Drag and Drop Handlers / CN: 拖拽排序逻辑
-        def on_drag_start(event):
-            self.drag_widget = container
-            self._drag_data["x"] = event.x
-            self.drag_widget.configure(cursor="fleur")
-            # EN: Visually highlight the one being moved / CN: 视觉高亮正在移动的对象
-            frame.configure(bootstyle="info")
-
-        def on_drag_motion(event):
-            if not self.drag_widget: return
-            
-            # EN: Calculate global X of parent container / CN: 计算父容器的全局 X 坐标
-            current_x = self.drag_widget.winfo_x() + (event.x - self._drag_data["x"])
-            
-            # EN: Find new insertion point among siblings / CN: 在兄弟组件中寻找新的插入点
-            siblings = self.inner_frame.pack_slaves()
-            # EN: Exclude ourselves and the "+" button (last child) / CN: 排除自身和末尾的 "+" 按钮
-            for other in siblings[:-1]:
-                if other == self.drag_widget: continue
-                
-                other_x = other.winfo_x()
-                other_w = other.winfo_width()
-                
-                # EN: If center point passed, swap order / CN: 如果超过中心点，则交换位置
-                if current_x < (other_x + other_w // 2) and self.drag_widget.winfo_x() > other_x:
-                    self.drag_widget.pack_forget()
-                    self.drag_widget.pack(side=LEFT, before=other)
-                    break
-                elif current_x > (other_x + other_w // 2) and self.drag_widget.winfo_x() < other_x:
-                    self.drag_widget.pack_forget()
-                    # EN: To pack AFTER 'other', we need to find the one after 'other'
-                    idx = siblings.index(other)
-                    if idx + 1 < len(siblings):
-                        self.drag_widget.pack(side=LEFT, before=siblings[idx+1])
-                    else:
-                        # EN: Should not happen because of "+" button, but safe fallback
-                        self.drag_widget.pack(side=LEFT)
-                    break
-
-        def on_drag_stop(event):
-            if not self.drag_widget: return
-            self.drag_widget.configure(cursor="hand2")
-            # EN: Restore original highlight if it was active / CN: 如果之前是激活态，恢复高亮
-            if getattr(lbl, '_img_path', None) == self.active_path:
-                frame.configure(bootstyle="primary")
-            else:
-                frame.configure(bootstyle="default")
-            
-            self.drag_widget = None
-            # EN: Inform order change / CN: 通知顺序已改变
-            self._notify_order_changed()
-
-        # EN: Re-bind selection vs drag logic / CN: 重新绑定选择与拖拽逻辑
-        # Use B1-Motion for drag start to avoid conflict with Click
-        lbl.bind("<Button-1>", on_drag_start, add="+")
-        lbl.bind("<B1-Motion>", on_drag_motion)
-        lbl.bind("<ButtonRelease-1>", on_drag_stop)
-        
-        container.bind("<Enter>", on_enter)
-        container.bind("<Leave>", on_leave)
-        lbl.bind("<Enter>", on_enter) # Ensure child labels also trigger
-        # Note: del_btn itself needs to keep showing on enter
-        del_btn.bind("<Enter>", lambda e: del_btn.place(relx=1.0, rely=0.0, anchor=NE, x=-5, y=5))
-        
-        lbl._img_path = path 
-        lbl._original_on_click = lambda e: self.on_select(path)
-        # Bind original click AFTER drag handlers to see if we moved
-        lbl.bind("<Button-1>", lambda e: self.on_select(path), add="+")
-        
-        # Filename label (shortened)
-        fname = os.path.basename(path)
-        if len(fname) > 12: fname = fname[:10] + ".."
-        ttk.Label(container, text=fname, font=("Segoe UI", 8), foreground="gray").pack()
-
-    def set_active(self, path):
-        self.active_path = path
-        # EN: Update highlight border / CN: 更新高亮边框 (主色调蓝色 3px 描边)
-        for container in self.inner_frame.pack_slaves():
-            # The frame is inside the container
-            widgets = container.winfo_children()
-            if not widgets: continue
-            frame = widgets[0]
-            lbl_widgets = frame.winfo_children()
-            if lbl_widgets:
-                lbl = lbl_widgets[0]
-                if getattr(lbl, '_img_path', None) == path:
-                    frame.configure(bootstyle="primary") # Indicates 3px border in some themes
-                else:
-                    frame.configure(bootstyle="default")
-
-    def _notify_order_changed(self):
-        """EN: Extract current paths from UI order and notify / CN: 从 UI 顺序提取路径并通知"""
-        new_paths = []
-        for container in self.inner_frame.pack_slaves():
-            # Skip the "+" button frame (it doesn't have an _img_path label at idx 0 index 0)
-            widgets = container.winfo_children()
-            if widgets:
-                frame = widgets[0]
-                lbl_widgets = frame.winfo_children()
-                if lbl_widgets:
-                    lbl = lbl_widgets[0]
-                    if hasattr(lbl, '_img_path'):
-                        new_paths.append(lbl._img_path)
-        
-        if self.on_order_changed:
-            self.on_order_changed(new_paths)
+from gui.components import ThumbnailStrip, ExifGroup, SettingsGroup
+from gui.controllers.border_controller import BorderController
 
 
 class BorderPanel:
@@ -291,6 +56,31 @@ class BorderPanel:
         # EN: Global EXIF flag (Single master switch)
         # CN: 全局 EXIF 标志位，一个开关控制所有字段是否“全局同步”
         self.exif_global_var = tk.BooleanVar(value=False)
+        
+        # EN: Variables for EXIF overrides / CN: 手动 EXIF 覆盖变量
+        self.exif_make_var = ttk.StringVar()
+        self.exif_model_var = ttk.StringVar()
+        self.exif_lens_var = ttk.StringVar()
+        self.exif_shutter_var = ttk.StringVar()
+        self.exif_aperture_var = ttk.StringVar()
+        self.exif_iso_var = ttk.StringVar()
+
+        # EN: Visibility toggles / CN: 显示开关
+        self.show_make_var = tk.IntVar(value=1)
+        self.show_model_var = tk.IntVar(value=1)
+        self.show_shutter_var = tk.IntVar(value=1)
+        self.show_aperture_var = tk.IntVar(value=1)
+        self.show_iso_var = tk.IntVar(value=1)
+        self.show_lens_var = tk.IntVar(value=1)
+        
+        # EN: Controller for decoupled logic / CN: 用于逻辑解耦的控制器
+        self.controller = BorderController(
+            lang=self.lang,
+            log_callback=self.log,
+            progress_callback=self._process_feedback,
+            complete_callback=self.on_processing_complete,
+            error_callback=self.on_processing_error
+        )
         
         # EN: Load layout config for parameter initialization / CN: 加载布局配置用于参数初始化
         self.layout_config = {}
@@ -422,124 +212,34 @@ class BorderPanel:
         self.film_combo.bind("<Return>", lambda e: self.on_params_changed())
 
         # EN: Advanced settings (border parameters) / CN: 高级设置（边框参数）
-        advanced_text = "高级设置" if self.lang == "zh" else "Advanced Settings"
-        self.advanced_frame = ttk.Labelframe(self.left_frame, text=advanced_text, padding=10)
-        self.advanced_frame.pack(fill=X, pady=(0, 10))
-        # EN: Advanced settings components
-        row1 = ttk.Frame(self.advanced_frame)
-        row1.pack(fill=X, pady=2)
-        row1.columnconfigure(0, weight=1, uniform="adv")
-        row1.columnconfigure(1, weight=1, uniform="adv")
-        
-        row2 = ttk.Frame(self.advanced_frame)
-        row2.pack(fill=X, pady=2)
-        row2.columnconfigure(0, weight=1, uniform="adv")
-        row2.columnconfigure(1, weight=1, uniform="adv")
-
-        def add_setting_to_grid(parent, label_text, var, col):
-            container = ttk.Frame(parent)
-            container.grid(row=0, column=col, sticky=EW, padx=2)
-            lbl = ttk.Label(container, text=label_text, width=12)
-            lbl.pack(side=LEFT)
-            entry = ttk.Entry(container, textvariable=var, width=12)
-            entry.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
-            entry.bind("<Return>", lambda e: self.on_params_changed())
-            return lbl
-
-        self.side_label = add_setting_to_grid(row1, "左右边框" if self.lang == "zh" else "Side Margin", self.side_ratio_var, 0)
-        self.top_label = add_setting_to_grid(row1, "顶部留白" if self.lang == "zh" else "Top Margin", self.top_ratio_var, 1)
-        self.bottom_label = add_setting_to_grid(row2, "底部留白" if self.lang == "zh" else "Bottom Margin", self.bottom_ratio_var, 0)
-        self.font_label = add_setting_to_grid(row2, "字体基础" if self.lang == "zh" else "Font Scale", self.font_scale_var, 1)
-        
-        # EN: Global toggles row / CN: 全局开关行
-        row3 = ttk.Frame(self.advanced_frame)
-        row3.pack(fill=X, pady=(5, 2))
-        
-        self.branding_toggle = ttk.Checkbutton(row3, 
-                                            text="开启镜头专属标识" if self.lang == "zh" else "Enable Lens Branding",
-                                            variable=self.use_lens_branding_var,
-                                            command=lambda: self.on_params_changed(),
-                                            bootstyle="round-toggle")
-        self.branding_toggle.pack(side=LEFT, padx=2)
-
-        row4 = ttk.Frame(self.advanced_frame)
-        row4.pack(fill=X, pady=2)
-        row4.columnconfigure(0, weight=1, uniform="adv")
-        row4.columnconfigure(1, weight=1, uniform="adv")
-
-        # EN: Border Theme selector / CN: 边框主题选择
-        theme_container = ttk.Frame(row4)
-        theme_container.grid(row=0, column=0, sticky=EW, padx=2)
-        self.theme_label = ttk.Label(theme_container, text="边框主题" if self.lang == "zh" else "Border Theme", width=12)
-        self.theme_label.pack(side=LEFT)
-        self.theme_combo = ttk.Combobox(theme_container, textvariable=self.theme_var, state="readonly", width=20)
-        self.theme_combo.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
-        self.theme_combo.bind("<<ComboboxSelected>>", lambda e: self.on_params_changed())
-        self._update_theme_combo_values()
+        settings_vars = {
+            "side": self.side_ratio_var, "top": self.top_ratio_var,
+            "bottom": self.bottom_ratio_var, "font": self.font_scale_var,
+            "theme": self.theme_var, "branding": self.use_lens_branding_var
+        }
+        self.settings_group = SettingsGroup(self.left_frame, lang=self.lang, 
+                                           on_change=self.on_params_changed,
+                                           vars=settings_vars)
+        self.settings_group.pack(fill=X, pady=(0, 10))
 
         # EN: Manual EXIF Overrides / CN: 手动 EXIF 覆盖
-        exif_text = "手动 EXIF 覆盖 (留空则读取原图)" if self.lang == "zh" else "Manual EXIF Overrides (Leave blank to use file EXIF)"
-        self.exif_frame = ttk.Labelframe(self.left_frame, text=exif_text, padding=5)
-        self.exif_frame.pack(fill=X, pady=(0, 5))
-
-        # EN: Global Sync Switch (Master) / CN: 全局同步主开关
-        sync_text = "全局应用" if self.lang == "zh" else "Apply to All"
-        self.global_sync_check = ttk.Checkbutton(self.exif_frame, text=sync_text, 
-                                               variable=self.exif_global_var, 
-                                               command=self.on_params_changed,
-                                               bootstyle="round-toggle")
-        self.global_sync_check.pack(anchor=W, padx=5, pady=(5, 5))
-
-        # Variables for EXIF overrides
-        self.exif_make_var = ttk.StringVar()
-        self.exif_model_var = ttk.StringVar()
-        self.exif_lens_var = ttk.StringVar()
-        self.exif_shutter_var = ttk.StringVar()
-        self.exif_aperture_var = ttk.StringVar()
-        self.exif_iso_var = ttk.StringVar()
-
-        # EN: Visibility toggles / CN: 显示开关
-        self.show_make_var = tk.IntVar(value=1)
-        self.show_model_var = tk.IntVar(value=1)
-        self.show_shutter_var = tk.IntVar(value=1)
-        self.show_aperture_var = tk.IntVar(value=1)
-        self.show_iso_var = tk.IntVar(value=1)
-        self.show_lens_var = tk.IntVar(value=1)
-
-        # Layout grids - Restored to 3x2 grid
-        ex_row1 = ttk.Frame(self.exif_frame)
-        ex_row1.pack(fill=X, pady=2)
-        ex_row1.columnconfigure(0, weight=1, uniform="exif")
-        ex_row1.columnconfigure(1, weight=1, uniform="exif")
-        
-        ex_row2 = ttk.Frame(self.exif_frame)
-        ex_row2.pack(fill=X, pady=2)
-        ex_row2.columnconfigure(0, weight=1, uniform="exif")
-        ex_row2.columnconfigure(1, weight=1, uniform="exif")
-        
-        ex_row3 = ttk.Frame(self.exif_frame)
-        ex_row3.pack(fill=X, pady=2)
-        ex_row3.columnconfigure(0, weight=1, uniform="exif")
-        ex_row3.columnconfigure(1, weight=1, uniform="exif")
-
-        def add_exif_field_to_grid(parent, label_text, var, show_var, col):
-            container = ttk.Frame(parent)
-            container.grid(row=0, column=col, sticky=EW)
-            # EN: Visibility toggle / CN: 显示开关
-            cb_show = ttk.Checkbutton(container, variable=show_var, command=self.on_params_changed)
-            cb_show.pack(side=LEFT, padx=(2, 0))
-            
-            ttk.Label(container, text=label_text, width=8).pack(side=LEFT)
-            entry = ttk.Entry(container, textvariable=var, width=18)
-            entry.pack(side=LEFT, padx=(0, 10), fill=X, expand=YES)
-            entry.bind("<Return>", lambda e: self.on_params_changed())
-
-        add_exif_field_to_grid(ex_row1, "Make:", self.exif_make_var, self.show_make_var, 0)
-        add_exif_field_to_grid(ex_row1, "Model:", self.exif_model_var, self.show_model_var, 1)
-        add_exif_field_to_grid(ex_row2, "Shutter:", self.exif_shutter_var, self.show_shutter_var, 0)
-        add_exif_field_to_grid(ex_row2, "Aperture:", self.exif_aperture_var, self.show_aperture_var, 1)
-        add_exif_field_to_grid(ex_row3, "ISO:", self.exif_iso_var, self.show_iso_var, 0)
-        add_exif_field_to_grid(ex_row3, "Lens:", self.exif_lens_var, self.show_lens_var, 1)
+        exif_vars = {
+            "make": self.exif_make_var, "model": self.exif_model_var,
+            "shutter": self.exif_shutter_var, "aperture": self.exif_aperture_var,
+            "iso": self.exif_iso_var, "lens": self.exif_lens_var
+        }
+        show_vars = {
+            "make": self.show_make_var, "model": self.show_model_var,
+            "shutter": self.show_shutter_var, "aperture": self.show_aperture_var,
+            "iso": self.show_iso_var, "lens": self.show_lens_var
+        }
+        from gui.components import ExifGroup
+        self.exif_group = ExifGroup(self.left_frame, lang=self.lang, 
+                                   on_change=self.on_params_changed,
+                                   exif_vars=exif_vars, 
+                                   show_vars=show_vars,
+                                   global_sync_var=self.exif_global_var)
+        self.exif_group.pack(fill=X, pady=(0, 5))
 
         # EN: Process button / CN: 处理按钮 (Pinned to left frame bottom)
         process_text = "开始处理" if self.lang == "zh" else "Start Processing"
@@ -660,24 +360,11 @@ class BorderPanel:
             self.film_selection_frame.config(text="胶片选择")
             self.auto_detect_check.config(text="自动识别胶片（从EXIF）")
             self.manual_label.config(text="手动选择:")
-            self.advanced_frame.config(text="高级设置")
-            self.side_label.config(text="左右边框")
-            self.side_label.configure(width=12)
-            self.top_label.config(text="顶部留白")
-            self.top_label.configure(width=12)
-            self.bottom_label.config(text="底部留白")
-            self.bottom_label.configure(width=12)
-            self.font_label.config(text="字体基础")
-            self.font_label.configure(width=12)
-            self.exif_frame.config(text="手动 EXIF 覆盖 (留空则读取原图)")
-            self.global_sync_check.config(text="全局应用")
-            self.preview_frame.config(text="预览（显示文件夹第一张图片）")
-            self.theme_label.config(text="边框主题")
-            self.theme_label.configure(width=12)
-            self._update_theme_combo_values()
+            self.settings_group.update_language(lang)
+            self.exif_group.update_language(lang)
+            self.thumb_strip.update_language(lang)
             self.redraw_preview()
             self.process_button.config(text="开始处理" if not is_running else "停止处理 (Stop)")
-            self.branding_toggle.config(text="开启镜头专属标识")
             self.log_frame.config(text="处理日志")
             self.update_film_combo_values()
         else:
@@ -691,24 +378,12 @@ class BorderPanel:
             self.film_selection_frame.config(text="Film Selection")
             self.auto_detect_check.config(text="Auto Detect from EXIF")
             self.manual_label.config(text="Manual Select:")
-            self.advanced_frame.config(text="Advanced Settings")
-            self.side_label.config(text="Side Margin")
-            self.side_label.configure(width=15)
-            self.top_label.config(text="Top Margin")
-            self.top_label.configure(width=15)
-            self.bottom_label.config(text="Bottom Margin")
-            self.bottom_label.configure(width=15)
-            self.font_label.config(text="Font Scale")
-            self.font_label.configure(width=15)
-            self.theme_label.config(text="Border Theme")
-            self.theme_label.configure(width=15)
-            self._update_theme_combo_values()
-            self.exif_frame.config(text="Manual EXIF Overrides (Leave blank to use file EXIF)")
-            self.global_sync_check.config(text="Apply to All")
+            self.settings_group.update_language(lang)
+            self.exif_group.update_language(lang)
+            self.thumb_strip.update_language(lang)
             self.preview_frame.config(text="Preview (First Image in Folder)")
             self.redraw_preview()
             self.process_button.config(text="Start Processing" if not is_running else "Stop Processing (Cancel)")
-            self.branding_toggle.config(text="Enable Lens Branding")
             self.log_frame.config(text="Processing Log")
             self.update_film_combo_values()
         
@@ -1138,199 +813,48 @@ class BorderPanel:
             self._preview_error_msg = None
             self.redraw_preview()
 
-            def worker(img_path, job_mark, is_digital_mode, is_pure_mode, manual_film_keyword, manual_rotation):
-                t_total_start = time.perf_counter()
-                render_timings = {}
+            def worker(img_path, job_mark, is_digital_mode, is_pure_mode, film_keyword, rotation):
                 try:
-                    # EN: Check if the source image is already cached for this rotation
-                    # CN: 检查该旋转角度下的源图是否已被缓存
-                    cache_entry = self.preview_source_cache.get(img_path, {})
-                    source_img = cache_entry.get(manual_rotation)
-                    
-                    if source_img is None:
-                        # EN: Cache miss - load, rotate, and scale once / CN: 缓存未命中 - 仅执行一次加载、旋转和缩放
-                        t_load_start = time.perf_counter()
-                        with Image.open(img_path) as raw_img:
-                            if raw_img.format == 'JPEG':
-                                raw_img.draft(raw_img.mode, (2400, 2400)) # 2x of 1200
-                            img = ImageOps.exif_transpose(raw_img)
-                            if manual_rotation != 0:
-                                img = img.rotate(-manual_rotation, expand=True)
-                            if img.mode != "RGB":
-                                img = img.convert("RGB")
-                            
-                            # Pre-scale to preview size (1200)
-                            w, h = img.size
-                            scale = 1200 / max(w, h)
-                            source_img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.BILINEAR)
-                        
-                        render_timings['load_rotate'] = time.perf_counter() - t_load_start
-                        render_timings['resize'] = 0 # Included in load_rotate for cache miss
-                        # Store in cache
-                        self.preview_source_cache[img_path] = {manual_rotation: source_img}
-                    else:
-                        render_timings['load_rotate'] = 0
-                        render_timings['resize'] = 0
-                    
-                    t_meta_start = time.perf_counter()
-                    meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
-                    data = meta.get_data(img_path, is_digital_mode=is_digital_mode, manual_film=manual_film_keyword)
-                    t_meta = time.perf_counter() - t_meta_start
-                    
-                    # EN: Apply custom layout params to preview / CN: 将自定义布局参数应用到预览
-                    custom_layout = {
-                        "side": self._get_float_safe(self.side_ratio_var, 0.05),
-                        "top": self._get_float_safe(self.top_ratio_var, 0.05),
-                        "bottom": self._get_float_safe(self.bottom_ratio_var, 0.15),
-                        "font_scale": self._get_float_safe(self.font_scale_var, 0.35)
-                    }
-                    if 'layout' in data:
-                        data['layout'].update(custom_layout)
-                    else:
-                        data['layout'] = custom_layout
-                    
-                    # EN: Apply manual rotation / CN: 应用手动旋转
-                    data['manual_rotation'] = self.rotation_var.get()
-                    
-                    # EN: Apply manual EXIF overrides / CN: 应用手动 EXIF 覆盖
-                    manual_exif = {
-                        'Make': self.exif_make_var.get().strip(),
-                        'Model': self.exif_model_var.get().strip(),
-                        'LensModel': self.exif_lens_var.get().strip(),
-                        'ExposureTimeStr': self.exif_shutter_var.get().strip(),
-                        'FNumber': self.exif_aperture_var.get().strip(),
-                        'ISO': self.exif_iso_var.get().strip(),
-                        'show_make': self.show_make_var.get(),
-                        'show_model': self.show_model_var.get(),
-                        'show_shutter': self.show_shutter_var.get(),
-                        'show_aperture': self.show_aperture_var.get(),
-                        'show_iso': self.show_iso_var.get(),
-                        'show_lens': self.show_lens_var.get()
-                    }
-                    for k, v in manual_exif.items():
-                        if v is not None and v != "":
-                            data[k] = v
+                    # EN: Call controller to do the heavy lifting
+                    final_pil, report = self.controller.get_preview_image(
+                        img_path=img_path,
+                        is_digital=is_digital_mode,
+                        is_pure=is_pure_mode,
+                        manual_film=film_keyword,
+                        rotation=rotation,
+                        image_configs=self.image_configs,
+                        batch_width_cache=self.batch_width_cache,
+                        current_batch_paths=self.current_batch_paths,
+                        use_branding=self.use_lens_branding_var.get()
+                    )
 
-                    renderer = FilmRenderer()
-                    # EN: Downscale target edge for faster preview while keeping shadow / CN: 降低分辨率加快预览同时保留阴影
-                    # EN: Pass the selected theme / CN: 传递当前选中的主题 (light/dark/rainbow/fuji_rainbow)
-                    theme_str = self.theme_var.get()
-                    theme_map = {
-                        "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
-                        "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
-                        "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
-                        "frosted": "frosted", "磨砂": "frosted", "glass": "frosted",
-                        "dark": "dark", "深色": "dark", "Dark": "dark",
-                        "light": "light", "浅色": "light", "Light": "light", "Default": "light"
-                    }
-                    theme_val = "light"
-                    theme_str_lower = theme_str.lower()
-                    for k, v in theme_map.items():
-                        if k.lower() in theme_str_lower:
-                            theme_val = v
-                            break
-
-                    # EN: For rainbow themes, use persistent index or calculate physical range
-                    # CN: 对于彩虹主题，使用持久化的色彩索引或计算物理范围
-                    r_index = 0
-                    r_total = 1 
-                    r_range = (0.0, 1.0)
-                    
-                    if theme_val in ["macaron", "sakura"]:
-                        # EN: Macaron Mode is always relative to batch position to support drag updates
-                        # CN: 马卡龙模式始终相对于批次位置，以支持拖拽热更新
-                        try:
-                            idx = self.current_batch_paths.index(os.path.normcase(os.path.normpath(img_path)))
-                            r_index = idx % 9
-                        except (ValueError, AttributeError):
-                            r_index = 0
-                    elif theme_val == "rainbow":
-                        # EN: Calculate range based on cache if available
-                        # CN: 基于缓存计算物理范围（实现预览与批次同步）
-                        norm_img_path = os.path.normcase(os.path.normpath(img_path))
-                        if self.batch_width_cache and self.current_batch_paths:
-                            # EN: Calculate total width based STRICTLY on current batch
-                            # CN: 严格基于当前批次计算总宽度
-                            total_rel_w = sum(self.batch_width_cache.get(os.path.normcase(os.path.normpath(p)), 1.6) 
-                                             for p in self.current_batch_paths)
-                            curr_accum = 0.0
-                            found = False
-                            for p in self.current_batch_paths:
-                                p_norm = os.path.normcase(os.path.normpath(p))
-                                if p_norm == norm_img_path:
-                                    w = self.batch_width_cache.get(p_norm, 1.6)
-                                    r_range = (curr_accum / total_rel_w, (curr_accum + w) / total_rel_w)
-                                    found = True
-                                    # DEBUG Path info
-                                    print(f"DEBUG [PreviewMatch]: match found! index={self.current_batch_paths.index(p)}, range={r_range}")
-                                    break
-                                curr_accum += self.batch_width_cache.get(p_norm, 1.6)
-                            
-                            if not found:
-                                print(f"DEBUG [PreviewMatch]: NO MATCH for {norm_img_path}")
-                                print(f"DEBUG [PreviewMatch]: batch_list[0]={self.current_batch_paths[0] if self.current_batch_paths else 'EMPTY'}")
-                            
-                            # DEBUG
-                            print(f"DEBUG [Preview]: path={os.path.basename(img_path)}, found={found}, r_range={r_range}, total_rel_w={total_rel_w}")
-
-                    # EN: Memory-based render call / CN: 基于内存的渲染调用
-                    final_pil = renderer.process_image(img_path, data, None, 
-                                                     target_long_edge=1200, 
-                                                     manual_rotation=manual_rotation,
-                                                     theme=theme_val,
-                                                     is_pure=is_pure_mode,
-                                                     use_lens_branding=self.use_lens_branding_var.get(),
-                                                     rainbow_index=r_index,
-                                                     rainbow_total=r_total,
-                                                     rainbow_range=r_range,
-                                                     timing_results=render_timings,
-                                                     source_img=source_img)
-
-                    # EN: Final image for display (Already flattened to RGB in renderer)
                     if final_pil and hasattr(final_pil, 'copy'):
                         img_copy = final_pil.copy()
                     else:
-                        print("CN: [!] 预览渲染失败，跳过本次更新")
-                        self._is_loading_preview = False
-                        return
+                        raise Exception("Render returned empty image")
 
                     def apply_image():
-                        if job_mark != getattr(self, 'preview_job_id', None):
-                            return
+                        if job_mark != getattr(self, 'preview_job_id', None): return
                         self._is_loading_preview = False
                         self._current_preview_pil = img_copy
                         self.redraw_preview()
                         
-                        # EN: Log performance report / CN: 记录性能报告
-                        total_time = time.perf_counter() - t_total_start
+                        # EN: Log performance / CN: 记录性能
                         log_msg = f"\n--- Performance Report ({os.path.basename(img_path)}) ---"
-                        log_msg += f"\n[Step 1] Metadata: {t_meta*1000:.1f}ms"
+                        log_msg += f"\n[Step 1] Metadata: {report['metadata']*1000:.1f}ms"
                         log_msg += f"\n[Step 2] Render Breakdown:"
-                        log_msg += f"\n  - Load & Rotate: {render_timings.get('load_rotate', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Resize: {render_timings.get('resize', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Layout: {render_timings.get('layout_calc', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Canvas: {render_timings.get('canvas_paste', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Logo Render: {render_timings.get('logo_render', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Text Main (Load/Draw): {render_timings.get('text_main_load', 0)*1000:.1f}/{render_timings.get('text_main_render', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Text Sub (Load/Draw): {render_timings.get('text_sub_load', 0)*1000:.1f}/{render_timings.get('text_sub_render', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Shadow: {render_timings.get('shadow', 0)*1000:.1f}ms"
-                        log_msg += f"\n  - Save: {render_timings.get('save', 0)*1000:.1f}ms"
-                        log_msg += f"\n[Step 3] Total Cycle: {total_time*1000:.1f}ms"
-                        log_msg += "\n" + "-"*40
+                        for step, t in report['render_breakdown'].items():
+                            log_msg += f"\n  - {step}: {t*1000:.1f}ms"
+                        log_msg += f"\n[Step 3] Total Cycle: {report['total']*1000:.1f}ms\n"
                         self.log(log_msg)
 
                     self.parent.after(0, apply_image)
 
                 except Exception as e:
-                    import traceback
-                    traceback.print_exc()
-                    error_msg = str(e)
-                    def apply_error(msg=error_msg):
-                        if job_mark != getattr(self, 'preview_job_id', None):
-                            return
+                    def apply_error(msg=str(e)):
+                        if job_mark != getattr(self, 'preview_job_id', None): return
                         fallback = f"预览失败: {msg}" if self.lang == "zh" else f"Preview failed: {msg}"
                         try:
-                            # EN: Fallback to raw thumbnail if render fails / CN: 渲染失败时降级为原图缩略图
                             with Image.open(img_path) as img:
                                 img = img.convert("RGB")
                                 img.thumbnail((2000, 2000))
@@ -1338,15 +862,13 @@ class BorderPanel:
                             self._is_loading_preview = False
                             self._current_preview_pil = img_copy
                             self.redraw_preview()
-                        except Exception:
+                        except:
                             self._is_loading_preview = False
                             self._current_preview_pil = None
                             self._preview_error_msg = fallback
                             self.redraw_preview()
-
                     self.parent.after(0, apply_error)
 
-            # EN: Start thread / CN: 启动线程
             self.preview_thread = threading.Thread(
                 target=worker, 
                 args=(img_path, job_id, is_digital, is_pure, manual_film, self.rotation_var.get()),
@@ -1461,8 +983,8 @@ class BorderPanel:
     def on_process_click(self):
         """EN: Toggle between start and stop / CN: 在开始与停止之间切换"""
         if self.worker_thread and self.worker_thread.is_alive():
-            # EN: Request stop / CN: 请求停止
-            self.stop_requested = True
+            # EN: Request stop via controller / CN: 通过控制器请求停止
+            self.controller.request_stop()
             msg = "⚡ 正在停止..." if self.lang == "zh" else "⚡ Stopping..."
             self.process_button.config(text=msg, bootstyle="danger", state="disabled")
         else:
@@ -1474,211 +996,85 @@ class BorderPanel:
         EN: Start border processing
         CN: 开始边框处理
         """
-        # EN: Force sync THEME only to all batch items before starting
-        # CN: 开始处理前强制将当前 UI 主题同步给所有批次项目（保持彩虹连贯性）
-        self.on_params_changed(sync_all=True)
-        
-        input_folder = self.input_folder_var.get()
-        if not input_folder or not os.path.exists(input_folder):
-            msg = "请先选择输入文件夹！" if self.lang == "zh" else "Please select input folder first!"
-            messagebox.showwarning("警告" if self.lang == "zh" else "Warning", msg)
-            return
-        
-        # 1. EN: Save current active config first / CN: 首先保存当前激活的图片配置
-        if self.current_image_path:
-            self._save_current_to_state(self.current_image_path)
-
-        # 2. EN: Prepare UI / CN: 准备 UI
-        self.stop_requested = False
-        msg = "停止处理 (Stop)" if self.lang == "zh" else "Stop Processing (Cancel)"
-        self.process_button.config(text=msg, bootstyle="danger-outline")
-        
-        self.progress.pack(fill=X, pady=(0, 10))
-        self.progress['value'] = 0
-
-        # 3. EN: Setup output folder / CN: 设置输出文件夹
-        working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
-        output_folder = os.path.join(working_dir, "photos_out")
-        os.makedirs(output_folder, exist_ok=True)
-
-        # 4. EN: Collect global fallbacks (from current UI) / CN: 收集全局兜底配置（从当前 UI）
-        global_cfg = {
-            'is_digital': self.mode_var.get() == "digital",
-            'is_pure': self.mode_var.get() == "pure",
-            'theme': self.theme_var.get(),
-            'rotation': self.rotation_var.get(),
-            'layout': {
-                "side": self.side_ratio_var.get(),
-                "top": self.top_ratio_var.get(),
-                "bottom": self.bottom_ratio_var.get(),
-                "font_scale": self.font_scale_var.get()
-            },
-            'exif': {
-                'Make': self.exif_make_var.get().strip(),
-                'Model': self.exif_model_var.get().strip(),
-                'LensModel': self.exif_lens_var.get().strip(),
-                'ExposureTimeStr': self.exif_shutter_var.get().strip(),
-                'FNumber': self.exif_aperture_var.get().strip(),
-                'ISO': self.exif_iso_var.get().strip(),
-                'show_make': self.show_make_var.get(),
-                'show_model': self.show_model_var.get(),
-                'show_shutter': self.show_shutter_var.get(),
-                'show_aperture': self.show_aperture_var.get(),
-                'show_iso': self.show_iso_var.get(),
-                'show_lens': self.show_lens_var.get()
-            },
-            'use_branding': self.use_lens_branding_var.get()
-        }
-        # Film specific fallback
-        manual_film = None
-        if not global_cfg['is_digital'] and not self.auto_detect_var.get():
-            manual_film = self.film_combo.get()
-        global_cfg['manual_film'] = manual_film
-
-        # 5. EN: Start worker / CN: 启动工作线程
-        self.worker_thread = threading.Thread(
-            target=self.process_worker,
-            args=(input_folder, output_folder, global_cfg),
-            daemon=True
-        )
-        self.worker_thread.start()
-
-    def process_worker(self, input_dir, output_dir, global_cfg):
-        """
-        EN: Worker thread for processing (Upgraded for Per-Image Config)
-        CN: 处理工作线程（已升级支持多图独立配置）
-        """
         try:
-            # EN: Use authoritative current_batch_paths / CN: 使用权威的 current_batch_paths
-            if not self.current_batch_paths:
-                self.refresh_thumb_strip()
+            # EN: Force sync THEME only to all batch items before starting
+            # CN: 开始处理前强制将当前 UI 主题同步给所有批次项目（保持彩虹连贯性）
+            self.on_params_changed(sync_all=True)
             
-            files = self.current_batch_paths
-            total = len(files)
-            
-            if total == 0:
-                self.log("CN: [!] 文件夹内未找到图片" if self.lang=="zh" else "EN: [!] No images found")
+            input_folder = self.input_folder_var.get()
+            if not input_folder or not os.path.exists(input_folder):
+                msg = "请先选择输入文件夹！" if self.lang == "zh" else "Please select input folder first!"
+                messagebox.showwarning("警告" if self.lang == "zh" else "Warning", msg)
                 return
             
-            # EN: Use cached widths or re-calculate
-            relative_widths = []
-            total_rel_w = 0.0
-            for img_path in files:
-                p_norm = os.path.normcase(os.path.normpath(img_path))
-                rel_w = self.batch_width_cache.get(p_norm)
-                if rel_w is None:
-                    try:
-                        with Image.open(img_path) as img:
-                            w, h = img.size
-                            rel_w = w / h
-                    except:
-                        rel_w = 1.6
-                relative_widths.append(rel_w)
-                total_rel_w += rel_w
+            # 1. EN: Save current active config first / CN: 首先保存当前激活的图片配置
+            if self.current_image_path:
+                self._save_current_to_state(self.current_image_path)
 
-            # DEBUG
-            print(f"DEBUG [Batch]: total_rel_w={total_rel_w}, count={len(files)}")
-
-            current_w_accum = 0.0
+            # 2. EN: Prepare UI / CN: 准备 UI
+            self.stop_requested = False
+            msg = "停止处理 (Stop)" if self.lang == "zh" else "Stop Processing (Cancel)"
+            self.process_button.config(text=msg, bootstyle="danger-outline")
             
-            bootstrap_logos()
-            renderer = FilmRenderer()
-            meta = MetadataHandler(layout_config='layouts.json', films_config='films.json')
-            
-            for i, img_path in enumerate(files):
-                # EN: Check stop flag / CN: 检查停止标志
-                if self.stop_requested:
-                    self.log("\n⚡ 用户手动终止处理" if self.lang == "zh" else "\n⚡ User canceled processing")
-                    break
+            self.progress.pack(fill=X, pady=(0, 10))
+            self.progress['value'] = 0
 
-                # EN: Calculate physical slice / CN: 计算物理切片比例
-                t_start = current_w_accum / total_rel_w
-                current_w_accum += relative_widths[i]
-                t_end = current_w_accum / total_rel_w
+            # 3. EN: Setup output folder / CN: 设置输出文件夹
+            working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
+            output_folder = os.path.join(working_dir, "photos_out")
+            os.makedirs(output_folder, exist_ok=True)
 
-                # EN: Load per-image config or fallback / CN: 读取各图专属配置或使用兜底
-                cfg = self.image_configs.get(img_path)
-                
-                # EN: Work Mode is now strictly global / CN: 工作模式现在严格全局化
-                is_digital = global_cfg['is_digital']
-                is_pure = global_cfg['is_pure']
-                theme_str = cfg.get('theme', global_cfg['theme']) if cfg else global_cfg['theme']
-                
-                # EN: Resolve manual film / CN: 解析手动胶片
-                m_film = global_cfg['manual_film']
-                if cfg and not cfg.get('auto_detect', True):
-                    m_film = cfg.get('film_combo')
-                # Resolve keyword from display name if needed
-                for display_name, keyword in self.film_list:
-                    if m_film == display_name:
-                        m_film = keyword
-                        break
+            # 4. EN: Collect global fallbacks (from current UI) / CN: 收集全局兜底配置（从当前 UI）
+            global_cfg = {
+                'is_digital': self.mode_var.get() == "digital",
+                'is_pure': self.mode_var.get() == "pure",
+                'theme': self.theme_var.get(),
+                'rotation': self.rotation_var.get(),
+                'layout': {
+                    "side": self.side_ratio_var.get(),
+                    "top": self.top_ratio_var.get(),
+                    "bottom": self.bottom_ratio_var.get(),
+                    "font_scale": self.font_scale_var.get()
+                },
+                'exif': {
+                    'Make': self.exif_make_var.get().strip(),
+                    'Model': self.exif_model_var.get().strip(),
+                    'LensModel': self.exif_lens_var.get().strip(),
+                    'ExposureTimeStr': self.exif_shutter_var.get().strip(),
+                    'FNumber': self.exif_aperture_var.get().strip(),
+                    'ISO': self.exif_iso_var.get().strip(),
+                    'show_make': self.show_make_var.get(),
+                    'show_model': self.show_model_var.get(),
+                    'show_shutter': self.show_shutter_var.get(),
+                    'show_aperture': self.show_aperture_var.get(),
+                    'show_iso': self.show_iso_var.get(),
+                    'show_lens': self.show_lens_var.get()
+                },
+                'use_branding': self.use_lens_branding_var.get()
+            }
+            # Film specific fallback
+            manual_film = None
+            if not global_cfg['is_digital'] and not self.auto_detect_var.get():
+                manual_film = self.film_combo.get()
+            global_cfg['manual_film'] = manual_film
 
-                # EN: Resolve data / CN: 解析数据
-                data = meta.get_data(img_path, is_digital_mode=is_digital, manual_film=m_film)
-                
-                # EN: Apply overrides / CN: 应用覆盖参数
-                c_layout = cfg if cfg else global_cfg['layout']
-                data['layout'].update({
-                    "side": c_layout.get('side_ratio', 0.04),
-                    "top": c_layout.get('top_ratio', 0.04),
-                    "bottom": c_layout.get('bottom_ratio', 0.13),
-                    "font_scale": c_layout.get('font_scale', 0.032)
-                })
-                
-                c_exif = cfg.get('exif') if cfg else global_cfg['exif']
-                if c_exif:
-                    for k, v in c_exif.items():
-                        if v is not None and v != "": # Make -> Make, Model -> Model etc
-                            key = k if k != 'Lens' else 'LensModel'
-                            key = key if key != 'Shutter' else 'ExposureTimeStr'
-                            key = key if key != 'Aperture' else 'FNumber'
-                            data[key] = v
+            # 5. EN: Start worker via controller / CN: 通过控制器启动工作线程
+            def run_work():
+                self.controller.run_batch(
+                    files=self.current_batch_paths,
+                    output_dir=output_folder,
+                    global_cfg=global_cfg,
+                    image_configs=self.image_configs,
+                    batch_width_cache=self.batch_width_cache,
+                    film_list=self.film_list
+                )
 
-                # EN: Theme mapping / CN: 主题值转换
-                # EN: Theme mapping with priority (Macaron/Rainbow first)
-                # CN: 带有优先级的主题映射 (马卡龙/彩虹优先匹配)
-                # EN: Theme mapping (Support both localized names and internal keys)
-                t_map = {
-                    "sakura": "sakura", "樱花粉": "sakura", "Sakura": "sakura",
-                    "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
-                    "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
-                    "frosted": "frosted", "磨砂": "frosted", "glass": "frosted",
-                    "dark": "dark", "深色": "dark", "Dark": "dark",
-                    "light": "light", "浅色": "light", "Light": "light", "Default": "light"
-                }
-                theme_val = "light"
-                theme_str_lower = theme_str.lower()
-                for k, v in t_map.items():
-                    if k.lower() in theme_str_lower:
-                        theme_val = v
-                        break
+            self.worker_thread = threading.Thread(
+                target=run_work,
+                daemon=True
+            )
+            self.worker_thread.start()
 
-                # EN: UI Feedback / CN: UI 反馈
-                self.parent.after(0, lambda c=i+1, t=total, fn=os.path.basename(img_path): self._process_feedback(c, t, fn))
-
-                # EN: For both Rainbow and Macaron, use batch physical order/range.
-                # CN: 彩虹与马卡龙均采用批次物理顺序/范围。
-                r_range = (t_start, t_end)
-                r_idx = i % 9 # Position-based indexing
-
-                # EN: Generate 001_ prefix for Macaron/Rainbow to follow sorted order
-                # CN: 为马卡龙/彩虹模式生成 001_ 前缀，以遵循调整后的排序
-                out_prefix = ""
-                if theme_val in ["macaron", "rainbow", "sakura"]:
-                    out_prefix = f"{i+1:03d}_"
-
-                renderer.process_image(img_path, data, output_dir, 
-                                     manual_rotation=cfg.get('rotation', global_cfg['rotation']) if cfg else global_cfg['rotation'],
-                                     theme=theme_val,
-                                     is_pure=is_pure,
-                                     use_lens_branding=global_cfg['use_branding'],
-                                     rainbow_index=r_idx,
-                                     rainbow_total=total,
-                                     rainbow_range=r_range,
-                                     output_prefix=out_prefix)
-
-            self.parent.after(0, lambda: self.on_processing_complete({'success': True, 'processed': total}))
         except Exception as e:
             import traceback
             self.parent.after(0, lambda msg=traceback.format_exc(): self.on_processing_error(msg))
@@ -1764,37 +1160,6 @@ class BorderPanel:
         self.log_text.see(tk.END)
         self.log_text.config(state="disabled")
 
-    def _update_theme_combo_values(self):
-        """
-        EN: Update theme combo box values with current language
-        CN: 使用当前语言更新主题下拉框选项
-        """
-        if self.lang == "zh":
-            themes = ["浅色", "深色", "磨砂玻璃", "马卡龙", "彩虹", "樱花粉"]
-        else:
-            themes = ["Default", "Dark Mode", "Frosted Glass", "Macaron", "Rainbow", "Sakura"]
-
-        current = self.theme_var.get()
-        self.theme_combo['values'] = themes
-
-        # EN: Try to maintain selection
-        # CN: 尝试保持之前的选择
-        selected = False
-        if current:
-            for i, theme in enumerate(themes):
-                # EN: Search by keyword / CN: 通过关键词搜索进行对齐
-                for kw in ["Light", "Default", "Dark", "Macaron", "Rainbow", "Frosted", "Glass", "浅色", "深色", "马卡龙", "彩虹", "磨砂"]:
-                    if kw.lower() in current.lower() and kw.lower() in theme.lower():
-                        # EN: Rainbow vs Macaron disambiguation / CN: 区分彩虹与马卡龙
-                        if "Rainbow" in current and "Rainbow" not in theme: continue
-                        if "彩虹" in current and "彩虹" not in theme: continue
-                        self.theme_combo.current(i)
-                        selected = True
-                        break
-                if selected: break
-
-        if not selected and themes:
-            self.theme_combo.current(0)
 
     def _get_float_safe(self, var, default=0.0):
         """EN: Safe get for Tkinter DoubleVar / CN: 安全获取 Tkinter DoubleVar 内容"""

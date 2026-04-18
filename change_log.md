@@ -6,8 +6,6 @@
 - **[Feature] 旗舰镜头视觉增强 / Flagship Lens Enhancements**:
   - EN: Implemented robust, regex-based detection for Canon L (Red), Nikon N (Gold), Sony GM (Token), and Sigma Art/Sports/Contemporary (Tokens). Added a global toggle in GUI with unified styling to enable/disable these stylings.
   - CN: 为旗舰镜头引入了专属视觉风格与勋章系统。通过正则精准识别 Canon L（红）、Nikon N（金）、Sony GM 与 Sigma A/S/C（勋章），并在“高级设置”中增加了全局开关（已统一视觉风格），支持随时切换至纯文本模式。
-## [2.5.0] - 2026-04-17
-
 ### 💎 磨砂玻璃极致视觉重构 (Frosted Glass Depth Overhaul)
 - **[Feature] 物理级悬浮投影 / Physical Floating Shadow**:
   - EN: Implemented **Negative Spread + Rounded Masks** to eliminate gray ring artifacts and hard edges.
@@ -29,6 +27,8 @@
 - **[Feature] 多路径 Logo 检索 / Multi-Path Logo Resolver**:
   - EN: Upgraded asset lookup to check both root source and distribution distribution folders, resolving missing logos for flagship models like Sony A1.
   - CN: 升级了相机 Logo 检索引擎，支持多路径（源码 + dist 离线库）同步搜索，彻底解决了部分旗舰机型（如 Sony A1）Logo 无法匹配的路径识别死角。
+
+## [2.3.1] - 2026-04-06
 
 ### 🎨 样片与演示系统 (Samples & Showcase)
 - **[Feature] 18 度灰专业样片 / 18° Gray Samples**:
