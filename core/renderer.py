@@ -208,11 +208,11 @@ class FilmRenderer:
                 # 1. EN: Get frosted base / CN: 获取磨砂底座
                 frost_base = self._create_frosted_canvas(img, new_w, new_h)
                 # 2. EN: Create vertical gradient overlay / CN: 创建深灰垂直渐变层
-                c_top = (63, 63, 66) # Lighter Charcoal / 浅炭灰
-                c_bottom = (28, 28, 30) # Deep Grey / 深灰 (不再是纯黑)
+                c_top = (142, 142, 147) # Apple System Gray 1 / 浅中灰
+                c_bottom = (99, 99, 102) # Apple System Gray 2 / 深中灰
                 grad_overlay = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
-                # 3. EN: Blend together / CN: 降低叠加比例，让原图颜色透出来更多 (70% 渐变 + 30% 磨砂底色)
-                canvas = Image.blend(frost_base, grad_overlay, 0.70)
+                # 3. EN: Blend together / CN: 大幅降低叠加比例，让原图磨砂感占主导 (40% 渐变 + 60% 磨砂底色)
+                canvas = Image.blend(frost_base, grad_overlay, 0.40)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
