@@ -687,7 +687,7 @@ class BorderPanel:
         try:
             self.on_params_changed(sync_all=True)
             input_folder = self.input_folder_var.get()
-            images = self.strip.get_all_images()
+            images = self.thumb_strip.get_all_images()
             if not images:
                 msg = "请先添加图片！" if self.lang == "zh" else "Please add images first!"
                 messagebox.showwarning("警告" if self.lang == "zh" else "Warning", msg)
