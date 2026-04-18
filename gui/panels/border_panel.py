@@ -45,6 +45,8 @@ class BorderPanel:
         self.exif_shutter_var = ttk.StringVar()
         self.exif_aperture_var = ttk.StringVar()
         self.exif_iso_var = ttk.StringVar()
+        self.exif_lens_var = ttk.StringVar()
+        self.output_folder_var = ttk.StringVar()
 
         # EN: Visibility toggles / CN: 显示开关
         self.show_make_var = tk.IntVar(value=1)
@@ -140,6 +142,22 @@ class BorderPanel:
         no_folder_text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
         self.file_count_label = ttk.Label(self.folder_frame, text=no_folder_text, foreground="gray")
         self.file_count_label.pack(anchor=W)
+
+        # EN: Output folder / CN: 输出文件夹
+        out_text = "输出文件夹" if self.lang == "zh" else "Output Folder"
+        self.out_frame = ttk.Labelframe(self.left_frame, text=out_text, padding=10)
+        self.out_frame.pack(fill=X, pady=(0, 10))
+        
+        out_row = ttk.Frame(self.out_frame)
+        out_row.pack(fill=X)
+        
+        ttk.Entry(out_row, textvariable=self.output_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES, padx=(0, 5))
+        self.out_browse_btn = ttk.Button(out_row, text=browse_text, command=self.select_output_folder, bootstyle="info-outline")
+        self.out_browse_btn.pack(side=RIGHT)
+
+        # EN: Initialize default output / CN: 初始化默认输出路径
+        working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
+        self.output_folder_var.set(os.path.join(working_dir, "photos_out"))
 
         # EN: Parameter variables (Pixels based on 4500px ref) / CN: 参数变量（基于 4500px 基准的像素值）
         self.left_px_var = ttk.IntVar(value=180)
@@ -689,6 +707,10 @@ class BorderPanel:
             self.process_button.config(text=msg, bootstyle="danger", state="disabled")
         else: self.start_processing()
 
+    def select_output_folder(self):
+        path = filedialog.askdirectory()
+        if path: self.output_folder_var.set(path)
+
     def start_processing(self):
         try:
             self.on_params_changed(sync_all=True)
@@ -704,8 +726,10 @@ class BorderPanel:
             self.process_button.config(text=msg, bootstyle="danger-outline")
             self.progress.pack(fill=X, pady=(0, 10))
             self.progress['value'] = 0
-            working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
-            output_folder = os.path.join(working_dir, "photos_out")
+            output_folder = self.output_folder_var.get()
+            if not output_folder:
+                working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
+                output_folder = os.path.join(working_dir, "photos_out")
             os.makedirs(output_folder, exist_ok=True)
             global_cfg = {
                 'is_digital': self.mode_var.get() == "digital", 'is_pure': self.mode_var.get() == "pure",
