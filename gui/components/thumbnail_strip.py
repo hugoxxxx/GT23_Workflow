@@ -243,6 +243,18 @@ class ThumbnailStrip(ttk.Frame):
                 else:
                     frame.configure(bootstyle="default")
 
+    def get_all_images(self):
+        """EN: Return current image paths in UI order / CN: 按 UI 顺序返回当前所有图片路径"""
+        paths = []
+        for container in self.inner_frame.pack_slaves():
+            widgets = container.winfo_children()
+            if widgets and len(widgets) > 0:
+                frame = widgets[0]
+                lbl_widgets = frame.winfo_children()
+                if lbl_widgets and hasattr(lbl_widgets[0], '_img_path'):
+                    paths.append(lbl_widgets[0]._img_path)
+        return paths
+
     def _notify_order_changed(self):
         """EN: Extract current paths from UI order and notify / CN: 从 UI 顺序提取路径并通知"""
         new_paths = []
