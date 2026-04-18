@@ -335,6 +335,7 @@ class FilmRenderer:
                 return final_output, timings
 
             if output_dir:
+                t_save_start = time.perf_counter()
                 os.makedirs(output_dir, exist_ok=True)
                 save_name = f"GT_{os.path.basename(img_path)}"
                 if not save_name.lower().endswith('.jpg'):
