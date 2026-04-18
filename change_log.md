@@ -1,11 +1,40 @@
 # Change Log / 变更日志
 
-## [2.4.0] - 2026-04-17
+## [2.4.0] - 2026-04-18
+
+### 🏗️ 架构重构与上帝对象拆解 (Architecture Refactor & God-Object Decoupling)
+- **[Refactor] 核心控制逻辑离岸化 / Core Logic Off-shoring**:
+  - EN: Successfully refactored the 1800-line monolithic `BorderPanel` into a lean 900-line modular structure. Migrated all business state (configs, caches, file scanning) to `BorderController`.
+  - CN: 成功将 1800 余行的单体上帝对象 `BorderPanel` 重构为 900 行左右的精简模块化架构。将所有业务状态（配置、缓存、文件扫描逻辑）下沉至 `BorderController`。
+- **[Component] UI 组态化封装 / Componentized UI Wrapper**:
+  - EN: Extracted `ThumbnailStrip`, `ExifGroup`, and `SettingsGroup` into independent reusable components. Improved code readability and maintainability.
+  - CN: 抽离了`ThumbnailStrip`（样片条）、`ExifGroup`（EXIF 组）和 `SettingsGroup`（设置组）为独立的复用组件，极大提升了代码的可读性和可维护性。
+- **[Stabilization] “核能级”代码清理 / "Nuclear" Code Cleanup**:
+  - EN: Resolved invisible binary character corruption and encoding issues by performing a full reconstruction of `BorderPanel.py` from a verified UTF-8 buffer.
+  - CN: 通过对 `BorderPanel.py` 进行全量 UTF-8 缓冲区重构，物理消除了工具对位失败导致的所有不可见脏字符与编码乱码问题。
+- **[Fix] 接口对位与导入修复 / Interface Alignment & Import Fixes**:
+  - EN: Restored missing `scrolledtext` imports and fixed residual `AttributeError` in `refresh_input_folder` caused by the logic migration.
+  - CN: 补全了精简过程中缺失的 `scrolledtext` 导入，并修复了 `refresh_input_folder` 中由于变量迁移未对位导致的 `AttributeError`。
+
+### 📏 像素级布局与排版进化 (Pixel-Level Layout & Typography)
+- **[Feature] 独立字号控制 / Independent Font Scaling**:
+  - EN: Decoupled model (Main) and parameter (Sub) font sizes with dedicated input controls. Removed fixed scaling ratios for maximum layout flexibility.
+  - CN: 实现了型号 (Main) 与参数 (Sub) 字号的完全独立控制。废除了固定比例约束，支持像素级独立微调。
+- **[Feature] 实时溢出与压图预警 / Real-time Overflow & Overlap Radar**:
+  - EN: Implemented a dual-axis warning system. Automatically detects horizontal text overflow and vertical image overlap (collision), providing real-time UI feedback with suggested maximum font sizes.
+  - CN: 实现了双轴实时预警系统。可自动检测文字水平溢出与垂直压图（碰撞），并在预览界面实时展示警告信息及建议的最大安全像素值。
+- **[Feature] 文字垂直位移微调 / Text Vertical Offset Control**:
+  - EN: Added "Text Vertical Offset (px)" in Advanced Settings, allowing precise vertical repositioning of the entire text block to balance composition or avoid overlaps.
+  - CN: 在高级设置中新增了“文字垂直偏移 (px)”项。支持整块文字的上下像素级位移微调，方便平衡构图或手动避开画面干扰。
+- **[Fix] 渲染内核数值对位修复 / Renderer Precision Fixes**:
+  - EN: Resolved `NameError` for `resolved_main` and `ref_factor` in the rendering pipeline. Fixed pixel rounding errors in preview mode to eliminate false overflow alarms.
+  - CN: 修复了渲染流水层中 `resolved_main` 与 `ref_factor` 变量未定义的 Bug。解决了预览模式下的像素舍入精度误差，彻底排除了默认字号下的“假性报警”。
 
 ### 📸 品牌专属镜头设计 (Brand-Specific Lens Styling)
 - **[Feature] 旗舰镜头视觉增强 / Flagship Lens Enhancements**:
   - EN: Implemented robust, regex-based detection for Canon L (Red), Nikon N (Gold), Sony GM (Token), and Sigma Art/Sports/Contemporary (Tokens). Added a global toggle in GUI with unified styling to enable/disable these stylings.
   - CN: 为旗舰镜头引入了专属视觉风格与勋章系统。通过正则精准识别 Canon L（红）、Nikon N（金）、Sony GM 与 Sigma A/S/C（勋章），并在“高级设置”中增加了全局开关（已统一视觉风格），支持随时切换至纯文本模式。
+
 ### 💎 磨砂玻璃极致视觉重构 (Frosted Glass Depth Overhaul)
 - **[Feature] 物理级悬浮投影 / Physical Floating Shadow**:
   - EN: Implemented **Negative Spread + Rounded Masks** to eliminate gray ring artifacts and hard edges.

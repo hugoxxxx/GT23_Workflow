@@ -42,31 +42,48 @@ class SettingsGroup(ttk.Labelframe):
         row2.columnconfigure(0, weight=1, uniform="adv")
         row2.columnconfigure(1, weight=1, uniform="adv")
 
-        self.side_label = self.add_setting(row1, "side", 0)
-        self.top_label = self.add_setting(row1, "top", 1)
-        self.bottom_label = self.add_setting(row2, "bottom", 0)
-        self.font_label = self.add_setting(row2, "font", 1)
+        self.left_label = self.add_setting(row1, "left", 0)
+        self.right_label = self.add_setting(row1, "right", 1)
+        self.top_label = self.add_setting(row2, "top", 0)
+        self.bottom_label = self.add_setting(row2, "bottom", 1)
         
-        # EN: Global toggles row / CN: 全局开关行
+        # Row 3 for font and theme
         row3 = ttk.Frame(self)
-        row3.pack(fill=X, pady=(5, 2))
+        row3.pack(fill=X, pady=2)
+        row3.columnconfigure(0, weight=1, uniform="adv")
+        row3.columnconfigure(1, weight=1, uniform="adv")
+        
+        self.font_label = self.add_setting(row3, "font", 0)
+        self.font_sub_label = self.add_setting(row3, "font_sub", 1)
+        
+        # Row 4 for offset
+        row4 = ttk.Frame(self)
+        row4.pack(fill=X, pady=2)
+        row4.columnconfigure(0, weight=1, uniform="adv")
+        row4.columnconfigure(1, weight=1, uniform="adv")
+        
+        self.font_offset_label = self.add_setting(row4, "font_offset", 0)
+
+        # EN: Global toggles row / CN: 全局开关行
+        row5 = ttk.Frame(self)
+        row5.pack(fill=X, pady=(5, 2))
         
         branding_var = self.vars.get("branding")
         if branding_var:
-            self.branding_toggle = ttk.Checkbutton(row3, 
+            self.branding_toggle = ttk.Checkbutton(row5, 
                                                 text="开启镜头专属标识" if self.lang == "zh" else "Enable Lens Branding",
                                                 variable=branding_var,
                                                 command=self.on_change,
                                                 bootstyle="round-toggle")
             self.branding_toggle.pack(side=LEFT, padx=2)
 
-        row4 = ttk.Frame(self)
-        row4.pack(fill=X, pady=2)
-        row4.columnconfigure(0, weight=1, uniform="adv")
-        row4.columnconfigure(1, weight=1, uniform="adv")
+        row6 = ttk.Frame(self)
+        row6.pack(fill=X, pady=2)
+        row6.columnconfigure(0, weight=1, uniform="adv")
+        row6.columnconfigure(1, weight=1, uniform="adv")
 
         # EN: Border Theme selector / CN: 边框主题选择
-        theme_container = ttk.Frame(row4)
+        theme_container = ttk.Frame(row6)
         theme_container.grid(row=0, column=0, sticky=EW, padx=2)
         self.theme_label = ttk.Label(theme_container, text="边框主题" if self.lang == "zh" else "Border Theme")
         self.theme_label.pack(side=LEFT)
@@ -98,10 +115,13 @@ class SettingsGroup(ttk.Labelframe):
 
     def _get_label_text(self, key):
         mapping = {
-            "side": ("左右边框", "Side Margin"),
-            "top": ("顶部留白", "Top Margin"),
-            "bottom": ("底部留白", "Bottom Margin"),
-            "font": ("字体基础", "Font Scale")
+            "left": ("左边框 (px)", "Left Border (px)"),
+            "right": ("右边框 (px)", "Right Border (px)"),
+            "top": ("顶部边框 (px)", "Top Border (px)"),
+            "bottom": ("底部边框 (px)", "Bottom Border (px)"),
+            "font": ("型号字号 (px)", "Model Font Size (px)"),
+            "font_sub": ("参数字号 (px)", "Param Font Size (px)"),
+            "font_offset": ("文字垂直偏移 (px)", "Text Vertical Offset (px)")
         }
         idx = 0 if self.lang == "zh" else 1
         return mapping[key][idx]
@@ -115,19 +135,16 @@ class SettingsGroup(ttk.Labelframe):
             self.branding_toggle.config(text="开启镜头专属标识" if lang == "zh" else "Enable Lens Branding")
 
     def update_labels(self):
-        self.side_label.config(text=self._get_label_text("side"))
+        self.left_label.config(text=self._get_label_text("left"))
+        self.right_label.config(text=self._get_label_text("right"))
         self.top_label.config(text=self._get_label_text("top"))
         self.bottom_label.config(text=self._get_label_text("bottom"))
         self.font_label.config(text=self._get_label_text("font"))
         self.theme_label.config(text="边框主题" if self.lang == "zh" else "Border Theme")
         
         # Adjust widths for English
-        if self.lang == "en":
-            for lbl in [self.side_label, self.top_label, self.bottom_label, self.font_label, self.theme_label]:
-                lbl.configure(width=15)
-        else:
-            for lbl in [self.side_label, self.top_label, self.bottom_label, self.font_label, self.theme_label]:
-                lbl.configure(width=12)
+        for lbl in [self.left_label, self.right_label, self.top_label, self.bottom_label, self.font_label, self.theme_label, self.font_offset_label]:
+            lbl.configure(width=16 if self.lang == "en" else 12)
 
     def _update_theme_combo_values(self):
         """

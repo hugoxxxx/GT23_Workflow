@@ -125,17 +125,27 @@ class FilmRenderer:
             # --- EN: DATA INTEGRITY CHECK ---
             layout = data.get('layout', {})
             layout_name = layout.get('name', 'CUSTOM')
-            side_ratio = layout.get('side', 0.04)
-            top_ratio = layout.get('top', side_ratio)
+            
+            # EN: Support asymmetrical side padding
+            # CN: 支持非对称侧边距调节 (左/右独立)
+            left_ratio = layout.get('left', layout.get('side', 0.04))
+            right_ratio = layout.get('right', layout.get('side', 0.04))
+            top_ratio = layout.get('top', 0.04)
             bottom_ratio = layout.get('bottom', 0.13)
             font_base_scale = layout.get('font_scale', 0.032)
             
             # --- EN: CALCULATE SPACING ---
-            side_pad = int(w * side_ratio)
+            side_pad_left = int(w * left_ratio)
+            side_pad_right = int(w * right_ratio)
             top_pad = int(w * top_ratio)
             bottom_splice = int(h * bottom_ratio)
             
-            new_w, new_h = w + (side_pad * 2), h + top_pad + side_pad + bottom_splice
+            # EN: The "inner bottom margin" between image and text area. 
+            # CN: 图像与底部文字区之间的间隙，传统上等于 side_pad。即便是非对称，这里取均值保持视觉平衡。
+            inner_bottom_margin = (side_pad_left + side_pad_right) // 2
+            
+            new_w = w + side_pad_left + side_pad_right
+            new_h = h + top_pad + inner_bottom_margin + bottom_splice
             timings['layout_calc'] = time.perf_counter() - t_layout_start
             
             # --- EN: DRAWING ---
@@ -198,11 +208,11 @@ class FilmRenderer:
             
             if theme == "frosted":
                 # EN: Floating Photo Effect (Inner Shadow + Image + Border)
-                self._draw_floating_photo(canvas, img, side_pad, top_pad, line_color)
+                self._draw_floating_photo(canvas, img, side_pad_left, top_pad, line_color)
             else:
-                canvas.paste(img, (side_pad, top_pad))
+                canvas.paste(img, (side_pad_left, top_pad))
                 # EN: 1px inner border
-                ImageDraw.Draw(canvas).rectangle([side_pad, top_pad, side_pad + w, top_pad + h], outline=line_color, width=1)
+                ImageDraw.Draw(canvas).rectangle([side_pad_left, top_pad, side_pad_left + w, top_pad + h], outline=line_color, width=1)
             
             draw = ImageDraw.Draw(canvas)
             timings['canvas_paste'] = time.perf_counter() - t_canvas_start
@@ -220,10 +230,17 @@ class FilmRenderer:
                 pass
             else:
                 long_edge = max(new_w, new_h)
-                base_main_font_size = int(long_edge * font_base_scale)
-                base_sub_font_size = int(base_main_font_size * 0.78)
+                
+                # EN: Resolve independent main/sub font scales (CN: 解决独立的主副标题比例)
+                font_main_scale = layout.get('font_main_scale', font_base_scale) if layout else font_base_scale
+                font_sub_scale = layout.get('font_sub_scale', font_main_scale * 0.78) if layout else font_base_scale * 0.78
+                
+                base_main_font_size = int(long_edge * font_main_scale)
+                base_sub_font_size = int(long_edge * font_sub_scale)
 
-                available_width = new_w - (side_pad * 4)
+                # EN: Available width for text (Allow 95% of canvas width, no longer squeezed by side borders)
+                # CN: 文字可用宽度（允许占用画布总宽度的 95%，不再受侧边框宽度的双倍挤压）
+                available_width = int(new_w * 0.95)
                 
                 # EN: Adaptive Text Coloring for Frosted Mode
                 # CN: 磨砂模式下的文字颜色自适应逻辑 (强化对比度版)
@@ -247,16 +264,51 @@ class FilmRenderer:
                     else: # Dark
                         main_color, sub_color = (255, 255, 255), (210, 210, 210)
                 
-                actual_main_size, actual_sub_size = self._adjust_font_sizes_to_fit(
+                actual_main_size, actual_sub_size, m_factor, s_factor = self._adjust_font_sizes_to_fit(
                     draw, main_text, sub_text, available_width, 
                     base_main_font_size, base_sub_font_size
                 )
 
+                # EN: High-precision calculation of overflow-free max in reference pixels (4500px)
+                # CN: 在 4500px 基准下进行高精度不溢出最大像素值计算 (避开预览图整数舍入误差)
+                timings['max_font_px'] = {
+                    'main': int(font_main_scale * m_factor * 4500),
+                    'sub': int(font_sub_scale * s_factor * 4500),
+                    'main_overflow': m_factor < 0.9999,
+                    'sub_overflow': s_factor < 0.9999
+                }
+
+                # EN: Vertical collision detection (CN: 垂直重叠/压图检测)
+                ref_factor = long_edge / 4500.0
+                resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
+                m_font = self._get_font(resolved_main, actual_main_size)
+                m_ascent, m_descent = m_font.getmetrics()
+                base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2
+                v_gap_ref = max(actual_main_size, actual_sub_size)
+                main_y = base_y - int(v_gap_ref * 0.55)
+                photo_bottom = top_pad + h
+                
+                # Check height overflow (Overlap with photo area)
+                v_overflow = (main_y - m_ascent) < photo_bottom
+                timings['max_font_px']['v_overflow'] = v_overflow
+                
+                if v_overflow:
+                    # EN: Approximate max font size that fits vertically (CN: 估算垂直方向能容纳的最大字号)
+                    # Calculation: m_ascent(0.8) + offset(0.55) = 1.35 * font_size < center_gap
+                    center_gap = (inner_bottom_margin + bottom_splice) // 2
+                    max_v_size = int(center_gap / 1.35 / ref_factor)
+                    # EN: Update suggest if hit vertical limit (CN: 如果垂直溢出，取宽度与高度限制的最小值)
+                    timings['max_font_px']['main'] = min(timings['max_font_px']['main'], max_v_size)
+
                 t_logo_start = time.perf_counter()
-                self._draw_pro_text(draw, new_w, h, side_pad, top_pad, bottom_splice, 
+                v_offset_ratio = layout.get('font_v_offset', 0) if layout else 0
+                v_offset_px = int(long_edge * v_offset_ratio)
+                
+                self._draw_pro_text(draw, new_w, h, side_pad_left, side_pad_right, top_pad, bottom_splice, 
                                 main_text, sub_text, actual_main_size, actual_sub_size, 
                                 data=data, main_color=main_color, sub_color=sub_color, 
-                                use_lens_branding=use_lens_branding, timings=timings)
+                                use_lens_branding=use_lens_branding, timings=timings,
+                                v_offset=v_offset_px)
                 timings['text_logo_total'] = time.perf_counter() - t_logo_start
             timings['draw_text_outer'] = time.perf_counter() - t_draw_start
             
@@ -279,18 +331,18 @@ class FilmRenderer:
                     flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
                     bg = Image.new("RGB", final_output.size, flatten_bg_color)
                     bg.paste(final_output, mask=final_output.split()[3])
-                    return bg
-                return final_output
+                    return bg, timings
+                return final_output, timings
 
             t_save_start = time.perf_counter()
-            result = self._save_with_limit(final_output, img_path, output_dir, data, target_long_edge, layout_name, output_prefix=output_prefix, theme=theme)
-            timings['save'] = time.perf_counter() - t_save_start
-
             timings['total'] = time.perf_counter() - t_start
-            return result
+            return result, timings
 
         except Exception as e:
             print(f"CN: [ERR] 渲染程序出错: {e}")
+            import traceback
+            traceback.print_exc()
+            return None, {}
             return False
 
     def _apply_theme_colors(self, theme, index=0):
@@ -723,7 +775,7 @@ class FilmRenderer:
         sub_text = "".join([s["content"] for s in sub_segments if s["type"] == "text"])
         return main_text, sub_text
 
-    def _draw_pro_text(self, draw, new_w, h, side_pad, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, use_lens_branding=True, timings=None):
+    def _draw_pro_text(self, draw, new_w, h, side_pad_left, side_pad_right, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, use_lens_branding=True, timings=None, v_offset=0):
         if timings is None: timings = {}
         # EN: Use provided colors or fallback to defaults
         # CN: 使用提供的颜色，或回退至默认值
@@ -733,11 +785,15 @@ class FilmRenderer:
         # EN: Detect CJK characters and resolve paths / CN: 检测 CJK 字符并解析路径
         resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
 
-        # EN: Vertical center of the white area / CN: 白色区域垂直中心
-        base_y = top_pad + h + (side_pad + bottom_splice) // 2
+        # EN: Vertical center of the white area with optional offset / CN: 白色区域垂直中心，支持可选偏移
+        inner_bottom_margin = (side_pad_left + side_pad_right) // 2
+        base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2 + v_offset
         
-        main_draw_pos = (new_w // 2, base_y - int(bottom_splice * 0.15))
-        sub_draw_pos = (new_w // 2, base_y + int(bottom_splice * 0.28))
+        # EN: Dynamic vertical offset based on font sizes to ensure relative spacing
+        # CN: 基于字号的动态垂直偏移，确保间距随字体放大而自动“弹开”
+        v_gap_ref = max(m_size, s_size)
+        main_draw_pos = (new_w // 2, base_y - int(v_gap_ref * 0.55))
+        sub_draw_pos = (new_w // 2, base_y + int(v_gap_ref * 0.75))
 
         # --- EN: CAMERA LOGO RENDERING / CN: 相机 LOGO 渲染 ---
         logo_drawn = False
@@ -1072,13 +1128,12 @@ class FilmRenderer:
         
         sub_scale_factor = min(1.0, available_width / sub_text_width) if sub_text_width > 0 else 1.0
         
-        # 使用最小缩放因子确保两个文本都不会超出边界
-        final_scale_factor = min(main_scale_factor, sub_scale_factor)
+        # EN: Decouple scaling to allow main title to grow even if subtitle is long
+        # CN: 解耦主副标题缩放，允许型号名在参数行较长时依然保持独立增长（响应老大反馈）
+        final_main_size = max(10, int(base_main_size * main_scale_factor))
+        final_sub_size = max(8, int(base_sub_size * sub_scale_factor))
         
-        final_main_size = max(10, int(base_main_size * final_scale_factor))  # 最小字体大小为10
-        final_sub_size = max(8, int(base_sub_size * final_scale_factor))   # 最小字体大小为8
-        
-        return final_main_size, final_sub_size
+        return final_main_size, final_sub_size, main_scale_factor, sub_scale_factor
 
     def _get_font(self, font_path, size):
         """
