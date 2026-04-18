@@ -203,10 +203,20 @@ class FilmRenderer:
             elif theme == "frosted":
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
+            elif theme == "obsidian":
+                # EN: Premium Dark Obsidian Gradient / CN: 曜石黑（深色垂直渐变层叠加磨砂图片层）
+                # 1. EN: Get frosted base / CN: 获取磨砂底座
+                frost_base = self._create_frosted_canvas(img, new_w, new_h)
+                # 2. EN: Create vertical gradient overlay / CN: 创建深灰垂直渐变层
+                c_top = (44, 44, 46) # Charcoal / 深炭灰
+                c_bottom = (10, 10, 11) # Obsidian Black / 曜石黑
+                grad_overlay = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
+                # 3. EN: Blend together / CN: 强力覆盖叠加 (85% 渐变 + 15% 磨砂底色)
+                canvas = Image.blend(frost_base, grad_overlay, 0.85)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
-            if theme == "frosted":
+            if theme in ["frosted", "obsidian"]:
                 # EN: Floating Photo Effect (Inner Shadow + Image + Border)
                 self._draw_floating_photo(canvas, img, side_pad_left, top_pad, line_color)
             else:
@@ -393,23 +403,30 @@ class FilmRenderer:
         elif theme == "frosted":
             # EN: Glassmorphism / CN: 磨砂玻璃（使用图片虚化背景，深色文字）
             return (240, 240, 240), (26, 26, 26), (85, 85, 85), (200, 200, 200)
+        elif theme == "obsidian":
+            # EN: Premium Dark Grey Gradient / CN: 曜石黑（深灰渐变，冷白文字）
+            return (28, 28, 30), (242, 242, 247), (161, 161, 166), (58, 58, 60)
         else:
             # Light
             return (255, 255, 255), (26, 26, 26), (85, 85, 85), (238, 238, 238)
 
-    def _create_linear_gradient_canvas(self, w, h, c1, c2):
+    def _create_linear_gradient_canvas(self, w, h, c1, c2, vertical=False):
         """
-        EN: Simple 2-color horizontal gradient for Macaron Mode.
-        CN: 马卡龙模式专用的双色线性渐变画布。
+        EN: Create high-precision linear gradient / CN: 创建高精度线性渐变 (支持横向/纵向)
         """
         canvas = Image.new("RGB", (w, h))
         draw = ImageDraw.Draw(canvas)
-        for x in range(w):
-            t = x / w
+        
+        steps = h if vertical else w
+        for i in range(steps):
+            t = i / steps if steps > 0 else 0
             r = int(c1[0] + (c2[0] - c1[0]) * t)
             g = int(c1[1] + (c2[1] - c1[1]) * t)
             b = int(c1[2] + (c2[2] - c1[2]) * t)
-            draw.line([(x, 0), (x, h)], fill=(r, g, b))
+            if vertical:
+                draw.line([(0, i), (w, i)], fill=(r, g, b))
+            else:
+                draw.line([(i, 0), (i, h)], fill=(r, g, b))
         return canvas
 
     def _create_frosted_canvas(self, source_img, w, h):

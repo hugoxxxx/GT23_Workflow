@@ -154,9 +154,9 @@ class SettingsGroup(ttk.Labelframe):
         if not hasattr(self, 'theme_combo'): return
         
         if self.lang == "zh":
-            themes = ["浅色", "深色", "磨砂玻璃", "马卡龙", "彩虹", "樱花粉"]
+            themes = ["浅色", "深色", "磨砂玻璃", "曜石黑", "马卡龙", "彩虹", "樱花粉"]
         else:
-            themes = ["Default", "Dark Mode", "Frosted Glass", "Macaron", "Rainbow", "Sakura"]
+            themes = ["Default", "Dark Mode", "Frosted Glass", "Obsidian", "Macaron", "Rainbow", "Sakura"]
 
         theme_var = self.vars.get("theme")
         if not theme_var: return

@@ -320,6 +320,7 @@ class BorderController:
             "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
             "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
             "frosted": "frosted", "磨砂": "frosted", "glass": "frosted",
+            "obsidian": "obsidian", "曜石黑": "obsidian", "Obsidian": "obsidian",
             "dark": "dark", "深色": "dark", "Dark": "dark",
             "light": "light", "浅色": "light", "Light": "light", "Default": "light"
         }
