@@ -607,7 +607,7 @@ class BorderPanel:
                     self.parent.after(0, apply)
                 except Exception as e:
                     err_msg = str(e)
-                    self.parent.after(0, lambda: self._handle_preview_error(img_path, err_msg, job_id))
+                    self.parent.after(0, lambda m=err_msg, j=job_id: self._handle_preview_error(img_path, m, j))
             threading.Thread(target=worker, daemon=True).start()
         except: pass
 
@@ -687,8 +687,9 @@ class BorderPanel:
         try:
             self.on_params_changed(sync_all=True)
             input_folder = self.input_folder_var.get()
-            if not input_folder or not os.path.exists(input_folder):
-                msg = "请先选择输入文件夹！" if self.lang == "zh" else "Please select input folder first!"
+            images = self.strip.get_all_images()
+            if not images:
+                msg = "请先添加图片！" if self.lang == "zh" else "Please add images first!"
                 messagebox.showwarning("警告" if self.lang == "zh" else "Warning", msg)
                 return
             if self.current_image_path: self._save_current_to_state(self.current_image_path)
