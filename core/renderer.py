@@ -207,12 +207,12 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Slate-Teal Gradient (Ultimate Voigtlander Aesthetic)
-                # CN: 曜石黑（终极修正版：复刻福伦达高明度“石板青”模拟渐变）
-                c_top = (158, 178, 185)    # Slate Blue-Teal / 石板青
-                c_bottom = (82, 98, 105)   # Deep Ocean Stone / 深海岩
-                # EN: Use gamma 1.1 for organic light decay / CN: 使用伽态 1.1 模拟光线自然衰减
-                canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True, gamma=1.1)
+                # EN: Premium Slate-Teal Gradient (Extreme Voigtlander Aesthetic)
+                # CN: 曜石黑（终极修正版：复刻福伦达高明度“朗透石板青”模拟渐变）
+                c_top = (175, 194, 202)    # Luminous Sage-Teal / 朗透青石
+                c_bottom = (92, 110, 118)  # Mid-Slate Teal / 中度石板岩
+                # EN: Use gamma 1.2 for deep organic light decay / CN: 使用伽态 1.2 模拟电影感光线衰减
+                canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True, gamma=1.2)
                 # EN: Apply matte texture for "Fine Art Paper" feel
                 # CN: 应用磨砂纹理，模拟“艺术纸”质感
                 canvas = self._apply_matte_texture(canvas, intensity=0.06)
@@ -571,17 +571,17 @@ class FilmRenderer:
             
             shadow_buf = Image.alpha_composite(shadow_buf, layer)
 
-        # --- 2. EN: STACK LAYERS (Self-Vanishing Depth) / CN: 堆叠投影层 (自消隐深度感) ---
-        # Layer A: EN: Massive Ambient (Subtle Fade) / CN: 广域环境影（弱消隐）
-        # EN: Stronger throw to the right (off_x=130) and more solid (fade=0.2)
-        # CN: 向右投射更强 (off_x=135)，且右侧更扎实 (消隐仅 20%)
-        draw_layer(radius=int(180 * sf), opacity=130, off_x=135, off_y=180, spread_neg=50, fade_strength=0.2)
+        # --- 2. EN: STACK LAYERS (Diffuse Ambient Stack) / CN: 堆叠投影层 (高级漫反射模型) ---
+        # Layer A: EN: Massive Atmosphere (Deep, widespread glow) / CN: 超大氛围层 (深邃、广域漫射)
+        # EN: radius 320+ for extreme softness, offsets reduced to center the photo light
+        # CN: 极大的模糊半径（及负扩张）营造出真正的“悬浮感”，大幅减少位移以实现全包裹光效
+        draw_layer(radius=int(320 * sf), opacity=55, off_x=0, off_y=30, spread_neg=-60, fade_strength=0.1)
         
-        # Layer B: EN: Soft Floating (Balanced) / CN: 柔和悬浮层（平衡）
-        draw_layer(radius=int(80 * sf), opacity=160, off_x=70, off_y=100, spread_neg=30, fade_strength=0.1)
+        # Layer B: EN: Soft Float (Balanced) / CN: 柔和悬浮层（平衡）
+        draw_layer(radius=int(120 * sf), opacity=85, off_x=0, off_y=60, spread_neg=20, fade_strength=0.0)
         
-        # Layer C: EN: Anchoring Core (Solid Contact) / CN: 锚定核心影（扎实落座）
-        draw_layer(radius=int(25 * sf), opacity=180, off_x=15, off_y=20, spread_neg=0, fade_strength=0.0)
+        # Layer C: EN: Tactile Core (Solid Contact) / CN: 触控核心层（微距细节）
+        draw_layer(radius=int(25 * sf), opacity=120, off_x=0, off_y=15, spread_neg=0, fade_strength=0.0)
         
         # --- 3. EN: PASTE TO CANVAS & FINAL PHOTO / CN: 粘贴至画布与最终照片 ---
         canvas.paste(shadow_buf, (x - margin, y - margin), shadow_buf)
