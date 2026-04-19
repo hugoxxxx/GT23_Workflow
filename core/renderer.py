@@ -207,12 +207,13 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Grey Gradient (Matte Texture) / CN: 曜石黑（磨砂质感高级灰垂直渐变）
-                c_top = (142, 142, 147) # Apple System Gray 1 / 浅中灰
-                c_bottom = (99, 99, 102) # Apple System Gray 2 / 深中灰
+                # EN: Premium Slate Grey Gradient (Based on Voigtlander Style)
+                # CN: 曜石黑（基于福伦达审美的石板灰垂直渐变）
+                c_top = (155, 171, 178) # Slate Blue-Grey / 蓝石灰
+                c_bottom = (86, 91, 94) # Deep Rock Grey / 深岩灰
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
-                # EN: Apply enhanced matte texture to mask banding
-                # CN: 应用增强型磨砂纹理，掩盖断层
+                # EN: Apply matte texture for "Fine Art Paper" feel
+                # CN: 应用磨砂纹理，模拟“艺术纸”质感
                 canvas = self._apply_matte_texture(canvas, intensity=0.06)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
