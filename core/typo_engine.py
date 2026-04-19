@@ -48,7 +48,7 @@ class TypoEngine:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(current_dir)
         
-        return os.path.join(project_root, font_path)
+        return os.path.normcase(os.path.normpath(os.path.join(project_root, font_path)))
 
     @classmethod
     def draw_mixed_text(cls, draw, pos, segments, font_path, font_size, default_fill, timings=None, key_prefix="mixed"):

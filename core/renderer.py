@@ -144,8 +144,8 @@ class FilmRenderer:
             bottom_splice = int(long_edge * bottom_ratio)
             
             # EN: The "inner bottom margin" between image and text area. 
-            # CN: 图像与底部文字区之间的间隙，传统上等于侧边框
-            inner_bottom_margin = (side_pad_left + side_pad_right) // 2
+            # CN: 图像与底部文字区之间的间隙，置 0 以实现底部参数的完全解耦
+            inner_bottom_margin = 0
             
             new_w = w + side_pad_left + side_pad_right
             new_h = h + top_pad + inner_bottom_margin + bottom_splice
@@ -854,7 +854,7 @@ class FilmRenderer:
         resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
 
         # EN: Vertical center of the white area with optional offset / CN: 白色区域垂直中心，支持可选偏移
-        inner_bottom_margin = (side_pad_left + side_pad_right) // 2
+        inner_bottom_margin = 0
         base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2 + v_offset
         
         # EN: Dynamic vertical offset based on font sizes to ensure relative spacing

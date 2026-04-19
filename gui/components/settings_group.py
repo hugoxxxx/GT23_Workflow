@@ -13,12 +13,13 @@ class SettingsGroup(ttk.Labelframe):
     EN: Group of settings for border ratios, font scale, and theme
     CN: 包含边框比例、字体缩放和主题展示的设置组
     """
-    def __init__(self, parent, lang="en", on_change=None, vars=None):
+    def __init__(self, parent, lang="en", on_change=None, on_sync_similar=None, vars=None):
         """
         Args:
             parent: Parent widget
             lang: "zh" or "en"
             on_change: Callback when any value changes
+            on_sync_similar: Callback for "Sync Similar" button
             vars: Dict of {name: Var} - side, top, bottom, font, theme, branding
         """
         title = "高级设置" if lang == "zh" else "Advanced Settings"
@@ -26,6 +27,7 @@ class SettingsGroup(ttk.Labelframe):
         
         self.lang = lang
         self.on_change = on_change
+        self.on_sync_similar = on_sync_similar
         self.vars = vars or {}
         
         self.setup_ui()
@@ -95,6 +97,15 @@ class SettingsGroup(ttk.Labelframe):
             self.theme_combo.bind("<<ComboboxSelected>>", lambda e: self.on_change())
             self._update_theme_combo_values()
 
+        # Row 7 for Sync Button
+        row7 = ttk.Frame(self)
+        row7.pack(fill=X, pady=(10, 0))
+        self.sync_btn = ttk.Button(row7, 
+                                 text="同步到同类图片 (画幅/旋转)" if self.lang == "zh" else "Apply to Similar Images",
+                                 bootstyle="outline-primary",
+                                 command=self.on_sync_similar)
+        self.sync_btn.pack(fill=X)
+
         self.update_labels()
 
     def add_setting(self, parent, key, col):
@@ -133,6 +144,8 @@ class SettingsGroup(ttk.Labelframe):
         self._update_theme_combo_values()
         if hasattr(self, 'branding_toggle'):
             self.branding_toggle.config(text="开启镜头专属标识" if lang == "zh" else "Enable Lens Branding")
+        if hasattr(self, 'sync_btn'):
+            self.sync_btn.config(text="同步到同类图片 (画幅/旋转)" if lang == "zh" else "Apply to Similar Images")
 
     def update_labels(self):
         self.left_label.config(text=self._get_label_text("left"))

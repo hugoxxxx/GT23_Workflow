@@ -93,6 +93,7 @@ class ThumbnailStrip(ttk.Frame):
 
     def _create_thumb_widget(self, path, index):
         from PIL import ImageOps, ImageDraw
+        path_norm = os.path.normcase(os.path.normpath(path))
         
         container = ttk.Frame(self.inner_frame, padding=2)
         container.pack(side=LEFT)
@@ -108,13 +109,13 @@ class ThumbnailStrip(ttk.Frame):
         # CN: 右上角的小删除按钮 (默认隐藏，悬停显示)
         del_btn = ttk.Label(frame, text="×", cursor="hand2", font=("Segoe UI", 12), foreground="gray")
         # del_btn.place() is called in hover events
-        del_btn.bind("<Button-1>", lambda e: self.on_delete(path) if self.on_delete else None)
+        del_btn.bind("<Button-1>", lambda e: self.on_delete(path_norm) if self.on_delete else None)
 
         # EN: Async thumbnail generation / CN: 异步生成缩略图
         def generate():
             try:
                 from PIL import ImageTk
-                with Image.open(path) as img:
+                with Image.open(path_norm) as img:
                     # EN: Force 1:1 Square Crop (Increased size) / CN: 强制 1:1 方型裁切 (增加尺寸)
                     img = ImageOps.fit(img, (120, 120), Image.Resampling.LANCZOS)
                     
@@ -136,7 +137,7 @@ class ThumbnailStrip(ttk.Frame):
                                 # EN: Create PhotoImage in MAIN thread
                                 # CN: 在主线程中创建 PhotoImage
                                 photo = ImageTk.PhotoImage(pil_img)
-                                self.thumbs[path] = photo # EN: Persist reference / CN: 保持引用防止 GC
+                                self.thumbs[path_norm] = photo # EN: Persist reference / CN: 保持引用防止 GC
                                 target_lbl.configure(image=photo, text="")
                         except Exception:
                             pass
@@ -217,10 +218,10 @@ class ThumbnailStrip(ttk.Frame):
         # Note: del_btn itself needs to keep showing on enter
         del_btn.bind("<Enter>", lambda e: del_btn.place(relx=1.0, rely=0.0, anchor=tk.NE, x=-5, y=5))
         
-        lbl._img_path = path 
-        lbl._original_on_click = lambda e: self.on_select(path)
+        lbl._img_path = path_norm 
+        lbl._original_on_click = lambda e: self.on_select(path_norm)
         # Bind original click AFTER drag handlers to see if we moved
-        lbl.bind("<Button-1>", lambda e: self.on_select(path), add="+")
+        lbl.bind("<Button-1>", lambda e: self.on_select(path_norm), add="+")
         
         # Filename label (shortened)
         fname = os.path.basename(path)
@@ -228,7 +229,8 @@ class ThumbnailStrip(ttk.Frame):
         ttk.Label(container, text=fname, font=("Segoe UI", 8), foreground="gray").pack()
 
     def set_active(self, path):
-        self.active_path = path
+        path_norm = os.path.normcase(os.path.normpath(path))
+        self.active_path = path_norm
         # EN: Update highlight border / CN: 更新高亮边框 (主色调蓝色 3px 描边)
         for container in self.inner_frame.pack_slaves():
             # The frame is inside the container
@@ -238,7 +240,7 @@ class ThumbnailStrip(ttk.Frame):
             lbl_widgets = frame.winfo_children()
             if lbl_widgets:
                 lbl = lbl_widgets[0]
-                if getattr(lbl, '_img_path', None) == path:
+                if getattr(lbl, '_img_path', None) == path_norm:
                     frame.configure(bootstyle="primary") # Indicates 3px border in some themes
                 else:
                     frame.configure(bootstyle="default")

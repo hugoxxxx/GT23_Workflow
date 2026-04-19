@@ -92,10 +92,16 @@ class ExifGroup(ttk.Labelframe):
         title = "手动 EXIF 覆盖 (留空则读取原图)" if lang == "zh" else "Manual EXIF Overrides (Leave blank to use file EXIF)"
         self.config(text=title)
 
-    def set_field_visible(self, key, visible):
-        """EN: Toggle field visibility / CN: 切换字段可见性"""
+    def set_field_state(self, key, state):
+        """EN: Toggle field state (normal/disabled) / CN: 切换字段状态 (正常/禁用)"""
         if key in self.fields:
-            if visible:
-                self.fields[key].grid()
-            else:
-                self.fields[key].grid_remove()
+            container = self.fields[key]
+            # EN: Recursively set state for all children / CN: 递归设置所有子部件的状态
+            def update_recursive(widget):
+                try:
+                    widget.configure(state=state)
+                except:
+                    pass
+                for child in widget.winfo_children():
+                    update_recursive(child)
+            update_recursive(container)

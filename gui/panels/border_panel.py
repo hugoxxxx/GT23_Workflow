@@ -213,6 +213,7 @@ class BorderPanel:
         }
         self.settings_group = SettingsGroup(self.left_frame, lang=self.lang, 
                                            on_change=self.on_params_changed,
+                                           on_sync_similar=self.on_sync_similar_click,
                                            vars=settings_vars)
         self.settings_group.pack(fill=X, pady=(0, 10))
         
@@ -680,19 +681,44 @@ class BorderPanel:
     
     def on_mode_changed(self):
         mode = self.mode_var.get()
-        if mode == "film":
-            self.film_selection_frame.pack(fill=X, pady=(0, 10), after=self.folder_frame)
-        else:
-            self.film_selection_frame.pack_forget()
+        # EN: Always show film selection but disable in digital mode
+        # CN: 始终显示胶片选择分组，但在数码模式下禁用
+        self.film_selection_frame.pack(fill=X, pady=(0, 10), after=self.folder_frame)
+        self._set_frame_enabled(self.film_selection_frame, mode == "film")
             
-        # EN: Only show ISO in digital mode / CN: 仅在数码模式下显示 ISO 覆盖
-        self.exif_group.set_field_visible('iso', mode == "digital")
+        # EN: Disable ISO in film mode / CN: 胶片模式下禁用 ISO 覆盖
+        self.exif_group.set_field_state('iso', "normal" if mode == "digital" else "disabled")
         
         self.on_params_changed()
     
     def on_auto_detect_changed(self):
         if self.auto_detect_var.get(): self.film_combo.config(state="disabled")
         else: self.film_combo.config(state="normal")
+
+    def on_sync_similar_click(self):
+        if not getattr(self, 'current_image_path', None): 
+            msg = "CN: 请先选择一张图片进行设置 / EN: Please select an image first"
+            self.log(msg)
+            return
+        
+        # EN: Save current UI state to the current image config
+        # CN: 首先将当前 UI 状态保存到当前图片的配置中
+        self._save_current_to_state(self.current_image_path)
+        
+        # EN: Get current params
+        # CN: 获取当前图片配置
+        current_cfg = self.controller.get_image_config(self.current_image_path)
+        
+        # EN: Sync via controller
+        # CN: 通过控制器进行同步
+        count = self.controller.sync_config_to_similar(self.current_image_path, current_cfg)
+        
+        if count > 0:
+            msg = f"CN: 已成功将当前设置应用至 {count} 张具有相同画幅和旋转角度的图片 / EN: Successfully applied settings to {count} images with matching format and rotation"
+            self.log(msg)
+        else:
+            msg = f"CN: 未找到其他具有相同画幅和旋转角度的图片 / EN: No other images found with matching format and rotation"
+            self.log(msg)
     
     def on_params_changed(self, sync_all=False):
         if getattr(self, '_loading_state', False): return
@@ -703,6 +729,19 @@ class BorderPanel:
                 for p in self.controller.current_batch_paths:
                     if p != self.current_image_path: self.controller.update_image_config(p, cfg)
             self.update_preview_for_path(self.current_image_path)
+
+    def _set_frame_enabled(self, frame, enabled):
+        """EN: Recursively set state for all widgets in a frame / CN: 递归设置框架内所有组件的启用状态"""
+        state = "normal" if enabled else "disabled"
+        for child in frame.winfo_children():
+            try:
+                # Some widgets like Labelframe might not have 'state' but their children do
+                child.configure(state=state)
+            except:
+                pass
+            # Also recurse into sub-frames
+            if child.winfo_children():
+                self._set_frame_enabled(child, enabled)
 
     def notify_order_changed(self, new_paths):
         self.controller.update_batch_order([os.path.normcase(os.path.normpath(p)) for p in new_paths])

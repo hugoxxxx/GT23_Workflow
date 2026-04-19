@@ -1,14 +1,33 @@
 # Change Log / 变更日志
 
 ## [2.4.0] - 2026-04-19
-💎 v2.4.0 核心更新：石板青 (Slate Teal) 审美重构
+💎 v2.4.0 核心更新：石板青 (Slate Teal) 审美重构 & 稳定性加固
 品牌色全面迭代 (Obsidian → Slate Teal)
 
-色彩对齐：通过多点采样，将原有的数字灰色重构为具工业质感的“空明石板青”。
-全链路更名：已手动完成了 
+### 🛠️ 系统稳定性与路径加固 (System Stability & Path Hardening)
+- **[Fix] Windows 路径全链路归一化 / Path Normalization**:
+  - EN: Enforced strict path normalization (`os.path.normcase`) across `BorderController`, `ThumbnailStrip`, and `TypoEngine`. Resolved critical bugs where Windows case/slash variations caused configuration desync and redundant font loading.
+  - CN: 在 `BorderController`、`ThumbnailStrip` 和 `TypoEngine` 中强制实施了全链路路径归一化 (`os.path.normcase`)。彻底解决了 Windows 系统下因路径大小写及斜杠差异导致的配置不同步、样片选中失效以及字体重复加载等顽疾。
+- **[Fix] 样片条删除同步修复 / Thumbnail Strip Sync**:
+  - EN: Applied path normalization to widget creation and deletion logic, ensuring the "Delete" action always stays in sync with the internal batch state.
+  - CN: 将路径归一化应用于样片条的创建与删除逻辑，确保界面点击“删除”后，后台批次列表能精准同步更新。
 
-renderer.py
-、BorderController.py 和 SettingsGroup.py 的同步更名，界面下拉菜单现已正式显示“石板青 (Slate Teal)”。
+### 📏 布局逻辑深度解耦 (Layout Decoupling & Stability)
+- **[Feature] 底部边框绝对控制 / Absolute Bottom Border Control**:
+  - EN: Completely decoupled the footer area from side/top margins. The "Bottom Border (px)" setting now represents the absolute height of the white area, with text automatically vertically centered.
+  - CN: 实现了底部边框逻辑的深度解耦。删除了底层的隐藏边距关联，现在“底部边框 (px)”数值即为实打实的留白高度，且文字会在该区域内自动垂直居中，不再受侧边或顶部留白变化的干扰。
+- **[UX] 模式切换逻辑优化 / Mode-Switch UI Stability**:
+  - EN: Replaced dynamic hiding with state-based disabling (`_set_frame_enabled`) for mode-specific UI fields. Eliminated frustrating layout shifts and jumping when switching between Digital/Film/Pure modes.
+  - CN: 优化了模式切换时的 UI 行为。将动态隐藏改为状态禁用 (`_set_frame_enabled`)，彻底消除了在数码/胶片/纯净模式切换时界面产生的抖动与跳变，保证了操作逻辑的连贯性。
+
+### 🔄 智能配置同步 (Smart Configuration Sync)
+- **[Feature] 同类设置一键同步 / Global Settings Sync**:
+  - EN: Added "Apply to Similar Images" in Advanced Settings. Automatically identifies images in the batch with matching format (aspect ratio) and rotation to batch-apply border and theme settings.
+  - CN: 在高级设置中新增了“同步到同类图片”功能。可一键识别批次中**同画幅（宽高比一致）且同旋转方向**的照片，并将当前的边框比例、主题及字号设置批量应用，显著提升多图处理效率。
+
+### 🎨 审美重构 (Aesthetics Overhaul)
+色彩对齐：通过多点采样，将原有的数字灰色重构为具工业质感的“空明石板青”。
+全链路更名：已手动完成了 `renderer.py`、`BorderController.py` 和 `SettingsGroup.py` 的同步更名，界面下拉菜单现已正式显示“石板青 (Slate Teal)”。
 Gamma 1.6 渲染引擎 (光学仿真)
 
 通透感增强：引入了 1.6 伽态非线性校正，模拟自然光的物理衰减曲线。这消除了传统数字渐变的沉闷感，为背景营造出了极其开阔的“空气呼吸感”。

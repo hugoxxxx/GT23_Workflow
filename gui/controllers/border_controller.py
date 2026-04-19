@@ -106,6 +106,46 @@ class BorderController:
         p_norm = os.path.normcase(os.path.normpath(path))
         return self.image_configs.get(p_norm, {})
 
+    def sync_config_to_similar(self, source_path, params):
+        """
+        EN: Apply source params to all images in batch with same aspect ratio and rotation.
+        CN: 将当前图片的配置应用到批次中具有相同宽高比和旋转角度的所有图片。
+        """
+        p_norm = os.path.normcase(os.path.normpath(source_path))
+        source_ratio = self.batch_width_cache.get(p_norm)
+        if source_ratio is None: return
+        
+        source_rotation = params.get('rotation', 0)
+        
+        # EN: Parameters to sync (exclude EXIF and path-specific stuff)
+        # CN: 需要同步的参数（不含 EXIF 等特定信息）
+        sync_keys = [
+            'left_px', 'right_px', 'top_px', 'bottom_px', 
+            'font_scale', 'font_sub_px', 'font_v_offset',
+            'theme', 'branding', 'auto_detect', 'film_combo'
+        ]
+        sync_data = {k: params[k] for k in sync_keys if k in params}
+        
+        count = 0
+        for path in self.current_batch_paths:
+            if path == p_norm: continue
+            
+            target_ratio = self.batch_width_cache.get(path)
+            if target_ratio is None: continue
+            
+            # EN: Match aspect ratio (tolerance 0.02) and rotation
+            # CN: 匹配宽高比（容差 0.02）和旋转角度
+            if abs(target_ratio - source_ratio) < 0.05: # EN: Slightly wider tolerance for same format / CN: 同画幅稍微放宽容差
+                target_cfg = self.image_configs.get(path, {})
+                target_rotation = target_cfg.get('rotation', 0)
+                
+                if target_rotation == source_rotation:
+                    if path not in self.image_configs:
+                        self.image_configs[path] = {}
+                    self.image_configs[path].update(sync_data)
+                    count += 1
+        return count
+
     def update_aspect_ratio_cache(self, path, ratio):
         """EN: Cache aspect ratio for an image / CN: 缓存图片的宽高比"""
         norm_p = os.path.normcase(os.path.normpath(path))
@@ -158,7 +198,8 @@ class BorderController:
                     self.progress_callback(i + 1, total, os.path.basename(img_path))
 
                 # EN: Resolve configuration
-                cfg = self.image_configs.get(img_path, {})
+                p_norm = os.path.normcase(os.path.normpath(img_path))
+                cfg = self.image_configs.get(p_norm, {})
                 is_digital = global_cfg.get('is_digital', False)
                 is_pure = global_cfg.get('is_pure', False)
                 theme_str = cfg.get('theme', global_cfg.get('theme', 'light'))
@@ -238,7 +279,8 @@ class BorderController:
         t_start = time.perf_counter()
         render_timings = {}
         
-        cfg = self.image_configs.get(img_path, {})
+        p_norm = os.path.normcase(os.path.normpath(img_path))
+        cfg = self.image_configs.get(p_norm, {})
         m_film = manual_film
         if cfg and not cfg.get('auto_detect', True):
             m_film = cfg.get('film_combo')
