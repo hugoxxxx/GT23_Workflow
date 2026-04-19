@@ -206,9 +206,9 @@ class FilmRenderer:
             elif theme == "frosted":
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
-            elif theme == "obsidian":
+            elif theme == "slate_teal":
                 # EN: Premium Slate-Teal Gradient (Ultimate Luminous Replica)
-                # CN: 曜石黑（终极通透版：复刻福伦达“空明石板青”模拟渐变）
+                # CN: 石板青（终极通透版：复刻福伦达“空明石板青”模拟渐变）
                 c_top = (210, 222, 228)    # Luminous Air / 空明青灰
                 c_bottom = (125, 142, 152) # Breathable Slate / 通透石板
                 # EN: Use gamma 1.6 for expansive highlight falloff / CN: 使用伽态 1.6 引导大范围高光衰减
@@ -219,7 +219,7 @@ class FilmRenderer:
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
-            if theme in ["frosted", "obsidian"]:
+            if theme in ["frosted", "slate_teal"]:
                 # EN: Floating Photo Effect (Inner Shadow + Image + Border)
                 self._draw_floating_photo(canvas, img, side_pad_left, top_pad, line_color)
             else:
@@ -327,9 +327,9 @@ class FilmRenderer:
             
             # --- EN: FINAL POLISH ---
             t_shadow_start = time.perf_counter()
-            # EN: Disable shadow for Dark/Obsidian Mode to avoid edge artifacts and match user's clean aesthetic
-            # CN: 深色/曜石黑模式下不加阴影，避免边缘白边产生（黑色阴影在暗色底色上效果不佳）
-            if theme in ["dark", "frosted", "obsidian"]:
+            # EN: Disable shadow for Dark/Slate-Teal Mode to avoid edge artifacts and match user's clean aesthetic
+            # CN: 深色/石板青模式下不加阴影，避免边缘白边产生（黑色阴影在暗色底色上效果不佳）
+            if theme in ["dark", "frosted", "slate_teal"]:
                final_output = canvas.convert("RGBA")
             else:
                 # EN: Restore high-quality shadow for preview as requested
@@ -341,7 +341,7 @@ class FilmRenderer:
                 # EN: Flatten onto matching background color
                 # CN: 复合底色，避免阴影产生边缘白边（深色模式用黑底，其余用白底）
                 if final_output.mode == 'RGBA':
-                    flatten_bg_color = (0, 0, 0) if theme in ["dark", "obsidian"] else (255, 255, 255)
+                    flatten_bg_color = (0, 0, 0) if theme in ["dark", "slate_teal"] else (255, 255, 255)
                     bg = Image.new("RGB", final_output.size, flatten_bg_color)
                     bg.paste(final_output, mask=final_output.split()[3])
                     return bg, timings
@@ -356,7 +356,7 @@ class FilmRenderer:
                 save_path = os.path.join(output_dir, save_name)
 
                 # EN: Flatten before saving / CN: 保存前进行底色复合处理
-                flatten_bg_color = (0, 0, 0) if theme in ["dark", "obsidian"] else (255, 255, 255)
+                flatten_bg_color = (0, 0, 0) if theme in ["dark", "slate_teal"] else (255, 255, 255)
                 bg = Image.new("RGB", final_output.size, flatten_bg_color)
                 if final_output.mode == 'RGBA':
                     bg.paste(final_output, mask=final_output.split()[3])
@@ -406,8 +406,8 @@ class FilmRenderer:
         elif theme == "frosted":
             # EN: Glassmorphism / CN: 磨砂玻璃（使用图片虚化背景，深色文字）
             return (240, 240, 240), (26, 26, 26), (85, 85, 85), (200, 200, 200)
-        elif theme == "obsidian":
-            # EN: Premium Slate Gradient / CN: 曜石黑（极致通透石板青渐变，高对比冷白文字）
+        elif theme == "slate_teal":
+            # EN: Premium Slate Gradient / CN: 石板青（极致通透石板青渐变，高对比冷白文字）
             return (210, 222, 228), (245, 245, 250), (215, 222, 228), (180, 190, 200)
         else:
             # Light
@@ -700,13 +700,13 @@ class FilmRenderer:
         is_digi = data.get('is_digital', False)
         
         focal = data.get('FocalLength')
-        if focal: info_parts.append(focal)
+        if is_digi and focal: info_parts.append(focal)
         aperture = data.get('FNumber')
         if aperture: info_parts.append(f"f/{aperture}")
         shutter = data.get('ExposureTimeStr')
         if shutter: info_parts.append(f"{shutter}s")
         iso = data.get('ISO')
-        if iso: info_parts.append(f"ISO {iso}")
+        if is_digi and iso: info_parts.append(f"ISO {iso}")
         
         # EN: Digital systems should not display film info
         # CN: 数码系统不展示胶片信息

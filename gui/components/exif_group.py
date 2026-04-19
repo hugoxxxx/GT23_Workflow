@@ -31,6 +31,7 @@ class ExifGroup(ttk.Labelframe):
         self.exif_vars = exif_vars or {}
         self.show_vars = show_vars or {}
         self.global_sync_var = global_sync_var
+        self.fields = {} # EN: Store container references / CN: 存储容器引用
         
         self.setup_ui()
 
@@ -70,6 +71,7 @@ class ExifGroup(ttk.Labelframe):
     def add_field(self, parent, label_text, key, col):
         container = ttk.Frame(parent)
         container.grid(row=0, column=col, sticky=EW)
+        self.fields[key] = container # Store for visibility control
         
         # Visibility toggle
         show_var = self.show_vars.get(key)
@@ -89,3 +91,11 @@ class ExifGroup(ttk.Labelframe):
         self.lang = lang
         title = "手动 EXIF 覆盖 (留空则读取原图)" if lang == "zh" else "Manual EXIF Overrides (Leave blank to use file EXIF)"
         self.config(text=title)
+
+    def set_field_visible(self, key, visible):
+        """EN: Toggle field visibility / CN: 切换字段可见性"""
+        if key in self.fields:
+            if visible:
+                self.fields[key].grid()
+            else:
+                self.fields[key].grid_remove()

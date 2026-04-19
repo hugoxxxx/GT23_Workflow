@@ -303,6 +303,9 @@ class BorderPanel:
         # EN: Auto-detect / CN: 自动检测
         self.auto_detect_photos_in()
         self.refresh_thumb_strip()
+        
+        # EN: Force initial mode sync / CN: 强制初始模式同步
+        self.on_mode_changed()
     
     def redraw_preview(self):
         """EN: Redraw the preview canvas / CN: 重绘预览画布"""
@@ -453,7 +456,9 @@ class BorderPanel:
         )
         if folder:
             self.input_folder_var.set(folder)
+            self.controller.scan_folder(folder) # EN: Mandatory scan / CN: 必须调用扫描逻辑
             self.controller.clear_all_configs()
+            self._update_batch_width_cache(self.controller.current_batch_paths) # EN: Sync cache / CN: 同步缓存
             self.update_file_count()
             self.refresh_thumb_strip()
             self.detect_layout_and_load_params(folder)
@@ -679,6 +684,10 @@ class BorderPanel:
             self.film_selection_frame.pack(fill=X, pady=(0, 10), after=self.folder_frame)
         else:
             self.film_selection_frame.pack_forget()
+            
+        # EN: Only show ISO in digital mode / CN: 仅在数码模式下显示 ISO 覆盖
+        self.exif_group.set_field_visible('iso', mode == "digital")
+        
         self.on_params_changed()
     
     def on_auto_detect_changed(self):

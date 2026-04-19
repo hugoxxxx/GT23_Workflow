@@ -59,7 +59,7 @@ class BorderController:
         
         # EN: Use stable sort to maintain order / CN: 使用稳定排序保持顺序
         found_files.sort()
-        self.current_batch_paths = found_files
+        self.current_batch_paths = [os.path.normcase(os.path.normpath(p)) for p in found_files]
         
         # EN: Scan images to cache aspect ratios in background
         # (This is usually handled by the Panel calling a specific method)
@@ -72,27 +72,30 @@ class BorderController:
     def add_to_batch(self, paths):
         """EN: Add specific files to current batch / CN: 将特定文件添加到当前批次"""
         for p in paths:
-            if p not in self.current_batch_paths:
-                self.current_batch_paths.append(p)
+            p_norm = os.path.normcase(os.path.normpath(p))
+            if p_norm not in self.current_batch_paths:
+                self.current_batch_paths.append(p_norm)
         return len(self.current_batch_paths)
 
     def remove_from_batch(self, path):
         """EN: Remove file from batch / CN: 从批次中移除文件"""
-        if path in self.current_batch_paths:
-            self.current_batch_paths.remove(path)
-        if path in self.image_configs:
-            del self.image_configs[path]
+        p_norm = os.path.normcase(os.path.normpath(path))
+        if p_norm in self.current_batch_paths:
+            self.current_batch_paths.remove(p_norm)
+        if p_norm in self.image_configs:
+            del self.image_configs[p_norm]
 
     def update_image_config(self, path, params):
         """EN: Update config for a specific image / CN: 更新单张图片的配置"""
+        p_norm = os.path.normcase(os.path.normpath(path))
         if params is None:
-            if path in self.image_configs:
-                del self.image_configs[path]
+            if p_norm in self.image_configs:
+                del self.image_configs[p_norm]
             return
             
-        if path not in self.image_configs:
-            self.image_configs[path] = {}
-        self.image_configs[path].update(params)
+        if p_norm not in self.image_configs:
+            self.image_configs[p_norm] = {}
+        self.image_configs[p_norm].update(params)
 
     def clear_all_configs(self):
         """EN: Clear all image configurations / CN: 清除所有图片配置"""
@@ -100,7 +103,8 @@ class BorderController:
 
     def get_image_config(self, path):
         """EN: Get config for image, fallback to empty / CN: 获取图片配置，无则返回空"""
-        return self.image_configs.get(path, {})
+        p_norm = os.path.normcase(os.path.normpath(path))
+        return self.image_configs.get(p_norm, {})
 
     def update_aspect_ratio_cache(self, path, ratio):
         """EN: Cache aspect ratio for an image / CN: 缓存图片的宽高比"""
@@ -320,7 +324,7 @@ class BorderController:
             "macaron": "macaron", "马卡龙": "macaron", "Macaron": "macaron",
             "rainbow": "rainbow", "彩虹": "rainbow", "Rainbow": "rainbow",
             "frosted": "frosted", "磨砂": "frosted", "glass": "frosted",
-            "obsidian": "obsidian", "曜石黑": "obsidian", "Obsidian": "obsidian",
+            "slate_teal": "slate_teal", "石板青": "slate_teal", "Slate Teal": "slate_teal",
             "dark": "dark", "深色": "dark", "Dark": "dark",
             "light": "light", "浅色": "light", "Light": "light", "Default": "light"
         }
