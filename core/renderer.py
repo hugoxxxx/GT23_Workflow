@@ -571,17 +571,17 @@ class FilmRenderer:
             
             shadow_buf = Image.alpha_composite(shadow_buf, layer)
 
-        # --- 2. EN: STACK LAYERS (Diffuse Ambient Stack) / CN: 堆叠投影层 (高级漫反射模型) ---
-        # Layer A: EN: Massive Atmosphere (Deep, widespread glow) / CN: 超大氛围层 (深邃、广域漫射)
-        # EN: radius 320+ for extreme softness, offsets reduced to center the photo light
-        # CN: 极大的模糊半径（及负扩张）营造出真正的“悬浮感”，大幅减少位移以实现全包裹光效
-        draw_layer(radius=int(320 * sf), opacity=55, off_x=0, off_y=30, spread_neg=-60, fade_strength=0.1)
+        # --- 2. EN: STACK LAYERS (Refined Structured Stack) / CN: 堆叠投影层 (精细结构化模型) ---
+        # Layer A: EN: Ambient Foundation (Soft but defined) / CN: 环境基底层 (柔和但有形)
+        # EN: radius 180-220 for defined softness, moderate offset for gravity
+        # CN: 中等模糊半径营造清晰的“空气感”，配合适度位移增加重力感
+        draw_layer(radius=int(180 * sf), opacity=100, off_x=0, off_y=70, spread_neg=20, fade_strength=0.15)
         
-        # Layer B: EN: Soft Float (Balanced) / CN: 柔和悬浮层（平衡）
-        draw_layer(radius=int(120 * sf), opacity=85, off_x=0, off_y=60, spread_neg=20, fade_strength=0.0)
+        # Layer B: EN: Supporting Float / CN: 支撑悬浮层
+        draw_layer(radius=int(80 * sf), opacity=140, off_x=0, off_y=40, spread_neg=10, fade_strength=0.0)
         
-        # Layer C: EN: Tactile Core (Solid Contact) / CN: 触控核心层（微距细节）
-        draw_layer(radius=int(25 * sf), opacity=120, off_x=0, off_y=15, spread_neg=0, fade_strength=0.0)
+        # Layer C: EN: Tactile Core (Sharp Contact) / CN: 触控核心层（利落细节）
+        draw_layer(radius=int(20 * sf), opacity=180, off_x=0, off_y=15, spread_neg=0, fade_strength=0.0)
         
         # --- 3. EN: PASTE TO CANVAS & FINAL PHOTO / CN: 粘贴至画布与最终照片 ---
         canvas.paste(shadow_buf, (x - margin, y - margin), shadow_buf)
