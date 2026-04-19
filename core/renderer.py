@@ -207,10 +207,10 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Slate-Teal Gradient (Pixel-Perfect Voigtlander Replica)
-                # CN: 曜石黑（究极进化版：各锚点全采样复刻福伦达“空明石板青”模拟渐变）
-                c_top = (205, 218, 225)    # Luminous Air / 空明青灰
-                c_bottom = (115, 132, 142) # Breathable Slate / 通透石板
+                # EN: Premium Slate-Teal Gradient (Ultimate Luminous Replica)
+                # CN: 曜石黑（终极通透版：复刻福伦达“空明石板青”模拟渐变）
+                c_top = (210, 222, 228)    # Luminous Air / 空明青灰
+                c_bottom = (125, 142, 152) # Breathable Slate / 通透石板
                 # EN: Use gamma 1.6 for expansive highlight falloff / CN: 使用伽态 1.6 引导大范围高光衰减
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True, gamma=1.6)
                 # EN: Apply matte texture for "Fine Art Paper" feel
@@ -407,8 +407,8 @@ class FilmRenderer:
             # EN: Glassmorphism / CN: 磨砂玻璃（使用图片虚化背景，深色文字）
             return (240, 240, 240), (26, 26, 26), (85, 85, 85), (200, 200, 200)
         elif theme == "obsidian":
-            # EN: Premium Dark Grey Gradient / CN: 曜石黑（深灰渐变，冷白文字）
-            return (28, 28, 30), (242, 242, 247), (161, 161, 166), (58, 58, 60)
+            # EN: Premium Slate Gradient / CN: 曜石黑（极致通透石板青渐变，高对比冷白文字）
+            return (210, 222, 228), (245, 245, 250), (215, 222, 228), (180, 190, 200)
         else:
             # Light
             return (255, 255, 255), (26, 26, 26), (85, 85, 85), (238, 238, 238)
