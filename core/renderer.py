@@ -204,10 +204,13 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Grey Gradient (Solid) / CN: 曜石黑（纯色垂直渐变层，无原图磨砂层）
+                # EN: Premium Grey Gradient (Matte Texture) / CN: 曜石黑（磨砂质感高级灰垂直渐变）
                 c_top = (142, 142, 147) # Apple System Gray 1 / 浅中灰
                 c_bottom = (99, 99, 102) # Apple System Gray 2 / 深中灰
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
+                # EN: Apply subtle paper/matte texture to remove "digital" look
+                # CN: 应用微细的磨砂/纸质感纹理，消除“数码味”
+                canvas = self._apply_matte_texture(canvas, intensity=0.03)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
@@ -458,13 +461,37 @@ class FilmRenderer:
         canvas = canvas.filter(ImageFilter.GaussianBlur(radius=160))
         
         # 3. EN: Brighten and add a white "frost" tint / CN: 提亮并添加白色磨砂蒙版
-        enhancer = ImageEnhance.Brightness(canvas)
-        canvas = enhancer.enhance(1.15)
-        
-        overlay = Image.new('RGB', (w, h), (255, 255, 255))
-        canvas = Image.blend(canvas, overlay, alpha=0.12) # 12% white frost
-        
+        canvas = ImageEnhance.Brightness(canvas).enhance(1.15)
         return canvas
+
+    def _apply_matte_texture(self, canvas, intensity=0.03):
+        """
+        EN: Add subtle paper-like/matte noise texture to a canvas
+        CN: 为画布添加微细的纸质感/哑光磨砂噪点纹理
+        """
+        from PIL import Image, ImageDraw, ImageChops
+        import random
+        
+        w, h = canvas.size
+        # EN: Create a tileable noise block for performance (256x256)
+        # CN: 为性能考虑，创建一个可平铺的噪点块
+        tile_size = 256
+        noise_tile = Image.new('L', (tile_size, tile_size))
+        
+        # EN: Fast noise generation / CN: 快速随机噪点生成
+        pixels = [random.randint(110, 145) for _ in range(tile_size * tile_size)]
+        noise_tile.putdata(pixels)
+        
+        # EN: Create full-size noise overlay / CN: 创建覆盖全画面的噪点层
+        noise_overlay = Image.new('L', (w, h))
+        for y in range(0, h, tile_size):
+            for x in range(0, w, tile_size):
+                noise_overlay.paste(noise_tile, (x, y))
+        
+        # EN: Blend noise with canvas using "Soft Light" style (manually here)
+        # CN: 将噪点层以微弱比例叠加到原画布
+        noise_rgb = Image.merge("RGB", (noise_overlay, noise_overlay, noise_overlay))
+        return Image.blend(canvas, noise_rgb, intensity)
 
     def _draw_floating_photo(self, canvas, img, x, y, outline_color):
         """
