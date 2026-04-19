@@ -207,10 +207,10 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Slate-Blue Gradient (Refined Voigtlander Aesthetic)
-                # CN: 曜石黑（进阶版：复刻福伦达冷调石板蓝/深岩灰渐变）
-                c_top = (170, 188, 195)   # Luminous Slate Blue / 朗透石板蓝
-                c_bottom = (75, 92, 102)  # Deep Oceanic Stone / 深海岩灰
+                # EN: Premium Slate-Blue Gradient (Ultra-Refined Voigtlander Aesthetic)
+                # CN: 曜石黑（终极版：复刻福伦达高明度“朗透石板青”渐变）
+                c_top = (182, 200, 208)   # Luminous Sage-Blue / 朗透青石
+                c_bottom = (105, 122, 130)  # Medium Slate Slate / 中度石板岩
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
                 # EN: Apply matte texture for "Fine Art Paper" feel
                 # CN: 应用磨砂纹理，模拟“艺术纸”质感
