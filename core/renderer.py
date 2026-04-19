@@ -207,11 +207,12 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Slate-Teal Gradient (Industrial Voigtlander Aesthetic)
-                # CN: 曜石黑（工业版：复刻福伦达冷调石板青/深海岩灰渐变）
-                c_top = (152, 174, 180)    # Industrial Teal-Grey / 工业青灰
-                c_bottom = (72, 88, 95)    # Deep Deep Slate / 深邃石板
-                canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
+                # EN: Premium Slate-Teal Gradient (Ultimate Voigtlander Aesthetic)
+                # CN: 曜石黑（终极修正版：复刻福伦达高明度“石板青”模拟渐变）
+                c_top = (158, 178, 185)    # Slate Blue-Teal / 石板青
+                c_bottom = (82, 98, 105)   # Deep Ocean Stone / 深海岩
+                # EN: Use gamma 1.1 for organic light decay / CN: 使用伽态 1.1 模拟光线自然衰减
+                canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True, gamma=1.1)
                 # EN: Apply matte texture for "Fine Art Paper" feel
                 # CN: 应用磨砂纹理，模拟“艺术纸”质感
                 canvas = self._apply_matte_texture(canvas, intensity=0.06)
@@ -412,9 +413,11 @@ class FilmRenderer:
             # Light
             return (255, 255, 255), (26, 26, 26), (85, 85, 85), (238, 238, 238)
 
-    def _create_linear_gradient_canvas(self, w, h, c1, c2, vertical=False):
+    def _create_linear_gradient_canvas(self, w, h, c1, c2, vertical=False, gamma=1.3):
         """
-        EN: Create high-precision linear gradient / CN: 创建高精度线性渐变 (支持横向/纵向)
+        EN: Create high-precision linear gradient with optional gamma correction.
+        CN: 创建支持伽态校正的高精度线性渐变 (支持横向/纵向)。
+        gamma: >1.0 makes color transition slower at start, <1.0 makes it faster.
         """
         canvas = Image.new("RGB", (w, h))
         draw = ImageDraw.Draw(canvas)
@@ -422,6 +425,10 @@ class FilmRenderer:
         steps = h if vertical else w
         for i in range(steps):
             t = i / steps if steps > 0 else 0
+            # EN: Apply gamma for organic transition / CN: 应用伽态以实现自然的模拟感过渡
+            if gamma != 1.0:
+                t = t ** gamma
+                
             r = int(c1[0] + (c2[0] - c1[0]) * t)
             g = int(c1[1] + (c2[1] - c1[1]) * t)
             b = int(c1[2] + (c2[2] - c1[2]) * t)
