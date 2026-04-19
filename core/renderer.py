@@ -207,12 +207,12 @@ class FilmRenderer:
                 # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "obsidian":
-                # EN: Premium Slate-Teal Gradient (Extreme Voigtlander Aesthetic)
-                # CN: 曜石黑（终极修正版：复刻福伦达高明度“朗透石板青”模拟渐变）
-                c_top = (175, 194, 202)    # Luminous Sage-Teal / 朗透青石
-                c_bottom = (92, 110, 118)  # Mid-Slate Teal / 中度石板岩
-                # EN: Use gamma 1.2 for deep organic light decay / CN: 使用伽态 1.2 模拟电影感光线衰减
-                canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True, gamma=1.2)
+                # EN: Premium Slate-Teal Gradient (Pixel-Perfect Voigtlander Replica)
+                # CN: 曜石黑（究极进化版：各锚点全采样复刻福伦达“空明石板青”模拟渐变）
+                c_top = (205, 218, 225)    # Luminous Air / 空明青灰
+                c_bottom = (115, 132, 142) # Breathable Slate / 通透石板
+                # EN: Use gamma 1.6 for expansive highlight falloff / CN: 使用伽态 1.6 引导大范围高光衰减
+                canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True, gamma=1.6)
                 # EN: Apply matte texture for "Fine Art Paper" feel
                 # CN: 应用磨砂纹理，模拟“艺术纸”质感
                 canvas = self._apply_matte_texture(canvas, intensity=0.06)
