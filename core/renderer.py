@@ -135,13 +135,16 @@ class FilmRenderer:
             font_base_scale = layout.get('font_scale', 0.032)
             
             # --- EN: CALCULATE SPACING ---
-            side_pad_left = int(w * left_ratio)
-            side_pad_right = int(w * right_ratio)
-            top_pad = int(w * top_ratio)
-            bottom_splice = int(h * bottom_ratio)
+            # EN: Use long_edge as a stable reference for all paddings to ensure consistent border thickness
+            # CN: 使用长边作为所有边距计算的稳定基准，确保 UI 输入的像素值具有一致的物理含义
+            long_edge = max(w, h)
+            side_pad_left = int(long_edge * left_ratio)
+            side_pad_right = int(long_edge * right_ratio)
+            top_pad = int(long_edge * top_ratio)
+            bottom_splice = int(long_edge * bottom_ratio)
             
             # EN: The "inner bottom margin" between image and text area. 
-            # CN: 图像与底部文字区之间的间隙，传统上等于 side_pad。即便是非对称，这里取均值保持视觉平衡。
+            # CN: 图像与底部文字区之间的间隙，传统上等于侧边框
             inner_bottom_margin = (side_pad_left + side_pad_right) // 2
             
             new_w = w + side_pad_left + side_pad_right
