@@ -208,9 +208,9 @@ class FilmRenderer:
                 c_top = (142, 142, 147) # Apple System Gray 1 / 浅中灰
                 c_bottom = (99, 99, 102) # Apple System Gray 2 / 深中灰
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True)
-                # EN: Apply subtle paper/matte texture to remove "digital" look
-                # CN: 应用微细的磨砂/纸质感纹理，消除“数码味”
-                canvas = self._apply_matte_texture(canvas, intensity=0.03)
+                # EN: Apply enhanced matte texture to mask banding
+                # CN: 应用增强型磨砂纹理，掩盖断层
+                canvas = self._apply_matte_texture(canvas, intensity=0.06)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
@@ -322,10 +322,10 @@ class FilmRenderer:
             
             # --- EN: FINAL POLISH ---
             t_shadow_start = time.perf_counter()
-            # EN: Disable shadow for Dark Mode to avoid edge artifacts and match user's clean aesthetic
-            # CN: 深色模式下不加阴影，避免边缘白边产生且符合老大的纯净审美（黑色阴影在黑底上不可见）
-            if theme in ["dark", "frosted"]:
-                final_output = canvas.convert("RGBA")
+            # EN: Disable shadow for Dark/Obsidian Mode to avoid edge artifacts and match user's clean aesthetic
+            # CN: 深色/曜石黑模式下不加阴影，避免边缘白边产生（黑色阴影在暗色底色上效果不佳）
+            if theme in ["dark", "frosted", "obsidian"]:
+               final_output = canvas.convert("RGBA")
             else:
                 # EN: Restore high-quality shadow for preview as requested
                 final_output = self._apply_pro_shadow(canvas, radius=20)
@@ -336,7 +336,7 @@ class FilmRenderer:
                 # EN: Flatten onto matching background color
                 # CN: 复合底色，避免阴影产生边缘白边（深色模式用黑底，其余用白底）
                 if final_output.mode == 'RGBA':
-                    flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
+                    flatten_bg_color = (0, 0, 0) if theme in ["dark", "obsidian"] else (255, 255, 255)
                     bg = Image.new("RGB", final_output.size, flatten_bg_color)
                     bg.paste(final_output, mask=final_output.split()[3])
                     return bg, timings
@@ -351,7 +351,7 @@ class FilmRenderer:
                 save_path = os.path.join(output_dir, save_name)
 
                 # EN: Flatten before saving / CN: 保存前进行底色复合处理
-                flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
+                flatten_bg_color = (0, 0, 0) if theme in ["dark", "obsidian"] else (255, 255, 255)
                 bg = Image.new("RGB", final_output.size, flatten_bg_color)
                 if final_output.mode == 'RGBA':
                     bg.paste(final_output, mask=final_output.split()[3])
