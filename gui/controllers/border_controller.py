@@ -122,7 +122,7 @@ class BorderController:
         sync_keys = [
             'left_px', 'right_px', 'top_px', 'bottom_px', 
             'font_scale', 'font_sub_px', 'font_v_offset',
-            'theme', 'branding', 'auto_detect', 'film_combo'
+            'theme', 'branding', 'auto_detect', 'film_combo', 'sync_lr'
         ]
         sync_data = {k: params[k] for k in sync_keys if k in params}
         
@@ -241,6 +241,8 @@ class BorderController:
                             key = key if key != 'Shutter' else 'ExposureTimeStr'
                             key = key if key != 'Aperture' else 'FNumber'
                             data[key] = v
+                
+                data['target_ratio'] = cfg.get('target_ratio', global_cfg.get('target_ratio', 'Original'))
 
                 # EN: Theme mapping
                 theme_val = self.resolve_theme(theme_str)
@@ -311,6 +313,8 @@ class BorderController:
                     key = key if key != 'Shutter' else 'ExposureTimeStr'
                     key = key if key != 'Aperture' else 'FNumber'
                     data[key] = v
+        
+        data['target_ratio'] = cfg.get('target_ratio', 'Original')
 
         theme_str = cfg.get('theme', 'light')
         theme_val = self.resolve_theme(theme_str)

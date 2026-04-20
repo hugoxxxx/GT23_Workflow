@@ -10,7 +10,7 @@ from ttkbootstrap.constants import *
 from tkinter import filedialog, messagebox, scrolledtext
 from PIL import Image, ImageTk
 
-from gui.components import ThumbnailStrip, ExifGroup, SettingsGroup
+from gui.components import ThumbnailStrip, ExifGroup, SettingsGroup, AestheticGroup
 from gui.controllers.border_controller import BorderController
 
 class BorderPanel:
@@ -160,32 +160,61 @@ class BorderPanel:
         self.output_folder_var.set(os.path.join(working_dir, "photos_out"))
 
         # EN: Parameter variables (Pixels based on 4500px ref) / CN: 参数变量（基于 4500px 基准的像素值）
-        self.left_px_var = ttk.IntVar(value=180)
-        self.right_px_var = ttk.IntVar(value=180)
-        self.top_px_var = ttk.IntVar(value=180)
-        self.bottom_px_var = ttk.IntVar(value=585)
-        self.font_scale_var = ttk.IntVar(value=144)
-        self.font_sub_px_var = ttk.IntVar(value=112)
-        self.font_offset_px_var = ttk.IntVar(value=0)
+        # EN: Using StringVar to avoid TclError when entry is temporarily empty during typing
+        # CN: 使用 StringVar 以避免在打字时输入框暂时为空导致的 TclError 崩溃
+        self.left_px_var = ttk.StringVar(value="180")
+        self.right_px_var = ttk.StringVar(value="180")
+        self.top_px_var = ttk.StringVar(value="180")
+        self.bottom_px_var = ttk.StringVar(value="585")
+        self.font_scale_var = ttk.StringVar(value="144")
+        self.font_sub_px_var = ttk.StringVar(value="112")
+        self.font_offset_px_var = ttk.StringVar(value="0")
         self.theme_var = tk.StringVar(value="light")
         self.use_lens_branding_var = tk.BooleanVar(value=True) # EN: Global lens branding toggle / CN: 镜头专属标识全局开关
+        self.sync_lr_var = tk.BooleanVar(value=True) # EN: Sync L/R borders toggle / CN: 左右边框同时调整开关
+        self.target_ratio_var = tk.StringVar(value="Original") # EN: Target Aspect Ratio / CN: 目标画布比例
+        self.auto_detect_var = ttk.BooleanVar(value=True) # EN: EXIF auto detect / CN: 自动识别胶片开关
+        self._is_syncing_lr = False
+        
+        # EN: Shadow state for adaptive logic / CN: 用于自适应联动的影子状态
+        self._param_shadow = {
+            "left": "180", "right": "180", "top": "180", "bottom": "585"
+        }
 
         # EN: Setup traces for sync / CN: 设置同步监听
-        self.left_px_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
-        self.right_px_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
-        self.top_px_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
-        self.bottom_px_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
-        self.font_scale_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
-        self.font_sub_px_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
-        self.font_offset_px_var.trace('w', lambda *args: self.on_params_changed(sync_all=False))
+        def _sync_lr(source_var, target_var, *args):
+            if self._is_syncing_lr or not self.sync_lr_var.get(): return
+            if getattr(self, '_loading_state', False): return
+            self._is_syncing_lr = True
+            try:
+                # EN: String sync is inherently safe regardless of content
+                # CN: 字符串同步对内容不敏感，即使为空也不会报错
+                s_val = source_var.get()
+                if s_val != target_var.get():
+                    target_var.set(s_val)
+            finally:
+                self._is_syncing_lr = False
+        
+        def _on_px_change(*args):
+            # EN: Refresh preview / CN: 刷新预览
+            self.on_params_changed(sync_all=False)
+
+        self.left_px_var.trace_add('write', lambda *args: _sync_lr(self.left_px_var, self.right_px_var))
+        self.right_px_var.trace_add('write', lambda *args: _sync_lr(self.right_px_var, self.left_px_var))
+        
+        # EN: Only dropdowns and Booleans trigger immediate redraw
+        # CN: 仅下拉框与布尔开关触发立即重绘，输入框改为失焦/回车重绘
         self.theme_var.trace('w', lambda *args: self.on_params_changed(sync_all=True))
+        self.target_ratio_var.trace('w', self._on_ratio_changed_aesthetic)
+        self.use_lens_branding_var.trace('w', lambda *args: self.on_params_changed(sync_all=True))
+        self.auto_detect_var.trace('w', lambda *args: self.on_params_changed(sync_all=True))
         
         # EN: Film selection / CN: 胶片选择
         film_selection_text = "胶片选择" if self.lang == "zh" else "Film Selection"
         self.film_selection_frame = ttk.Labelframe(self.left_frame, text=film_selection_text, padding=10)
         self.film_selection_frame.pack(fill=X, pady=(0, 10))
         
-        self.auto_detect_var = ttk.BooleanVar(value=True)
+        # self.auto_detect_var initialized earlier to prevent trace crash
         auto_detect_text = "自动识别胶片（从EXIF）" if self.lang == "zh" else "Auto Detect from EXIF"
         self.auto_detect_check = ttk.Checkbutton(self.film_selection_frame, text=auto_detect_text, 
                        variable=self.auto_detect_var, command=self.on_auto_detect_changed, 
@@ -202,6 +231,16 @@ class BorderPanel:
         self.film_combo.bind("<<ComboboxSelected>>", lambda e: self.on_params_changed())
         self.film_combo.bind("<Return>", lambda e: self.on_params_changed())
 
+        # EN: Composition & Style / CN: 构图与风格
+        aesthetic_vars = {
+            "target_ratio": self.target_ratio_var,
+            "theme": self.theme_var
+        }
+        self.aesthetic_group = AestheticGroup(self.left_frame, lang=self.lang,
+                                             on_change=self.on_params_changed,
+                                             vars=aesthetic_vars)
+        self.aesthetic_group.pack(fill=X, pady=(0, 10))
+
         # EN: Advanced settings (border parameters) / CN: 高级设置（边框参数）
         settings_vars = {
             "left": self.left_px_var, "right": self.right_px_var,
@@ -209,7 +248,9 @@ class BorderPanel:
             "font": self.font_scale_var, "font_sub": self.font_sub_px_var,
             "font_offset": self.font_offset_px_var,
             "theme": self.theme_var,
-            "branding": self.use_lens_branding_var
+            "branding": self.use_lens_branding_var,
+            "sync_lr": self.sync_lr_var,
+            "target_ratio": self.target_ratio_var
         }
         self.settings_group = SettingsGroup(self.left_frame, lang=self.lang, 
                                            on_change=self.on_params_changed,
@@ -355,6 +396,7 @@ class BorderPanel:
             self.auto_detect_check.config(text="自动识别胶片（从EXIF）")
             self.manual_label.config(text="手动选择:")
             self.settings_group.update_language(lang)
+            self.aesthetic_group.update_language(lang)
             self.exif_group.update_language(lang)
             self.thumb_strip.update_language(lang)
             self.redraw_preview()
@@ -373,6 +415,7 @@ class BorderPanel:
             self.auto_detect_check.config(text="Auto Detect from EXIF")
             self.manual_label.config(text="Manual Select:")
             self.settings_group.update_language(lang)
+            self.aesthetic_group.update_language(lang)
             self.exif_group.update_language(lang)
             self.thumb_strip.update_language(lang)
             self.preview_frame.config(text="Preview (First Image in Folder)")
@@ -531,6 +574,12 @@ class BorderPanel:
         self.current_image_path = path
         self.thumb_strip.set_active(path)
         self._load_state_to_ui(path)
+        # EN: Reset shadow state to current image's values to avoid false deltas
+        # CN: 切换预览图时同步更新影子状态，避免产生误报的差异检测
+        self._param_shadow = {
+            "left": self.left_px_var.get(), "right": self.right_px_var.get(),
+            "top": self.top_px_var.get(), "bottom": self.bottom_px_var.get()
+        }
 
     def _save_current_to_state(self, path):
         if not path: return
@@ -546,6 +595,8 @@ class BorderPanel:
             'rotation': self.rotation_var.get(),
             'auto_detect': self.auto_detect_var.get(),
             'film_combo': self.film_combo.get(),
+            'sync_lr': self.sync_lr_var.get(),
+            'target_ratio': self.target_ratio_var.get(),
             'exif': {
                 'Make': self.exif_make_var.get().strip(), 'Model': self.exif_model_var.get().strip(),
                 'Lens': self.exif_lens_var.get().strip(), 'Shutter': self.exif_shutter_var.get().strip(),
@@ -581,6 +632,8 @@ class BorderPanel:
                 if 'theme' in cfg: self.theme_var.set(cfg['theme'])
                 if 'film_combo' in cfg: self.film_combo.set(cfg['film_combo'])
                 if 'font_v_offset' in cfg: self.font_offset_px_var.set(cfg['font_v_offset'])
+                self.sync_lr_var.set(cfg.get('sync_lr', True))
+                self.target_ratio_var.set(cfg.get('target_ratio', 'Original'))
                 self.rotation_var.set(cfg.get('rotation', 0))
                 self.auto_detect_var.set(cfg.get('auto_detect', True))
                 exif = cfg.get('exif', {})
@@ -720,8 +773,63 @@ class BorderPanel:
             msg = f"CN: 未找到其他具有相同画幅和旋转角度的图片 / EN: No other images found with matching format and rotation"
             self.log(msg)
     
+    def _on_ratio_changed_aesthetic(self, *args):
+        """
+        EN: Apply premium aesthetic defaults based on selected ratio
+        CN: 根据选择的比例应用“高级美学”默认边距
+        """
+        if getattr(self, '_loading_state', False): return
+        
+        ratio_str = self.target_ratio_var.get()
+        # EN: Premium margin presets (based on 4500px ref)
+        # CN: 高级美学预设值（基于 4500px 基准）
+        presets = {
+            "1:1": {"left": 500, "right": 500, "top": 500, "bottom": 1200, "font": 144, "sub": 112},
+            "3:4": {"left": 400, "right": 400, "top": 400, "bottom": 1300, "font": 144, "sub": 112},
+            "4:3": {"left": 450, "right": 450, "top": 400, "bottom": 900, "font": 144, "sub": 112},
+            "5:7": {"left": 350, "right": 350, "top": 350, "bottom": 1100, "font": 140, "sub": 108},
+            "4:5": {"left": 400, "right": 400, "top": 400, "bottom": 1200, "font": 144, "sub": 112},
+            "9:16": {"left": 300, "right": 300, "top": 600, "bottom": 2000, "font": 156, "sub": 120},
+            "3:2": {"left": 350, "right": 350, "top": 350, "bottom": 850, "font": 144, "sub": 112},
+            "16:9": {"left": 300, "right": 300, "top": 500, "bottom": 950, "font": 124, "sub": 96},
+        }
+        
+        # EN: Extract ratio key (e.g., "4:5 (LRB)" -> "4:5")
+        import re
+        match = re.search(r'(\d+):(\d+)', ratio_str)
+        if match:
+            key = f"{match.group(1)}:{match.group(2)}"
+            if key in presets:
+                p = presets[key]
+                self._loading_state = True # EN: Prevents individual trace triggers / CN: 防止触发单个更新
+                try:
+                    self.left_px_var.set(p["left"])
+                    self.right_px_var.set(p["right"])
+                    self.top_px_var.set(p["top"])
+                    self.bottom_px_var.set(p["bottom"])
+                    if "font" in p: self.font_scale_var.set(str(p["font"]))
+                    if "sub" in p: self.font_sub_px_var.set(str(p["sub"]))
+                finally:
+                    self._loading_state = False
+        
+        # EN: Final update to preview
+        # CN: 最终触发全量预览更新
+        self.on_params_changed(sync_all=True)
+
     def on_params_changed(self, sync_all=False):
         if getattr(self, '_loading_state', False): return
+        
+        # EN: Proportional Adaptive Logic / CN: 比例锁定联动逻辑
+        ratio_str = self.target_ratio_var.get().split(' (')[0]
+        if ratio_str not in ["Original", "原图", "原图 (自由)"] and getattr(self, 'current_image_path', None):
+            self._handle_ratio_locked_sync(ratio_str)
+
+        # EN: Update shadow state / CN: 更新影子状态
+        self._param_shadow = {
+            "left": self.left_px_var.get(), "right": self.right_px_var.get(),
+            "top": self.top_px_var.get(), "bottom": self.bottom_px_var.get()
+        }
+
         if getattr(self, 'current_image_path', None):
             self._save_current_to_state(self.current_image_path)
             if sync_all:
@@ -729,6 +837,70 @@ class BorderPanel:
                 for p in self.controller.current_batch_paths:
                     if p != self.current_image_path: self.controller.update_image_config(p, cfg)
             self.update_preview_for_path(self.current_image_path)
+
+    def _handle_ratio_locked_sync(self, ratio_str):
+        """
+        EN: Auto-calculate paddings to maintain target ratio when one side is manually edited
+        CN: 比例锁定联动逻辑：当手动修改一方面值时，自动计算并补齐其余边际
+        """
+        try:
+            parts = ratio_str.split(':')
+            if len(parts) != 2: return
+            target_r = float(parts[0]) / float(parts[1])
+            
+            # EN: Get current image base aspect / CN: 获取当前图片的基础比例
+            path_norm = os.path.normcase(os.path.normpath(self.current_image_path))
+            img_ratio = self.controller.batch_width_cache.get(path_norm)
+            
+            # EN: Fallback if cache not found / CN: 如果缓存未命中，则即时打开图片获取比例
+            if not img_ratio:
+                try:
+                    with Image.open(self.current_image_path) as tmp_img:
+                        tw, th = tmp_img.size
+                        img_ratio = tw / th
+                        self.controller.update_aspect_ratio_cache(path_norm, img_ratio)
+                except: return
+            
+            if not img_ratio: return
+            
+            # EN: Reference size (virtual) / CN: 基准图大小（虚拟）
+            ref_w = 4000.0
+            ref_h = ref_w / img_ratio
+            
+            # EN: Get manual inputs / CN: 获取手动输入内容
+            l = self._get_int_safe(self.left_px_var, 0)
+            r = self._get_int_safe(self.right_px_var, 0)
+            t = self._get_int_safe(self.top_px_var, 0)
+            b = self._get_int_safe(self.bottom_px_var, 0)
+            
+            # EN: Detect what changed / CN: 检测变化点
+            changed = []
+            if self.left_px_var.get() != self._param_shadow["left"]: changed.append("w")
+            if self.right_px_var.get() != self._param_shadow["right"]: changed.append("w")
+            if self.top_px_var.get() != self._param_shadow["top"]: changed.append("h")
+            if self.bottom_px_var.get() != self._param_shadow["bottom"]: changed.append("h")
+            
+            if "w" in changed:
+                # EN: Width changed -> solve for Bottom (Height) / CN: 宽度变了 -> 补齐高度（Bottom）
+                total_w = ref_w + l + r
+                needed_h_total = total_w / target_r
+                needed_paddings_h = needed_h_total - ref_h
+                new_b = max(10, int(needed_paddings_h - t))
+                self.bottom_px_var.set(str(new_b))
+            elif "h" in changed:
+                # EN: Height changed -> solve for Right (Width) / CN: 高度变了 -> 补齐宽度（Right）
+                total_h = ref_h + t + b
+                needed_w_total = total_h * target_r
+                needed_paddings_w = needed_w_total - ref_w
+                if self.sync_lr_var.get():
+                    new_side = max(10, int(needed_paddings_w / 2))
+                    self.left_px_var.set(str(new_side))
+                    self.right_px_var.set(str(new_side))
+                else:
+                    new_r = max(10, int(needed_paddings_w - l))
+                    self.right_px_var.set(str(new_r))
+        except:
+            pass
 
     def _set_frame_enabled(self, frame, enabled):
         """EN: Recursively set state for all widgets in a frame / CN: 递归设置框架内所有组件的启用状态"""

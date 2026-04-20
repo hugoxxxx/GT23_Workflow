@@ -149,6 +149,37 @@ class FilmRenderer:
             
             new_w = w + side_pad_left + side_pad_right
             new_h = h + top_pad + inner_bottom_margin + bottom_splice
+            
+            # --- EN: TARGET ASPECT RATIO ADAPTATION / CN: 目标画幅比例自适应 ---
+            target_ratio_str = data.get('target_ratio', 'Original')
+            if target_ratio_str and 'Original' not in target_ratio_str and '原图' not in target_ratio_str:
+                # EN: Parse ratio (e.g., "4:5 (LRB)" -> 0.8) / CN: 解析比例字符串
+                import re
+                match = re.search(r'(\d+):(\d+)', target_ratio_str)
+                if match:
+                    tr_w, tr_h = int(match.group(1)), int(match.group(2))
+                    tr = tr_w / tr_h
+                    
+                    current_ratio = new_w / new_h
+                    if current_ratio < tr:
+                        # EN: Canvas too tall, add side padding / CN: 画布过窄，增加左右边距
+                        target_new_w = int(new_h * tr)
+                        diff_w = target_new_w - new_w
+                        side_pad_left += diff_w // 2
+                        side_pad_right += diff_w - (diff_w // 2)
+                        new_w = target_new_w
+                    elif current_ratio > tr:
+                        # EN: Canvas too wide, add vertical padding / CN: 画布过宽，增加垂直向留白
+                        target_new_h = int(new_w / tr)
+                        diff_h = target_new_h - new_h
+                        
+                        # EN: Optical distribution (30% top, 70% bottom) for bold "Gallery" look
+                        # CN: 进一步优化垂直分布：赋予底部更多权重（3:7 开），让重心稳健上移，营造出极致的“挂画”仪式感
+                        top_extra = int(diff_h * 0.30)
+                        top_pad += top_extra
+                        bottom_splice += (diff_h - top_extra)
+                        new_h = target_new_h
+            
             timings['layout_calc'] = time.perf_counter() - t_layout_start
             
             # --- EN: DRAWING ---
@@ -296,7 +327,10 @@ class FilmRenderer:
                 resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
                 m_font = self._get_font(resolved_main, actual_main_size)
                 m_ascent, m_descent = m_font.getmetrics()
-                base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2
+                # EN: Anchor text proportionally to image bottom (38% of space) for tighter visual gestalt
+                # CN: 文字锚点调整至底部留白的 38% 处（微调），让文字与照片的“呼吸感”更紧密，避免在大画幅下显得疏离
+                total_bottom_space = inner_bottom_margin + bottom_splice
+                base_y = top_pad + h + int(total_bottom_space * 0.38)
                 v_gap_ref = max(actual_main_size, actual_sub_size)
                 main_y = base_y - int(v_gap_ref * 0.55)
                 photo_bottom = top_pad + h
@@ -468,11 +502,21 @@ class FilmRenderer:
             top = (new_ih - h) // 2
             canvas = resized.crop((0, top, w, top + h))
             
-        # 2. EN: Apply heavy blur / CN: 应用强力高斯模糊 (极致通透感 160px)
-        canvas = canvas.filter(ImageFilter.GaussianBlur(radius=160))
+        # --- 2. EN: ENHANCED BLUR LOGIC / CN: 增强型模糊逻辑 ---
+        # EN: Use proportional radius based on target size for consistent look
+        # CN: 使用基于基准尺寸的比例半径，确保大图小图视觉一致
+        long_edge = max(w, h)
+        # EN: target ~380px blur for 4500px long edge (approx 8.5% of long edge)
+        # CN: 针对 4500px 长边，应用约 380px 的模糊半径 (约 8.5% 长边)
+        radius = int(long_edge * 0.085)
+        canvas = canvas.filter(ImageFilter.GaussianBlur(radius=radius))
         
         # 3. EN: Brighten and add a white "frost" tint / CN: 提亮并添加白色磨砂蒙版
         canvas = ImageEnhance.Brightness(canvas).enhance(1.15)
+        
+        # 4. EN: Apply matte texture for premium grain feel / CN: 应用哑光纹理，增加高级感颗粒
+        canvas = self._apply_matte_texture(canvas, intensity=0.05)
+        
         return canvas
 
     def _apply_matte_texture(self, canvas, intensity=0.03):

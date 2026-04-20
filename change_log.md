@@ -1,7 +1,29 @@
 # Change Log / 变更日志
 
-## [2.4.0] - 2026-04-19
-💎 v2.4.0 核心更新：石板青 (Slate Teal) 审美重构 & 稳定性加固
+## [2.4.0] - 2026-04-20
+💎 v2.4.0 核心更新：石板青 (Slate Teal) 审美重构 & 极简交互 & 架构稳定性加固
+
+### 🎨 UI 极简交互重构 (Aesthetic UI Refactor)
+- **[Feature] “主题与比例”分组置顶 / Theme & Aspect Branding**:
+  - EN: Reorganized the settings sidebar into two distinct groups. "Theme & Aspect (主题与比例)" is now placed at the top to prioritize creative decisions over technical parameters.
+  - CN: 重构了设置面板的层级逻辑。将“主题与比例 (Theme & Aspect)”独立成组并置于最顶端，将创作风格与参数微调分离，操作逻辑更加契合摄影创作直觉。
+- **[Feature] 5:7 画幅支持与社交标签 / Social Media Ratios**:
+  - EN: Added 5:7 Instagram-native ratio support. Refined platform-specific labels for WeChat (1:1), Xiaohongshu (3:4), and Instagram (5:7).
+  - CN: 新增了 5:7 (Instagram 标准) 画幅支持。细化了社交平台标签：1:1（微信朋友圈）、3:4（小红书）、5:7（Instagram），简化其他数字标注。
+- **[Feature] 品牌色全面迭代 (Obsidian → Slate Teal)**:
+  - EN: Updated application theme to "Slate Teal" with Gamma 1.6 optical simulation and multi-layered diffuse shadows.
+  - CN: 品牌色全面迭代。由原有的“黑曜石”升级为具有工业美感的“石板青 (Slate Teal)”，并引入 Gamma 1.6 光学仿真渲染与多层结构化漫反射投影模型。
+
+### 📏 联动逻辑与稳定性 (Logic & Stability)
+- **[Feature] 比例锁定自适应联动 / Adaptive Proportional Sync**:
+  - EN: Implemented a proportional padding calculator. In locked-ratio mode, manually adjusting one dimension (Width or Height) will automatically update the other to maintain the target aspect ratio perfectly.
+  - CN: 实现了比例锁定下的自适应联动。在选择固定比例（如 1:1, 3:4）时，手动修改某一遍距，系统会自动计算并填补其余边际，确保整体画幅死死咬定在目标比例。
+- **[UX] 事件驱动刷新 (回车/失焦) / Event-Based Refresh**:
+  - EN: Optimized preview rendering to trigger only on `Return` (Enter) or `FocusOut` (blur) events. Eliminated real-time jitter during typing for a more premium, distraction-free input experience.
+  - CN: 预览重绘机制由“实时触发”升级为“确认触发”。现在仅在按下回车或鼠标失焦时触发渲染，彻底消除了连续打字时的界面跳闪，操作体验更加沉稳流畅。
+- **[Fix] 变量类型与鲁棒性加固 / StringVar Migration**:
+  - EN: Migrated border and font variables to `StringVar` to natively handle temporary empty states during input, resolving all `TclError` crashes during rapid parameter editing.
+  - CN: 将边距与字号变量从 `IntVar` 迁移至 `StringVar`。完美兼容输入框中途为空或非法字符的情况，彻底杜绝了因数值不匹配导致的 `TclError` 异常闪退。
 品牌色全面迭代 (Obsidian → Slate Teal)
 
 ### 🛠️ 系统稳定性与路径加固 (System Stability & Path Hardening)
