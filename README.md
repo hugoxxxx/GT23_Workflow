@@ -1,7 +1,7 @@
-﻿# GT23 Film Workflow (v2.3.0)
+﻿# GT23 Film Workflow (v2.4.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/hugoxxxx/GT23_Workflow/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/hugoxxxx/GT23_Workflow/releases)
 
 ---
 
@@ -12,15 +12,15 @@
 
 ---
 
-## ✨ Featured in v2.3.x / 新特性
+## ✨ Featured in v2.4.0 / 新特性
 
-### 🎞️ 135HF Half-Frame Specialization / 135 半格专题
-- **P/L Layouts**: Supports native vertical (9x8) and horizontal (12x6) half-frame orientations. / **双向排版**：针对半格相机的构图优化，支持 9*8(P) 或 12*6(L) 的逻辑布局。
-- **Fixed 72-Slot Grid**: Fills missing frames with film-base colors for a professional full-sheet aesthetic. / **强制 72 画幅补全**：不足的部分自动以底片基色填充，保持索引印样的完整视觉。
+### 🎨 Slate Teal Theme / 石板青主题
+- **Industrial Aesthetic**: Introducing an exclusive deep teal palette with Gamma 1.6 optical simulation. / **工业级质感**：全新的“石板青”方案，具备 Gamma 1.6 光学仿真特性与结构化漫反射投影模型。
+- **Frosted Glass Blur**: Dynamic blur effect that automatically adapts text color for readability. / **磨砂玻璃虚化**：新增动态背景虚化边框，支持根据亮度自动切换文字黑白逻辑。
 
-### 🌈 Artistic Themes / 艺术边框相纸
-- **Rainbow & Macaron**: Narrative-driven sequential coloring for social media grids. / **彩虹与马卡龙**：为社交媒体九宫格设计的叙事性色彩分配方案。
-- **Dark Border**: Professional cold-midnight aesthetic for cinematic presentation. / **深色模式**：高对比度的冷色调排版，赋予照片工业电影质感。
+### 📸 Precision Composition / 像素级控制
+- **Pixel-level Control**: Margins changed from ratios to exact pixels for ultimate precision. / **像素级微调**：边距单位全面转为像素，支持照片在画框内的双轴精细平移与重心调整。
+- **Radar v2 Safety**: Real-time overflow detection and photo-text collision alerts. / **安全预警系统**：实时监测元数据溢出与碰撞，确保每一张作品的构图完美。
 
 ---
 
@@ -29,12 +29,12 @@
 <table>
   <tr>
     <td align="center">
-      <strong>Border Tool / 边框工具</strong><br>
-      <img src="previews/GUI.png" width="100%" alt="GUI1">
+      <strong>Border Controller / 构图控制</strong><br>
+      <img src="./previews/v2.4.0/border_settings.png" width="100%" alt="GUI1">
     </td>
     <td align="center">
-      <strong>Contact Sheet / 底片索引</strong><br>
-      <img src="previews/GUI-2.png" width="100%" alt="GUI2">
+      <strong>Multi-aspect Adaptive / 画幅自适应</strong><br>
+      <img src="./previews/v2.4.0/multi_aspect_ratio.png" width="100%" alt="GUI2">
     </td>
   </tr>
 </table>
@@ -54,7 +54,7 @@
     - Expanded to **160+ logos** meticulously traced from original vintage documentation. / 跨越式更新至 **160+** 款，每一格图标均来自相机原始时代的纸质文献。
 
 <p align="center">
-  <img src="previews/logos/LOGO_FULL_MAP.jpg" width="100%" alt="LOGOMAP">
+  <img src="./previews/logos/LOGO_FULL_MAP.jpg" width="100%" alt="LOGOMAP">
 </p>
 
 ---
@@ -68,8 +68,8 @@
 ---
 
 ## 🗺️ Roadmap / 路线图
-- [x] **v2.3.x**: 135HF, Artistic Themes, 160+ Logos. / **v2.3.x**：135HF 专业化、艺术主题、160+ 客制图标。
-- [ ] **v2.4.x**: Android version full feature sync. / **v2.4.x**：安卓版全功能同步。
+- [x] **v2.4.x**: Slate Teal Theme, Pixel-level Precision, Radar v2. / **v2.4.x**：石板青主题、像素级精度、Radar v2 安全系统。
+- [ ] **v2.5.x**: Global Plugin System & Performance Optimization. / **v2.5.x**：全局插件化系统、运行性能极限优化。
 
 ---
 
