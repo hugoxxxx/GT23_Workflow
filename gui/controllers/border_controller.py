@@ -9,9 +9,10 @@ import sys
 import platform
 import subprocess
 import threading
-from PIL import Image
+import json
 from core.metadata import MetadataHandler
 from core.renderer import FilmRenderer, bootstrap_logos
+from utils.config_manager import config_manager
 
 class BorderController:
     """
@@ -35,6 +36,10 @@ class BorderController:
         # Load necessary singletons/handlers
         self.renderer = FilmRenderer()
         self.metadata_handler = MetadataHandler(layout_config='layouts.json', films_config='films.json')
+        
+        # User settings for presets (Persistence)
+        self.user_settings_path = os.path.join(config_manager.config_dir, "user_presets.json")
+        self.user_presets = self._load_user_presets()
 
     def log(self, msg):
         if self.log_callback:
@@ -262,7 +267,9 @@ class BorderController:
                                      rainbow_index=r_idx,
                                      rainbow_total=total,
                                      rainbow_range=r_range,
-                                     output_prefix=out_prefix)
+                                     output_prefix=out_prefix,
+                                     v_offset=cfg.get('v_offset', 0),
+                                     h_offset=cfg.get('h_offset', 0))
 
             if self.complete_callback:
                 self.complete_callback({'success': True, 'processed': total if not self.stop_requested else i})
@@ -352,6 +359,8 @@ class BorderController:
                                          rainbow_index=r_index,
                                          rainbow_total=r_total,
                                          rainbow_range=r_range,
+                                         v_offset=cfg.get('v_offset', 0),
+                                         h_offset=cfg.get('h_offset', 0),
                                          timing_results=render_timings)
         
         total_time = time.perf_counter() - t_start
@@ -445,3 +454,48 @@ class BorderController:
         msg_film = f"CN: 已加载 {film_list_len} 种虚拟胶片资料 / EN: Loaded {film_list_len} film profiles"
         msg_logo = f"CN: 已同步 {logo_count} 款相机品牌图标 / EN: Synced {logo_count} camera logos"
         return f"{msg_film}\n{msg_logo}"
+
+    # --- User Presets Persistence ---
+
+    def _load_user_presets(self):
+        default = {"border": {}, "metadata": {}}
+        if os.path.exists(self.user_settings_path):
+            try:
+                with open(self.user_settings_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data
+            except: pass
+        return default
+
+    def _save_user_presets(self):
+        try:
+            with open(self.user_settings_path, 'w', encoding='utf-8') as f:
+                json.dump(self.user_presets, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            self.log(f"CN: [!] 无法保存用户预设: {e}")
+
+    def get_border_presets(self):
+        return self.user_presets.get("border", {})
+
+    def add_border_preset(self, name, params):
+        if "border" not in self.user_presets: self.user_presets["border"] = {}
+        self.user_presets["border"][name] = params
+        self._save_user_presets()
+
+    def delete_border_preset(self, name):
+        if name in self.user_presets.get("border", {}):
+            del self.user_presets["border"][name]
+            self._save_user_presets()
+
+    def get_metadata_presets(self):
+        return self.user_presets.get("metadata", {})
+
+    def add_metadata_preset(self, name, data):
+        if "metadata" not in self.user_presets: self.user_presets["metadata"] = {}
+        self.user_presets["metadata"][name] = data
+        self._save_user_presets()
+
+    def delete_metadata_preset(self, name):
+        if name in self.user_presets.get("metadata", {}):
+            del self.user_presets["metadata"][name]
+            self._save_user_presets()

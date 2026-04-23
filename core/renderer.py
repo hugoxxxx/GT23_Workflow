@@ -75,7 +75,7 @@ class FilmRenderer:
 
     def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0, 
                     theme="light", is_pure=False, use_lens_branding=True, rainbow_index=0, rainbow_total=1, is_sample=False, 
-                    source_img=None, output_prefix="", **kwargs):
+                    source_img=None, output_prefix="", comp_v_offset=0, comp_h_offset=0, **kwargs):
         """
         EN: Main entry point with theme, global rainbow sequence, and sample mode.
         CN: 主渲染入口，增强主题、全局彩虹长卷与 SAMPLE 样品模式支持。
@@ -161,24 +161,39 @@ class FilmRenderer:
                     tr = tr_w / tr_h
                     
                     current_ratio = new_w / new_h
-                    if current_ratio < tr:
-                        # EN: Canvas too tall, add side padding / CN: 画布过窄，增加左右边距
-                        target_new_w = int(new_h * tr)
-                        diff_w = target_new_w - new_w
-                        side_pad_left += diff_w // 2
-                        side_pad_right += diff_w - (diff_w // 2)
-                        new_w = target_new_w
-                    elif current_ratio > tr:
-                        # EN: Canvas too wide, add vertical padding / CN: 画布过宽，增加垂直向留白
-                        target_new_h = int(new_w / tr)
-                        diff_h = target_new_h - new_h
-                        
-                        # EN: Optical distribution (30% top, 70% bottom) for bold "Gallery" look
-                        # CN: 进一步优化垂直分布：赋予底部更多权重（3:7 开），让重心稳健上移，营造出极致的“挂画”仪式感
-                        top_extra = int(diff_h * 0.30)
-                        top_pad += top_extra
-                        bottom_splice += (diff_h - top_extra)
-                        new_h = target_new_h
+                    
+                    # EN: Use epsilon (0.1%) to avoid redundant padding from precision errors
+                    # CN: 增加 0.1% 的容错率，避免因浮点误差导致的二次留白修正
+                    if abs(current_ratio - tr) / tr > 0.001:
+                        if current_ratio < tr:
+                            # EN: Canvas too tall, add side padding
+                            target_new_w = int(new_h * tr)
+                            diff_w = target_new_w - new_w
+                            if diff_w > 0:
+                                # EN: Horizontal distribution (0.5 center by default)
+                                h_off = comp_h_offset / 100.0
+                                dist_h = 0.5 + (h_off / 2.0) # -1 -> 0, 0 -> 0.5, 1 -> 1.0
+                                l_extra = int(diff_w * dist_h)
+                                side_pad_left += l_extra
+                                side_pad_right += (diff_w - l_extra)
+                                new_w = target_new_w
+                        elif current_ratio > tr:
+                            # EN: Canvas too wide, add vertical padding
+                            target_new_h = int(new_w / tr)
+                            diff_h = target_new_h - new_h
+                            if diff_h > 0:
+                                # EN: Use Text Safety Buffer during redistribution
+                                # CN: 在再分配过程中保留文字安全区
+                                TEXT_RESERVE = 550
+                                v = comp_v_offset / 100.0
+                                shift_budget = max(0, diff_h - TEXT_RESERVE)
+                                
+                                dist_v = (0.3 * (1 + v)) if v < 0 else (0.3 + 0.7 * v)
+                                top_extra = int(shift_budget * dist_v)
+                                
+                                top_pad += top_extra
+                                bottom_splice += (diff_h - top_extra)
+                                new_h = target_new_h
             
             timings['layout_calc'] = time.perf_counter() - t_layout_start
             

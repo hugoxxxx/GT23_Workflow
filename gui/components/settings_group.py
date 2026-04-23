@@ -99,7 +99,47 @@ class SettingsGroup(ttk.Labelframe):
                                  text="同步到同类图片 (画幅/旋转)" if self.lang == "zh" else "Apply to Similar Images",
                                  bootstyle="outline-primary",
                                  command=self.on_sync_similar)
-        self.sync_btn.pack(fill=X)
+        self.sync_btn.pack(fill=X, pady=(0, 10))
+        
+        # --- EN: VERTICAL OFFSET / CN: 垂直平移 (上下) ---
+        v_offset_container = ttk.Frame(self)
+        v_offset_container.pack(fill=X, pady=2)
+        v_label = ttk.Label(v_offset_container, text=self._get_label_text("v_offset"), width=15)
+        v_label.pack(side=LEFT)
+        v_var = self.vars.get("v_offset")
+        if v_var:
+            def _on_v_scale(val):
+                v_var.set(int(float(val)))
+                self.on_change()
+            
+            v_scale = ttk.Scale(v_offset_container, from_=-100, to=100, variable=v_var, 
+                              orient=HORIZONTAL, command=_on_v_scale)
+            v_scale.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
+            v_entry = ttk.Entry(v_offset_container, textvariable=v_var, width=5)
+            v_entry.pack(side=LEFT, padx=(0, 5))
+            v_entry.bind("<Return>", lambda e: self.on_change())
+            v_entry.bind("<FocusOut>", lambda e: self.on_change())
+        self.v_label = v_label
+
+        # --- EN: HORIZONTAL OFFSET / CN: 水平平移 (左右) ---
+        h_offset_container = ttk.Frame(self)
+        h_offset_container.pack(fill=X, pady=2)
+        h_label = ttk.Label(h_offset_container, text=self._get_label_text("h_offset"), width=15)
+        h_label.pack(side=LEFT)
+        h_var = self.vars.get("h_offset")
+        if h_var:
+            def _on_h_scale(val):
+                h_var.set(int(float(val)))
+                self.on_change()
+                
+            h_scale = ttk.Scale(h_offset_container, from_=-100, to=100, variable=h_var, 
+                              orient=HORIZONTAL, command=_on_h_scale)
+            h_scale.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
+            h_entry = ttk.Entry(h_offset_container, textvariable=h_var, width=5)
+            h_entry.pack(side=LEFT, padx=(0, 5))
+            h_entry.bind("<Return>", lambda e: self.on_change())
+            h_entry.bind("<FocusOut>", lambda e: self.on_change())
+        self.h_label = h_label
 
         self.update_labels()
 
@@ -128,7 +168,9 @@ class SettingsGroup(ttk.Labelframe):
             "bottom": ("底部边框 (px)", "Bottom Border (px)"),
             "font": ("型号字号 (px)", "Model Font Size (px)"),
             "font_sub": ("参数字号 (px)", "Param Font Size (px)"),
-            "font_offset": ("文字垂直偏移 (px)", "Text Vertical Offset (px)")
+            "font_offset": ("文字垂直偏移 (px)", "Text Vertical Offset (px)"),
+            "v_offset": ("垂直平移 (上下)", "Vertical Offset (U/D)"),
+            "h_offset": ("水平平移 (左右)", "Horizontal Offset (L/R)")
         }
         idx = 0 if self.lang == "zh" else 1
         return mapping[key][idx]
@@ -156,7 +198,9 @@ class SettingsGroup(ttk.Labelframe):
         self.font_offset_label.config(text=self._get_label_text("font_offset"))
         
         # Adjust widths for English
-        for lbl in [self.left_label, self.right_label, self.top_label, self.bottom_label, self.font_label, self.font_sub_label, self.font_offset_label]:
+        for lbl in [self.left_label, self.right_label, self.top_label, self.bottom_label, 
+                    self.font_label, self.font_sub_label, self.font_offset_label, 
+                    self.v_label, self.h_label]:
             lbl.configure(width=20 if self.lang == "en" else 15)
 
     def _update_theme_combo_values(self):
@@ -224,17 +268,45 @@ class AestheticGroup(ttk.Labelframe):
     EN: Group of settings for target ratio and border theme
     CN: 包含目标比例和边框主题的风格设置组
     """
-    def __init__(self, parent, lang="en", on_change=None, vars=None):
+    def __init__(self, parent, lang="en", on_change=None, vars=None, 
+                 on_save_preset=None, on_delete_preset=None, on_apply_preset=None):
         title = "主题与比例" if lang == "zh" else "Theme & Aspect"
         super().__init__(parent, text=title, padding=10)
         
         self.lang = lang
         self.on_change = on_change
         self.vars = vars or {}
+        self.on_save_preset = on_save_preset
+        self.on_delete_preset = on_delete_preset
+        self.on_apply_preset = on_apply_preset
         
         self.setup_ui()
 
     def setup_ui(self):
+        # Row 0: Presets
+        row0 = ttk.Frame(self)
+        row0.pack(fill=X, pady=(2, 5))
+        row0.columnconfigure(0, weight=1, uniform="aes")
+        
+        preset_container = ttk.Frame(row0)
+        preset_container.grid(row=0, column=0, sticky=EW, padx=2)
+        
+        self.preset_label = ttk.Label(preset_container, text="我的预设" if self.lang == "zh" else "My Presets")
+        self.preset_label.pack(side=LEFT)
+        
+        self.preset_combo = ttk.Combobox(preset_container, state="readonly", width=22)
+        self.preset_combo.pack(side=LEFT, padx=(10, 5))
+        self.preset_combo.bind("<<ComboboxSelected>>", self._handle_preset_selected)
+        
+        # EN: Use primary color for actions / CN: 使用 primary 蓝调统一动作色彩
+        self.btn_save = ttk.Button(preset_container, text="保存" if self.lang=="zh" else "Save", 
+                                  command=self._handle_save, bootstyle="outline-primary", padding=(5, 2))
+        self.btn_save.pack(side=LEFT, padx=2)
+        
+        self.btn_delete = ttk.Button(preset_container, text="删除" if self.lang=="zh" else "Del", 
+                                    command=self._handle_delete, bootstyle="outline-primary", padding=(5, 2))
+        self.btn_delete.pack(side=LEFT, padx=2)
+
         # Row 1 for Target Ratio
         row1 = ttk.Frame(self)
         row1.pack(fill=X, pady=2)
@@ -281,7 +353,8 @@ class AestheticGroup(ttk.Labelframe):
     def update_labels(self):
         self.theme_label.config(text="边框主题" if self.lang == "zh" else "Border Theme")
         self.ratio_label.config(text="目标比例" if self.lang == "zh" else "Target Ratio")
-        for lbl in [self.theme_label, self.ratio_label]:
+        self.preset_label.config(text="我的预设" if self.lang == "zh" else "My Presets")
+        for lbl in [self.theme_label, self.ratio_label, self.preset_label]:
             lbl.configure(width=20 if self.lang == "en" else 15)
 
     def _update_theme_combo_values(self):
@@ -314,3 +387,23 @@ class AestheticGroup(ttk.Labelframe):
                     self.ratio_combo.current(i)
                     return
             self.ratio_combo.current(0)
+
+    def _handle_preset_selected(self, event):
+        name = self.preset_combo.get()
+        if self.on_apply_preset:
+            self.on_apply_preset(name)
+
+    def _handle_save(self):
+        if self.on_save_preset:
+            self.on_save_preset()
+
+    def _handle_delete(self):
+        name = self.preset_combo.get()
+        if name and self.on_delete_preset:
+            self.on_delete_preset(name)
+
+    def set_preset_list(self, names):
+        """EN: Update preset list / CN: 更新预设列表"""
+        self.preset_combo['values'] = sorted(list(names))
+        if not names:
+            self.preset_combo.set("")

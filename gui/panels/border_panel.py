@@ -12,6 +12,7 @@ from PIL import Image, ImageTk
 
 from gui.components import ThumbnailStrip, ExifGroup, SettingsGroup, AestheticGroup
 from gui.controllers.border_controller import BorderController
+from tkinter import simpledialog
 
 class BorderPanel:
     """
@@ -32,29 +33,63 @@ class BorderPanel:
         self.preview_after_id = None # EN: Debounce timer ID / CN: 防抖计时器 ID
         self.film_list = []
         self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
-        self.rotation_var = tk.IntVar(value=0) # EN: Manual rotation state / CN: 手动旋转状态
         
-        # EN: Global EXIF flag (Single master switch)
-        # CN: 全局 EXIF 标志位，一个开关控制所有字段是否“全局同步”
+        # --- State Variables Consolidation ---
+        self.mode_var = tk.StringVar(value="film")
+        self.input_folder_var = tk.StringVar()
+        self.output_folder_var = tk.StringVar()
+        
+        self.left_px_var = tk.StringVar(value="180")
+        self.right_px_var = tk.StringVar(value="180")
+        self.top_px_var = tk.StringVar(value="180")
+        self.bottom_px_var = tk.StringVar(value="585")
+        
+        self.font_scale_var = tk.StringVar(value="144")
+        self.font_sub_px_var = tk.StringVar(value="112")
+        self.font_offset_px_var = tk.StringVar(value="0")
+        
+        self.v_offset_var = tk.IntVar(value=0)
+        self.h_offset_var = tk.IntVar(value=0)
+        self._prev_v_offset = 0
+        self._prev_h_offset = 0
+        
+        self.target_ratio_var = tk.StringVar(value="Original")
+        self.theme_var = tk.StringVar(value="light")
+        self.auto_detect_var = tk.BooleanVar(value=True)
+        self.rotation_var = tk.IntVar(value=0)
+        self.sync_lr_var = tk.BooleanVar(value=True)
+        self.use_lens_branding_var = tk.BooleanVar(value=True)
+        
+        # EN: Force integer values for offsets to avoid decimals in UI
+        # CN: 强制平移百分比为整数，避免 UI 中出现小数点
+        def _force_int(var):
+            try:
+                val = var.get()
+                if isinstance(val, (float, str)):
+                    var.set(int(float(val)))
+            except:
+                pass
+        self.v_offset_var.trace_add("write", lambda *a: _force_int(self.v_offset_var))
+        self.h_offset_var.trace_add("write", lambda *a: _force_int(self.h_offset_var))
+        
         self.exif_global_var = tk.BooleanVar(value=False)
+        self.exif_make_var = tk.StringVar()
+        self.exif_model_var = tk.StringVar()
+        self.exif_lens_var = tk.StringVar()
+        self.exif_shutter_var = tk.StringVar()
+        self.exif_aperture_var = tk.StringVar()
+        self.exif_iso_var = tk.StringVar()
         
-        # EN: Variables for EXIF overrides / CN: 手动 EXIF 覆盖变量
-        self.exif_make_var = ttk.StringVar()
-        self.exif_model_var = ttk.StringVar()
-        self.exif_lens_var = ttk.StringVar()
-        self.exif_shutter_var = ttk.StringVar()
-        self.exif_aperture_var = ttk.StringVar()
-        self.exif_iso_var = ttk.StringVar()
-        self.exif_lens_var = ttk.StringVar()
-        self.output_folder_var = ttk.StringVar()
-
-        # EN: Visibility toggles / CN: 显示开关
         self.show_make_var = tk.IntVar(value=1)
         self.show_model_var = tk.IntVar(value=1)
         self.show_shutter_var = tk.IntVar(value=1)
         self.show_aperture_var = tk.IntVar(value=1)
         self.show_iso_var = tk.IntVar(value=1)
         self.show_lens_var = tk.IntVar(value=1)
+        
+        self._is_syncing_lr = False
+        self._param_shadow = {"left": "180", "right": "180", "top": "180", "bottom": "585"}
+        # --------------------------------------
         
         # EN: Controller for decoupled logic / CN: 用于逻辑解耦的控制器
         self.controller = BorderController(
@@ -74,6 +109,9 @@ class BorderPanel:
         if os.path.exists(default_in):
             self.input_folder_var.set(default_in)
             self.refresh_input_folder()
+            
+        # EN: Initial load of preset lists / CN: 初始加载预设列表
+        self.refresh_preset_lists()
     
     def setup_ui(self):
         """
@@ -107,7 +145,7 @@ class BorderPanel:
         self.mode_frame = ttk.Labelframe(self.left_frame, text=mode_text, padding=10)
         self.mode_frame.pack(fill=X, pady=(0, 10))
         
-        self.mode_var = ttk.StringVar(value="film")
+        self.mode_var.set("film")
         film_text = "胶片项目" if self.lang == "zh" else "Film Project"
         digital_text = "数码项目" if self.lang == "zh" else "Digital Project"
         self.film_radio = ttk.Radiobutton(self.mode_frame, text=film_text, variable=self.mode_var, 
@@ -130,13 +168,13 @@ class BorderPanel:
         input_row = ttk.Frame(self.folder_frame)
         input_row.pack(fill=X, pady=(0, 5))
         
-        self.input_folder_var = ttk.StringVar()
+        # self.input_folder_var initialized at top
         ttk.Entry(input_row, textvariable=self.input_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES, padx=(0, 5))
         refresh_text = "刷新" if self.lang == "zh" else "Refresh"
-        self.refresh_button = ttk.Button(input_row, text=refresh_text, command=self.refresh_input_folder, bootstyle="info-outline", width=8)
+        self.refresh_button = ttk.Button(input_row, text=refresh_text, command=self.refresh_input_folder, bootstyle="outline-primary", width=8)
         self.refresh_button.pack(side=RIGHT, padx=(2, 5))
         browse_text = "浏览" if self.lang == "zh" else "Browse"
-        self.browse_button = ttk.Button(input_row, text=browse_text, command=self.select_input_folder, bootstyle="info-outline")
+        self.browse_button = ttk.Button(input_row, text=browse_text, command=self.select_input_folder, bootstyle="outline-primary")
         self.browse_button.pack(side=RIGHT)
         
         no_folder_text = "未选择文件夹" if self.lang == "zh" else "No folder selected"
@@ -152,34 +190,14 @@ class BorderPanel:
         out_row.pack(fill=X)
         
         ttk.Entry(out_row, textvariable=self.output_folder_var, state="readonly").pack(side=LEFT, fill=X, expand=YES, padx=(0, 5))
-        self.out_browse_btn = ttk.Button(out_row, text=browse_text, command=self.select_output_folder, bootstyle="info-outline")
+        self.out_browse_btn = ttk.Button(out_row, text=browse_text, command=self.select_output_folder, bootstyle="outline-primary")
         self.out_browse_btn.pack(side=RIGHT)
 
         # EN: Initialize default output / CN: 初始化默认输出路径
         working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
         self.output_folder_var.set(os.path.join(working_dir, "photos_out"))
 
-        # EN: Parameter variables (Pixels based on 4500px ref) / CN: 参数变量（基于 4500px 基准的像素值）
-        # EN: Using StringVar to avoid TclError when entry is temporarily empty during typing
-        # CN: 使用 StringVar 以避免在打字时输入框暂时为空导致的 TclError 崩溃
-        self.left_px_var = ttk.StringVar(value="180")
-        self.right_px_var = ttk.StringVar(value="180")
-        self.top_px_var = ttk.StringVar(value="180")
-        self.bottom_px_var = ttk.StringVar(value="585")
-        self.font_scale_var = ttk.StringVar(value="144")
-        self.font_sub_px_var = ttk.StringVar(value="112")
-        self.font_offset_px_var = ttk.StringVar(value="0")
-        self.theme_var = tk.StringVar(value="light")
-        self.use_lens_branding_var = tk.BooleanVar(value=True) # EN: Global lens branding toggle / CN: 镜头专属标识全局开关
-        self.sync_lr_var = tk.BooleanVar(value=True) # EN: Sync L/R borders toggle / CN: 左右边框同时调整开关
-        self.target_ratio_var = tk.StringVar(value="Original") # EN: Target Aspect Ratio / CN: 目标画布比例
-        self.auto_detect_var = ttk.BooleanVar(value=True) # EN: EXIF auto detect / CN: 自动识别胶片开关
-        self._is_syncing_lr = False
-        
-        # EN: Shadow state for adaptive logic / CN: 用于自适应联动的影子状态
-        self._param_shadow = {
-            "left": "180", "right": "180", "top": "180", "bottom": "585"
-        }
+        # Variables and shadow state initialized at top
 
         # EN: Setup traces for sync / CN: 设置同步监听
         def _sync_lr(source_var, target_var, *args):
@@ -238,7 +256,10 @@ class BorderPanel:
         }
         self.aesthetic_group = AestheticGroup(self.left_frame, lang=self.lang,
                                              on_change=self.on_params_changed,
-                                             vars=aesthetic_vars)
+                                             vars=aesthetic_vars,
+                                             on_save_preset=self.on_save_border_preset,
+                                             on_delete_preset=self.on_delete_border_preset,
+                                             on_apply_preset=self.on_apply_border_preset)
         self.aesthetic_group.pack(fill=X, pady=(0, 10))
 
         # EN: Advanced settings (border parameters) / CN: 高级设置（边框参数）
@@ -250,7 +271,9 @@ class BorderPanel:
             "theme": self.theme_var,
             "branding": self.use_lens_branding_var,
             "sync_lr": self.sync_lr_var,
-            "target_ratio": self.target_ratio_var
+            "target_ratio": self.target_ratio_var,
+            "v_offset": self.v_offset_var,
+            "h_offset": self.h_offset_var
         }
         self.settings_group = SettingsGroup(self.left_frame, lang=self.lang, 
                                            on_change=self.on_params_changed,
@@ -277,8 +300,10 @@ class BorderPanel:
                                    on_change=self.on_params_changed,
                                    exif_vars=exif_vars, 
                                    show_vars=show_vars,
-                                   global_sync_var=self.exif_global_var)
-        self.exif_group.pack(fill=X, pady=(0, 5))
+                                   global_sync_var=self.exif_global_var,
+                                   on_save_favorite=self.on_save_metadata_preset,
+                                   on_apply_favorite=self.on_apply_metadata_preset)
+        self.exif_group.pack(fill=X, pady=(0, 10))
 
         # EN: Process button / CN: 处理按钮 (Pinned to left frame bottom)
         process_text = "开始处理" if self.lang == "zh" else "Start Processing"
@@ -469,12 +494,23 @@ class BorderPanel:
     def refresh_input_folder(self):
         folder = self.controller.input_folder
         if not folder: return
+        
+        # EN: Reset compositional offsets to default / CN: 重置构图平移参数为默认值
+        self.v_offset_var.set(0)
+        self.h_offset_var.set(0)
+        self.sync_lr_var.set(True)
+        self.font_offset_px_var.set("0")
+        
         count = self.controller.scan_folder(folder)
         self._update_batch_width_cache(self.controller.current_batch_paths)
         self.controller.clear_all_configs()
         self.refresh_thumb_strip()
         self.update_file_count()
-        self.log(f"CN: 已刷新输入文件夹，当前共 {count} 张图片 / EN: Refreshed input folder, current {count} images")
+        self.log(f"CN: 已刷新输入文件夹并恢复默认参数，共 {count} 张图片 / EN: Refreshed folder and restored defaults, total {count} images")
+        
+        # EN: Force redraw and sync to apply resets
+        # CN: 强制重绘并同步，以应用重置后的构图
+        self.on_params_changed(sync_all=True)
         self.detect_layout_and_load_params(folder)
 
     def detect_layout_and_load_params(self, folder):
@@ -591,6 +627,8 @@ class BorderPanel:
             'font_scale': self._get_int_safe(self.font_scale_var, 144),
             'font_sub_px': self._get_int_safe(self.font_sub_px_var, 112),
             'font_v_offset': self._get_int_safe(self.font_offset_px_var, 0),
+            'v_offset': self.v_offset_var.get(),
+            'h_offset': self.h_offset_var.get(),
             'theme': self.theme_var.get(),
             'rotation': self.rotation_var.get(),
             'auto_detect': self.auto_detect_var.get(),
@@ -632,6 +670,8 @@ class BorderPanel:
                 if 'theme' in cfg: self.theme_var.set(cfg['theme'])
                 if 'film_combo' in cfg: self.film_combo.set(cfg['film_combo'])
                 if 'font_v_offset' in cfg: self.font_offset_px_var.set(cfg['font_v_offset'])
+                self.v_offset_var.set(cfg.get('v_offset', 0))
+                self.h_offset_var.set(cfg.get('h_offset', 0))
                 self.sync_lr_var.set(cfg.get('sync_lr', True))
                 self.target_ratio_var.set(cfg.get('target_ratio', 'Original'))
                 self.rotation_var.set(cfg.get('rotation', 0))
@@ -780,6 +820,10 @@ class BorderPanel:
         """
         if getattr(self, '_loading_state', False): return
         
+        # EN: Mark that the ratio changed to trigger offset re-distribution
+        # CN: 标记比例已更改，以触发偏移量的重新分配
+        self._ratio_just_changed = True
+        
         ratio_str = self.target_ratio_var.get()
         # EN: Premium margin presets (based on 4500px ref)
         # CN: 高级美学预设值（基于 4500px 基准）
@@ -821,8 +865,25 @@ class BorderPanel:
         
         # EN: Proportional Adaptive Logic / CN: 比例锁定联动逻辑
         ratio_str = self.target_ratio_var.get().split(' (')[0]
-        if ratio_str not in ["Original", "原图", "原图 (自由)"] and getattr(self, 'current_image_path', None):
-            self._handle_ratio_locked_sync(ratio_str)
+        if getattr(self, 'current_image_path', None):
+            # EN: Detect if sliders or ratio changed / CN: 检测滑块或比例是否变动
+            is_offset = False
+            cur_v = self.v_offset_var.get()
+            cur_h = self.h_offset_var.get()
+            
+            # EN: If sliders moved OR ratio just changed, we enforce the offset distribution
+            # CN: 如果滑块动了，或者比例刚刚发生变化，我们强制执行偏移量分布
+            if cur_v != self._prev_v_offset or cur_h != self._prev_h_offset or getattr(self, '_ratio_just_changed', False):
+                is_offset = True
+                self._prev_v_offset = cur_v
+                self._prev_h_offset = cur_h
+                self._ratio_just_changed = False # Reset flag
+                
+                # EN: Disable sync_lr automatically when moving horizontally
+                if cur_h != 0 and self.sync_lr_var.get():
+                    self.sync_lr_var.set(False)
+
+            self._handle_ratio_locked_sync(ratio_str, is_offset=is_offset)
 
         # EN: Update shadow state / CN: 更新影子状态
         self._param_shadow = {
@@ -838,15 +899,19 @@ class BorderPanel:
                     if p != self.current_image_path: self.controller.update_image_config(p, cfg)
             self.update_preview_for_path(self.current_image_path)
 
-    def _handle_ratio_locked_sync(self, ratio_str):
+    def _handle_ratio_locked_sync(self, ratio_str, is_offset=False):
         """
         EN: Auto-calculate paddings to maintain target ratio when one side is manually edited
         CN: 比例锁定联动逻辑：当手动修改一方面值时，自动计算并补齐其余边际
         """
         try:
+            is_free_mode = "Original" in ratio_str or "原图" in ratio_str
+            
             parts = ratio_str.split(':')
-            if len(parts) != 2: return
-            target_r = float(parts[0]) / float(parts[1])
+            target_r = 1.0 # Placeholder
+            if len(parts) == 2:
+                try: target_r = float(parts[0]) / float(parts[1])
+                except: pass
             
             # EN: Get current image base aspect / CN: 获取当前图片的基础比例
             path_norm = os.path.normcase(os.path.normpath(self.current_image_path))
@@ -875,11 +940,73 @@ class BorderPanel:
             
             # EN: Detect what changed / CN: 检测变化点
             changed = []
-            if self.left_px_var.get() != self._param_shadow["left"]: changed.append("w")
-            if self.right_px_var.get() != self._param_shadow["right"]: changed.append("w")
-            if self.top_px_var.get() != self._param_shadow["top"]: changed.append("h")
-            if self.bottom_px_var.get() != self._param_shadow["bottom"]: changed.append("h")
+            if self.left_px_var.get() != str(self._param_shadow["left"]): changed.append("w")
+            if self.right_px_var.get() != str(self._param_shadow["right"]): changed.append("w")
+            if self.top_px_var.get() != str(self._param_shadow["top"]): changed.append("h")
+            if self.bottom_px_var.get() != str(self._param_shadow["bottom"]): changed.append("h")
             
+            v_val = self.v_offset_var.get()
+            h_val = self.h_offset_var.get()
+            
+            # EN: New logic: distribution by offset / CN: 新逻辑：基于偏移量进行布局分配
+            if is_offset or "target_ratio" in str(getattr(self, '_current_event_source', '')):
+                curr_w_total = ref_w + l + r
+                curr_h_total = ref_h + t + b
+                
+                # EN: Safety buffer for text area (approx 12% of ref 4500)
+                # CN: 为预览图底部的文字区域预留“安全缓冲”，防止文字与照片重叠
+                TEXT_RESERVE = 550 
+                
+                if is_free_mode:
+                    # EN: In Free Mode, we redistribute the EXISTING total padding
+                    # CN: 自由模式下，我们对现有的总留白额度进行重新分配
+                    total_p_h = t + b
+                    total_p_w = l + r
+                else:
+                    # EN: Locked Ratio Mode: Smart Adaptation
+                    # CN: 比例锁定模式：智能适配
+                    # EN: Calculate current and target ratios
+                    curr_r = (ref_w + l + r) / (ref_h + t + b)
+                    
+                    if curr_r > target_r + 0.001:
+                        # EN: Too wide -> Need more Height
+                        needed_h_total = (ref_w + l + r) / target_r
+                        total_p_h = needed_h_total - ref_h
+                        total_p_w = l + r # Keep current width
+                    elif curr_r < target_r - 0.001:
+                        # EN: Too narrow -> Need more Width
+                        needed_w_total = (ref_h + t + b) * target_r
+                        total_p_w = needed_w_total - ref_w
+                        total_p_h = t + b # Keep current height
+                    else:
+                        # EN: Already perfect
+                        total_p_h = t + b
+                        total_p_w = l + r
+
+                # EN: Vertical Distribution with text-aware headroom
+                # CN: 带有文字感知的垂直分配
+                v = v_val / 100.0
+                
+                # EN: Calculate redistributable vertical budget
+                # budget = total - reserve. If total < reserve, we don't shift much
+                shift_budget_v = max(0, total_p_h - TEXT_RESERVE)
+                dist_v = (0.3 * (1 + v)) if v < 0 else (0.3 + 0.7 * v)
+                
+                new_t = int(shift_budget_v * dist_v)
+                new_b = int(total_p_h - new_t) # This includes the TEXT_RESERVE residual
+                
+                self.top_px_var.set(str(int(new_t)))
+                self.bottom_px_var.set(str(int(new_b)))
+                
+                # EN: Apply Linear Horizontal Mapping (0.5 Center)
+                h = h_val / 100.0
+                dist_h = 0.5 + (h / 2.0)
+                new_l = int(total_p_w * dist_h)
+                new_r = int(total_p_w - new_l)
+                self.left_px_var.set(str(int(new_l)))
+                self.right_px_var.set(str(int(new_r)))
+                return
+
             if "w" in changed:
                 # EN: Width changed -> solve for Bottom (Height) / CN: 宽度变了 -> 补齐高度（Bottom）
                 total_w = ref_w + l + r
@@ -1069,3 +1196,87 @@ class BorderPanel:
             return int(val) if val is not None else default
         except:
             return default
+
+    # --- Persistence Logic / 持久化逻辑 ---
+    
+    def refresh_preset_lists(self):
+        """EN: Update UI dropdowns with latest presets / CN: 更新界面下拉菜单中的预设列表"""
+        border_names = self.controller.get_border_presets().keys()
+        self.aesthetic_group.set_preset_list(border_names)
+        
+        metadata_names = self.controller.get_metadata_presets().keys()
+        self.exif_group.set_favorite_list(metadata_names)
+
+    def on_save_border_preset(self):
+        title = "保存预设" if self.lang == "zh" else "Save Preset"
+        prompt = "请输入预设名称 / Enter preset name:"
+        name = simpledialog.askstring(title, prompt, parent=self.parent)
+        
+        if name:
+            params = {
+                "theme": self.theme_var.get(),
+                "target_ratio": self.target_ratio_var.get(),
+                "left_px": self.left_px_var.get(),
+                "right_px": self.right_px_var.get(),
+                "top_px": self.top_px_var.get(),
+                "bottom_px": self.bottom_px_var.get(),
+                "font_scale": self.font_scale_var.get(),
+                "font_sub_px": self.font_sub_px_var.get(),
+                "font_v_offset": self.font_offset_px_var.get(),
+                "branding": self.use_lens_branding_var.get(),
+                "sync_lr": self.sync_lr_var.get()
+            }
+            self.controller.add_border_preset(name, params)
+            self.refresh_preset_lists()
+            self.aesthetic_group.preset_combo.set(name)
+
+    def on_apply_border_preset(self, name):
+        presets = self.controller.get_border_presets()
+        if name in presets:
+            p = presets[name]
+            self._loading_state = True # Prevent traces
+            try:
+                if "theme" in p: self.theme_var.set(p["theme"])
+                if "target_ratio" in p: self.target_ratio_var.set(p["target_ratio"])
+                if "left_px" in p: self.left_px_var.set(p["left_px"])
+                if "right_px" in p: self.right_px_var.set(p["right_px"])
+                if "top_px" in p: self.top_px_var.set(p["top_px"])
+                if "bottom_px" in p: self.bottom_px_var.set(p["bottom_px"])
+                if "font_scale" in p: self.font_scale_var.set(p["font_scale"])
+                if "font_sub_px" in p: self.font_sub_px_var.set(p["font_sub_px"])
+                if "font_v_offset" in p: self.font_offset_px_var.set(p["font_v_offset"])
+                if "branding" in p: self.use_lens_branding_var.set(p["branding"])
+                if "sync_lr" in p: self.sync_lr_var.set(p["sync_lr"])
+            finally:
+                self._loading_state = False
+            self.on_params_changed(sync_all=True)
+
+    def on_delete_border_preset(self, name):
+        confirm = messagebox.askyesno("Confirm", f"Delete preset '{name}'?" if self.lang == "en" else f"确定删除预设 '{name}'?")
+        if confirm:
+            self.controller.delete_border_preset(name)
+            self.refresh_preset_lists()
+
+    def on_save_metadata_preset(self):
+        title = "收藏机型" if self.lang == "zh" else "Favorite Model"
+        prompt = "请输入保存名称 (如: Leica M6) / Enter favorite name:"
+        name = simpledialog.askstring(title, prompt, parent=self.parent)
+        
+        if name:
+            data = {
+                "make": self.exif_make_var.get(),
+                "model": self.exif_model_var.get(),
+                "lens": self.exif_lens_var.get()
+            }
+            self.controller.add_metadata_preset(name, data)
+            self.refresh_preset_lists()
+            self.exif_group.fav_combo.set(name)
+
+    def on_apply_metadata_preset(self, name):
+        presets = self.controller.get_metadata_presets()
+        if name in presets:
+            p = presets[name]
+            self.exif_make_var.set(p.get("make", ""))
+            self.exif_model_var.set(p.get("model", ""))
+            self.exif_lens_var.set(p.get("lens", ""))
+            self.on_params_changed()

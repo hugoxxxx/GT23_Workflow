@@ -1,7 +1,27 @@
 # Change Log / 变更日志
 
-## [2.4.0] - 2026-04-20
-💎 v2.4.0 核心更新：石板青 (Slate Teal) 审美重构 & 极简交互 & 架构稳定性加固
+## [2.4.0] - 2026-04-23
+💎 v2.4.0 核心更新：石板青 (Slate Teal) 审美重构 & 预设持久化 & 架构稳定性加固
+
+### 📸 构图精度与平移控制 (Compositional Precision)
+- **[Feature] 构图平移（双轴）/ Compositional Offset (Dual-Axis)**:
+  - EN: Implemented independent Vertical (U/D) and Horizontal (L/R) sliders with integer-only numeric entry for precise photo positioning.
+  - CN: 实现了独立的双轴构图平移。支持垂直（上下）与水平（左右）像素级位移调节，且配备了强刷整型输入的输入框，确保构图极其精准。
+- **[Feature] 非破坏性自适应边框 / Non-Destructive Adaptive Margins**:
+  - EN: Refactored locked-ratio distribution to use an "Expansion-Only" strategy, preserving existing margins on the non-expanding axis when switching ratios.
+  - CN: 重构了比例锁定下的边距分发逻辑。切换比例时，系统采用“增量分发”策略，仅补足所需留白，而不会像旧版那样粗暴地重置侧边边距。
+- **[Aesthetics] 构图防撞安全区 / Text Safety Buffer**:
+  - EN: Integrated a 550px `TEXT_RESERVE` buffer to prevent the photo from overlapping metadata during extreme downward shifts.
+  - CN: 引入了 550 像素的“防撞缓冲区”。即使将照片大幅向下平移，系统也会强制保留底部元数据空间，确保文字永不被照片覆盖。
+- **[UX] 刷新即重置 / Refresh to Reset**:
+  - EN: Enhanced the "Refresh" button to restore all compositional offsets and sync states to defaults while re-scanning the folder.
+  - CN: 强化了“刷新”按钮功能。点击刷新在重新扫描的同时，会一键将构图位移、字体偏移清零并恢复左右同步，为创作者提供快速“回血”重来的捷径。
+
+### 💾 预设持久化与生产力增强 (Persistence & Productivity)
+- **[UX] 全面组件化与外观统一 / Global UI Polish**:
+  - EN: Unified metadata toggles to `round-toggle` style and standardized action buttons to `outline-primary` blue for a professional, distraction-free sidebar.
+  - CN: 侧边栏全面视觉进化。将所有 EXIF 显隐开关统一为 `round-toggle` 圆形切换开关，并统合了动作按键配色，显著提升了“石板青”主题的视觉完成度。
+- **[Feature] 审美预设系统 / Border Presets**:
 
 ### 🎨 UI 极简交互重构 (Aesthetic UI Refactor)
 - **[Feature] “主题与比例”分组置顶 / Theme & Aspect Branding**:

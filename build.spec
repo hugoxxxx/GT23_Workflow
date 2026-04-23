@@ -27,6 +27,7 @@ datas = [
     ('assets/fonts/gara.ttf', 'assets/fonts'),
     ('core', 'core'),          # Core modules
     ('apps', 'apps'),          # App modules
+    ('gui', 'gui'),            # GUI modules
 ]
 
 # EN: Hidden imports (if needed)
