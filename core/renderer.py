@@ -822,8 +822,21 @@ class FilmRenderer:
                     segments.append({"type": "image", "path": token_path})
                     segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
                     return segments
+        
+        # 4. SONY G (Token)
+        if "SONY" in make:
+            import re
+            # EN: Use word boundaries for G to avoid partial matches within "SIGMA"
+            if re.search(r'\bG\b', lens.upper()) and not re.search(r'\bGM\b', lens.upper()):
+                token_path = self._resolve_path(os.path.join("assets", "lenses", "SONY-G.png"))
+                if os.path.exists(token_path):
+                    clean_lens = re.sub(r'\bG\b', '', lens, flags=re.IGNORECASE).strip()
+                    segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
+                    segments.append({"type": "image", "path": token_path})
+                    segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
+                    return segments
 
-        # 4. SIGMA (Art/S/C Token)
+        # 5. SIGMA (Art/S/C Token)
         # EN: More lenient check to capture Sigma series even if brand string is missing
         # CN: 更宽泛的检测逻辑，捕获即便没有 "SIGMA" 字样的适马系列
         keywords_art = ["ART", "| A", "(A)"]

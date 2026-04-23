@@ -69,7 +69,7 @@
 
 ## 🗺️ Roadmap / 路线图
 - [x] **v2.4.x**: Slate Teal Theme, Pixel-level Precision, Radar v2. / **v2.4.x**：石板青主题、像素级精度、Radar v2 安全系统。
-- [ ] **v2.5.x**: Global Plugin System & Performance Optimization. / **v2.5.x**：全局插件化系统、运行性能极限优化。
+- [ ] **v2.5.x**: Next-Gen Modern UI Redesign & UX Optimization. / **v2.5.x**：下一代现代感 UI 视觉重构、交互体验极致优化。
 
 ---
 
