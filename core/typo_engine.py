@@ -14,6 +14,37 @@ class TypoEngine:
     CN: 排版引擎，专门处理字间距算法。
     """
     _font_cache = {}  # EN: Cache for (path, size) -> (pil_font, ttfont)
+    _fallback_cache = {} # EN: Cache for fallback fonts
+
+    @classmethod
+    def _has_glyph(cls, ttfont, char):
+        # EN: Check if the character is supported by the font
+        # CN: 检查字库是否支持该字符
+        if not ttfont: return False
+        try:
+            for table in ttfont['cmap'].tables:
+                if ord(char) in table.cmap:
+                    return True
+        except:
+            pass
+        return False
+
+    @classmethod
+    def _get_fallback_font(cls, size):
+        # EN: Get a reliable fallback font (Garamond)
+        # CN: 获取一个可靠的备用字体 (Garamond)
+        if size in cls._fallback_cache:
+            return cls._fallback_cache[size]
+        
+        # EN: Defaulting to the built-in Garamond for fallback symbols
+        fallback_path = cls._resolve_font_path("assets/fonts/gara.ttf")
+        try:
+            f = ImageFont.truetype(fallback_path, size)
+            cls._fallback_cache[size] = f
+            return f
+        except:
+            return ImageFont.load_default()
+
     @staticmethod
     def get_kerning_offset(ttfont, left, right, font_size):
         # EN: Extract kerning offset from native kern table
@@ -33,8 +64,11 @@ class TypoEngine:
 
     @staticmethod
     def _resolve_font_path(font_path):
+        # EN: Handle None or empty / CN: 强力处理空值
+        if not font_path or not isinstance(font_path, str):
+            return None
+            
         # EN: Convert relative path to absolute path for EXE support
-        # CN: 将相对路径转换为绝对路径，支持 EXE 环境
         if os.path.isabs(font_path):
             return font_path
         
@@ -60,6 +94,8 @@ class TypoEngine:
         """
         if timings is None: timings = {}
         t0 = time.perf_counter()
+        
+        # EN: Guard against None path / CN: 防止空路径导致崩溃
         font_path = cls._resolve_font_path(font_path)
         
         cache_key = (font_path, font_size)
@@ -90,11 +126,22 @@ class TypoEngine:
                 color = seg.get("color", default_fill)
                 
                 chars = list(content)
-                widths = [draw.textlength(c, font=pil_font) for c in chars]
-                offsets = [0]
+                widths = []
+                # EN: Resolve character widths with fallback awareness
+                fallback_pil = cls._get_fallback_font(font_size)
+                
+                for c in chars:
+                    if cls._has_glyph(ttfont, c):
+                        widths.append(draw.textlength(c, font=pil_font))
+                    else:
+                        widths.append(draw.textlength(c, font=fallback_pil))
+
+                offsets = [0] * len(chars)
                 if ttfont:
                     for i in range(len(chars) - 1):
-                        offsets.append(cls.get_kerning_offset(ttfont, chars[i], chars[i+1], font_size))
+                        # EN: Only calculate kening if both characters are in the font
+                        if cls._has_glyph(ttfont, chars[i]) and cls._has_glyph(ttfont, chars[i+1]):
+                            offsets[i+1] = cls.get_kerning_offset(ttfont, chars[i], chars[i+1], font_size)
                 
                 seg_w = sum(widths) + sum(offsets)
                 prepared_segments.append({
@@ -139,10 +186,20 @@ class TypoEngine:
                 offsets = seg["offsets"]
                 
                 for i, char in enumerate(content):
-                    curr_x += offsets[i]
-                    y_offset = font_size * 0.02
-                    draw.text((curr_x, base_y + y_offset), char, font=pil_font, fill=colors[i], anchor="lm")
-                    curr_x += char_widths[i]
+                    # EN: Defensive check for indexing / CN: 越界容错检查
+                    off = offsets[i] if i < len(offsets) else 0
+                    
+                    # EN: Determine which font to use for this specific character
+                    target_font = pil_font
+                    if not cls._has_glyph(ttfont, char):
+                        target_font = cls._get_fallback_font(font_size)
+                    
+                    cw = char_widths[i] if i < len(char_widths) else draw.textlength(char, font=target_font)
+                    
+                    # EN: Draw text with true center anchor
+                    # CN: 使用真实的中心锚点进行绘制，确保在窄边框内绝对居中
+                    draw.text((curr_x, base_y), char, font=target_font, fill=colors[i], anchor="lm")
+                    curr_x += cw
             elif seg["type"] == "image":
                 # EN: Paste image token / CN: 粘贴图片 Token
                 img = seg["img"]
@@ -153,3 +210,96 @@ class TypoEngine:
                 curr_x += seg["width"]
         
         timings[f'{key_prefix}_total'] = time.perf_counter() - t0
+    @classmethod
+    def draw_png_text(cls, text, font_dir, spacing_ratio=0.25, color=(255, 255, 255)):
+        """
+        EN: Render text using PNG characters with fully proportional layout.
+        CN: 使用 PNG 字符进行渲染，支持全比例布局（间距与高度挂钩）。
+        """
+        font_dir = cls._resolve_font_path(font_dir)
+        descenders = set("gjpqy")
+        superscripts = set("*'\"")
+        
+        # EN: 1. Get Reference Height / CN: 1. 获取参考高度
+        ref_file = os.path.join(font_dir, "1050-0.png")
+        ref_h = 40
+        if os.path.exists(ref_file):
+            with Image.open(ref_file) as ri:
+                bbox = ri.getbbox()
+                ref_h = bbox[3] - bbox[1] if bbox else ri.height
+                
+        # EN: Calculate Relative Spacing / CN: 计算相对间距
+        spacing = int(ref_h * spacing_ratio)
+        
+        processed_items = []
+        total_w = 0
+        
+        for char in text:
+            if char == " ":
+                w = int(ref_h * 0.5) 
+                processed_items.append({"img": None, "type": "space", "w": w})
+                total_w += w + spacing
+                continue
+                
+            filename = None
+            if char.isdigit(): filename = f"1050-{char}.png"
+            elif char.isupper(): filename = f"1050-{char}-capital.png"
+            elif char.islower(): filename = f"1050-{char.upper()}.png"
+            elif char == "/": filename = "1050-U+002F.png"
+            elif char == "|": filename = "1050-U+007C.png"
+            elif char == ".": filename = "1050-U+002E.png"
+            elif char == "*": filename = "1050-U+002A.png"
+            
+            path = os.path.join(font_dir, filename) if filename else None
+            if path and os.path.exists(path):
+                try:
+                    img = Image.open(path).convert('RGBA')
+                    
+                    # EN: Color Tint (preserving alpha)
+                    r, g, b, a = img.split()
+                    img = Image.merge("RGBA", (
+                        Image.new("L", img.size, color[0]),
+                        Image.new("L", img.size, color[1]),
+                        Image.new("L", img.size, color[2]),
+                        a
+                    ))
+                    
+                    # EN: Auto-Crop
+                    bbox = img.getbbox()
+                    if bbox: img = img.crop(bbox)
+                    
+                    char_type = "standard"
+                    if char in descenders: char_type = "descender"
+                    elif char.islower() and char not in "bdfhklit": char_type = "small"
+                    elif char in superscripts: char_type = "superscript"
+                        
+                    processed_items.append({"img": img, "type": char_type, "w": img.width, "h": img.height})
+                    total_w += img.width + spacing
+                except:
+                    processed_items.append({"img": None, "type": "error", "w": 0})
+            else:
+                processed_items.append({"img": None, "type": "missing", "w": 0})
+
+        # EN: 2. Layout (Relative Ratios) / CN: 2. 布局（相对比例）
+        canvas_h = int(ref_h * 1.5)
+        baseline = int(ref_h * 1.2)
+        result = Image.new('RGBA', (total_w, canvas_h), (0, 0, 0, 0))
+        
+        x_cursor = 0
+        for item in processed_items:
+            img = item.get("img")
+            if img:
+                t = item["type"]
+                if t == "descender":
+                    y_pos = baseline - int(img.height * 0.75) 
+                elif t == "superscript":
+                    y_pos = baseline - ref_h + int(ref_h * 0.05)
+                else:
+                    y_pos = baseline - img.height
+                
+                result.paste(img, (x_cursor, y_pos), mask=img)
+                x_cursor += item["w"] + spacing
+            else:
+                x_cursor += item.get("w", 0) + spacing
+                
+        return result

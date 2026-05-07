@@ -1,5 +1,38 @@
 # Change Log / 变更日志
 
+## [2.4.1] - 2026-04-24
+🎞️ v2.4.1 核心更新：字体解耦资产化 & 高精度齿孔渲染引擎 & 自定义边框文字
+
+### 🖋️ 字体系统解耦 (Font Decoupling & Assetization)
+- **[Feature] 外部字体动态加载 / Dynamic External Fonts**:
+  - EN: Decoupled font management. The app now scans `GT23_Assets/fonts` for `.ttf`, `.otf`, and `.ttc` files.
+  - CN: 实现了字体系统的全面解耦。程序现在会动态扫描 `GT23_Assets/fonts` 目录下的 `.ttf`、`.otf` 和 `.ttc` 文件。
+- **[Feature] 双标题独立字体选择 / Independent Font Path Selection**:
+  - EN: Added font path dropdowns for Main and Subtitle. Users can now assign different external fonts to different text hierarchy levels.
+  - CN: 新增了主副标题独立的字体路径选择下拉框。创作者可以根据审美需求，为型号和参数指定完全不同的外部字体。
+- **[UX] 默认字体回退机制 / Smart Font Fallback**:
+  - EN: Integrated "Default" option for fonts to ensure out-of-the-box usability while prioritizing external overrides if selected.
+  - CN: 集成了“Default”默认字体选项，确保开箱即用的稳定性，同时支持一键切换至选定的外部字体，实现了真正的资产隔离。
+
+### ⚙️ 齿孔渲染与自定义边框 (Sprocket Rendering & Custom Border)
+- **[Feature] 高精度矢量齿孔渲染 / High-Precision Vector Sprockets**:
+  - EN: Ported the high-precision BH-1866 movie film sprocket rendering engine to the main renderer. Uses SVG + CairoSVG for sub-pixel anti-aliased geometry.
+  - CN: 移植了高精度 BH-1866 电影胶片齿孔渲染引擎。采用 SVG + CairoSVG 矢量技术，实现了次像素级的抗锯齿几何呈现。
+- **[Feature] 自定义齿孔文字 / Custom Sprocket Text**:
+  - EN: Added custom text rendering in the sprocket area. Supports using EXIF tags (Film/EdgeCode) or manual text entry with color-coded "Film Orange" styling.
+  - CN: 支持在齿孔边框区域绘制自定义文字。可自动提取 EXIF 中的卷名/编号，或手动输入，并默认采用经典的“胶片橙”配色方案。
+- **[Interactive] 实时齿孔开关 / Live Sprocket Toggle**:
+  - EN: Added "Enable Sprockets" switch and text entry in Advanced Settings for instantaneous preview feedback.
+  - CN: 在高级设置面板新增了“开启齿孔边框”开关与文字输入框，支持预览界面瞬间响应，创作直观快捷。
+
+### 🛠️ 稳定性与 UI 优化 (Stability & UI Refinement)
+- **[Architecture] 资源引导加固 / Asset Bootstrap Hardening**:
+  - EN: Re-engineered `bootstrap_fonts` logic to align with Logo search patterns, supporting both production EXE environments and development Git repos.
+  - CN: 重构了字体引导逻辑 `bootstrap_fonts`，使其与 Logo 检索模式对齐，完美支持生产环境 EXE 与开发分支目录结构。
+- **[Fix] 胶片库加载冗余修复 / Film Library Load Fix**:
+  - EN: Resolved a code merging issue in `BorderPanel` where font loading inadvertently overwritten the film library initializer.
+  - CN: 修复了 `BorderPanel` 中的一个合并低级错误，确保字体库与胶卷库在初始化阶段各归其位。
+
 ## [2.4.0] - 2026-04-23
 💎 v2.4.0 核心更新：石板青 (Slate Teal) 审美重构 & 预设持久化 & 架构稳定性加固
 

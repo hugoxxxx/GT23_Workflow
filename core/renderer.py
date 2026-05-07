@@ -16,6 +16,11 @@ try:
 except ImportError:
     cairosvg = None
 
+try:
+    import svgwrite
+except ImportError:
+    svgwrite = None
+
 class FilmRenderer:
     """
     EN: Pro-grade renderer with dynamic typography hierarchy.
@@ -32,6 +37,12 @@ class FilmRenderer:
         # EN: Handle external logos (next to EXE) vs internal assets (dev/MEIPASS)
         # CN: 处理外置 Logo 资源（EXE 同级目录）与内置资源（开发环境/MEIPASS）
         self.logo_dir = bootstrap_logos(self._resolve_path)
+        
+        # EN: Handle dynamic fonts / CN: 处理动态字体解耦
+        self.font_dir = bootstrap_fonts(self._resolve_path)
+        
+        self.sprocket_enabled = False
+        self.sprocket_text = ""
         
         self._setup_cairo_dll()
 
@@ -119,8 +130,15 @@ class FilmRenderer:
             
             # --- EN: THEME SETUP / CN: 主题颜色设置 ---
             t_layout_start = time.perf_counter()
-            # EN: Support rainbow_index for sequential coloring
             bg_color, main_color, sub_color, line_color = self._apply_theme_colors(theme, index=rainbow_index)
+            
+            # EN: Force dark aesthetic for Sprocket Mode (v2.4.1)
+            # CN: 齿孔模式强制开启深色系美学
+            if data.get('sprocket_enabled', False):
+                bg_color = (0, 0, 0)
+                main_color = (245, 245, 245)
+                sub_color = (210, 210, 210)
+                line_color = (40, 40, 40)
             
             # --- EN: DATA INTEGRITY CHECK ---
             layout = data.get('layout', {})
@@ -136,16 +154,28 @@ class FilmRenderer:
             
             # --- EN: CALCULATE SPACING ---
             # EN: Use long_edge as a stable reference for all paddings to ensure consistent border thickness
-            # CN: 使用长边作为所有边距计算的稳定基准，确保 UI 输入的像素值具有一致的物理含义
-            long_edge = max(w, h)
-            side_pad_left = int(long_edge * left_ratio)
-            side_pad_right = int(long_edge * right_ratio)
-            top_pad = int(long_edge * top_ratio)
-            bottom_splice = int(long_edge * bottom_ratio)
-            
             # EN: The "inner bottom margin" between image and text area. 
             # CN: 图像与底部文字区之间的间隙，置 0 以实现底部参数的完全解耦
             inner_bottom_margin = 0
+            
+            # --- EN: SPROCKET MODE LAYOUT OVERRIDE (v2.4.1) / CN: 齿孔预设布局覆盖 (v2.4.1) ---
+            if data.get('sprocket_enabled', False):
+                # EN: Force 135 film physical proportions: 24mm image height in a 35mm strip
+                # CN: 锁死 135 胶卷物理比例：35mm 总高内嵌 24mm 成像
+                px_per_mm = h / 24.0
+                margin_px = int(5.5 * px_per_mm)
+                top_pad = margin_px
+                bottom_splice = margin_px
+                # EN: Add minimal side padding for a "strip segment" look
+                # CN: 添加微量侧边留白以实现“胶片条切片”感
+                side_pad_left = side_pad_right = int(2.0 * px_per_mm)
+            else:
+                # EN: Standard Manual Layout / CN: 标准手动布局
+                long_edge = max(w, h)
+                side_pad_left = int(long_edge * left_ratio)
+                side_pad_right = int(long_edge * right_ratio)
+                top_pad = int(long_edge * top_ratio)
+                bottom_splice = int(long_edge * bottom_ratio)
             
             new_w = w + side_pad_left + side_pad_right
             new_h = h + top_pad + inner_bottom_margin + bottom_splice
@@ -194,6 +224,11 @@ class FilmRenderer:
                                 top_pad += top_extra
                                 bottom_splice += (diff_h - top_extra)
                                 new_h = target_new_h
+
+            if data.get('sprocket_enabled', False):
+                # EN: Re-force black background after ratio padding might have added white
+                # CN: 在比例适配可能引入白边后，再次确保全黑背景
+                bg_color = (0, 0, 0)
             
             timings['layout_calc'] = time.perf_counter() - t_layout_start
             
@@ -265,6 +300,10 @@ class FilmRenderer:
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
+            # v2.4.1: Ensure pure black for sprockets even if theme is light
+            if data.get('sprocket_enabled', False):
+                canvas.paste((0,0,0), [0, 0, new_w, new_h])
+            
             if theme in ["frosted", "slate_teal"]:
                 # EN: Floating Photo Effect (Inner Shadow + Image + Border)
                 self._draw_floating_photo(canvas, img, side_pad_left, top_pad, line_color)
@@ -275,6 +314,21 @@ class FilmRenderer:
             
             draw = ImageDraw.Draw(canvas)
             timings['canvas_paste'] = time.perf_counter() - t_canvas_start
+            # --- EN: SPROCKET HOLES BORDER (v2.4.1) / CN: 齿孔边框 (v2.4.1) ---
+            if data.get('sprocket_enabled', False):
+                # EN: 135 Film Standard: Image Height = 24mm, Total Margin ~5.5mm (each)
+                # CN: 135 胶卷标准：成像高度 24mm，单边留白约 5.5mm
+                # EN: Use min(w,h) to handle vertical/horizontal correctly / CN: 使用较短边确保比例一致
+                px_per_mm = min(w, h) / 24.0
+                margin_px = int(5.5 * px_per_mm)
+                film_total_h = int(35.0 * px_per_mm)
+                
+                s_text = data.get('sprocket_text', '')
+                if not s_text:
+                    s_text = data.get('Film', '') or data.get('EdgeCode', '') or "FILM SPROCKET"
+                
+                # EN: Draw both top and bottom sprockets in one pass
+                self._draw_iso_sprockets_vector(canvas, 0, new_w, 0, margin_px, margin_px, film_total_h, px_per_mm, s_text)
             
             # --- EN: TYPOGRAPHY HIERARCHY ---
             t_draw_start = time.perf_counter()
@@ -290,12 +344,29 @@ class FilmRenderer:
             else:
                 long_edge = max(new_w, new_h)
                 
-                # EN: Resolve independent main/sub font scales (CN: 解决独立的主副标题比例)
-                font_main_scale = layout.get('font_main_scale', font_base_scale) if layout else font_base_scale
-                font_sub_scale = layout.get('font_sub_scale', font_main_scale * 0.78) if layout else font_base_scale * 0.78
+                # EN: Resolve independent main/sub font scales (v2.4.1: Priority to manual PX values)
+                # CN: 解决独立的主副标题比例 (v2.4.1: 优先使用手动设置的像素值)
+                ref_factor = long_edge / 4500.0  # EN: Reference for UI px units / CN: UI 像素单位的参考系数
                 
-                base_main_font_size = int(long_edge * font_main_scale)
-                base_sub_font_size = int(long_edge * font_sub_scale)
+                ui_font_scale = data.get('font_scale')
+                if ui_font_scale is not None:
+                    # EN: Support both old ratio (0.032) and new PX (144)
+                    # CN: 同时兼容旧比例 (0.032) 与新像素单位 (144)
+                    f_val = float(ui_font_scale)
+                    if f_val >= 1.0:
+                        base_main_font_size = int(f_val * ref_factor)
+                    else:
+                        base_main_font_size = int(long_edge * f_val)
+                else:
+                    font_main_scale = layout.get('font_main_scale', font_base_scale) if layout else font_base_scale
+                    base_main_font_size = int(long_edge * font_main_scale)
+
+                ui_font_sub_px = data.get('font_sub_px')
+                if ui_font_sub_px is not None:
+                    base_sub_font_size = int(float(ui_font_sub_px) * ref_factor)
+                else:
+                    font_sub_scale = layout.get('font_sub_scale', font_main_scale * 0.78) if layout else font_base_scale * 0.78
+                    base_sub_font_size = int(long_edge * font_sub_scale)
 
                 # EN: Available width for text (Allow 95% of canvas width, no longer squeezed by side borders)
                 # CN: 文字可用宽度（允许占用画布总宽度的 95%，不再受侧边框宽度的双倍挤压）
@@ -319,9 +390,9 @@ class FilmRenderer:
                     elif avg_lum > 135: # Fairly Light
                         main_color, sub_color = (15, 15, 15), (70, 70, 70)
                     elif avg_lum > 90: # Neutral/Mid
-                        main_color, sub_color = (255, 255, 255), (190, 190, 190)
+                        main_color, sub_color = (255, 255, 255), (225, 225, 225)
                     else: # Dark
-                        main_color, sub_color = (255, 255, 255), (210, 210, 210)
+                        main_color, sub_color = (255, 255, 255), (242, 242, 242)
                 
                 actual_main_size, actual_sub_size, m_factor, s_factor = self._adjust_font_sizes_to_fit(
                     draw, main_text, sub_text, available_width, 
@@ -904,23 +975,42 @@ class FilmRenderer:
 
     def _draw_pro_text(self, draw, new_w, h, side_pad_left, side_pad_right, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, use_lens_branding=True, timings=None, v_offset=0):
         if timings is None: timings = {}
+        
+        # v2.4.1: Sprocket Mode Logic
+        spkt_on = data.get('sprocket_enabled', False) if data else False
+        
         # EN: Use provided colors or fallback to defaults
         # CN: 使用提供的颜色，或回退至默认值
         m_color = main_color or self.main_color
         s_color = sub_color or self.sub_color
         
+        # EN: Force colors for Sprocket Mode (RGB for stability)
+        if spkt_on:
+            m_color = (255, 120, 0) # Exposure Orange
+            s_color = (235, 235, 235) # Luminous White
+        
         # EN: Detect CJK characters and resolve paths / CN: 检测 CJK 字符并解析路径
         resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
 
-        # EN: Vertical center of the white area with optional offset / CN: 白色区域垂直中心，支持可选偏移
+        # EN: Positioning Logic
         inner_bottom_margin = 0
-        base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2 + v_offset
-        
-        # EN: Dynamic vertical offset based on font sizes to ensure relative spacing
-        # CN: 基于字号的动态垂直偏移，确保间距随字体放大而自动“弹开”
-        v_gap_ref = max(m_size, s_size)
-        main_draw_pos = (new_w // 2, base_y - int(v_gap_ref * 0.55))
-        sub_draw_pos = (new_w // 2, base_y + int(v_gap_ref * 0.75))
+        if spkt_on:
+            # EN: Physics-accurate 135 edge channel positioning (1.0mm from edge)
+            # CN: 物理精确的 135 边缘通道定位：距离胶片边缘 1.0mm
+            px_per_mm = min(new_w - side_pad_left - side_pad_right, h) / 24.0
+            
+            main_draw_pos = (new_w // 2, int(1.0 * px_per_mm) + v_offset)
+            sub_draw_pos = (new_w // 2, (top_pad + h + bottom_splice) - int(1.0 * px_per_mm) + v_offset)
+            
+            # EN: Resize fonts for 2.0mm edge channel (Standard 1.6mm physical height)
+            target_px = int(1.6 * px_per_mm)
+            m_size = min(m_size, target_px)
+            s_size = min(s_size, target_px)
+        else:
+            base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2 + v_offset
+            v_gap_ref = max(m_size, s_size)
+            main_draw_pos = (new_w // 2, base_y - int(v_gap_ref * 0.55))
+            sub_draw_pos = (new_w // 2, base_y + int(v_gap_ref * 0.75))
 
         # --- EN: CAMERA LOGO RENDERING / CN: 相机 LOGO 渲染 ---
         logo_drawn = False
@@ -966,37 +1056,58 @@ class FilmRenderer:
                         scaled_w = int(orig_w * (target_h / orig_h))
                         logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
 
-                    # --- EN: LOGO INTELLIGENT TINTING / CN: LOGO 智能着色 ---
-                    # EN: If theme color is NOT black, adapt dark parts to match while preserving brand colors
-                    # CN: 如果文字颜色不是黑色，则将 Logo 暗部适配为该颜色，同时保留其品牌特有色彩
-                    is_black_theme = (m_color[0] < 40 and m_color[1] < 40 and m_color[2] < 40)
-                    if not is_black_theme:
-                        if logo_img.mode != 'RGBA': logo_img = logo_img.convert('RGBA')
-                        # EN: Pixel-level scan to protect color brands while tinting "ink" parts
-                        # CN: 像素级扫描，在染色“墨迹”部分的同时保护徕卡红等专业标识
-                        pixels = list(logo_img.getdata())
-                        new_pixels = []
-                        for r, g, b, a in pixels:
-                            # EN: Identify dark neutral pixels (potential candidates for theme tinting)
-                            # CN: 识别暗中性色像素（可能是黑色文字或线条）
-                            is_dark = (r < 180 and g < 180 and b < 180) # EN: Wider range / CN: 更宽的识别范围
-                            is_neutral = (abs(r-g) < 40 and abs(g-b) < 40)
-                            if is_dark and is_neutral:
-                                # EN: Tint to theme color / CN: 染色为主题色
-                                new_pixels.append((*m_color, a))
-                            else:
-                                # EN: Preserve brand colors (e.g. Leica Red, Nikon Yellow)
-                                # CN: 保留品牌特有色彩
-                                new_pixels.append((r, g, b, a))
-                        logo_img.putdata(new_pixels)
-
-                    # EN: Center horizontally, align vertically with text pos
-                    # CN: 水平居中，垂直与文字位置对齐
-                    logo_x = (new_w - logo_img.width) // 2
-                    logo_y = main_draw_pos[1] - logo_img.height // 2
+                    # --- EN: LOGO INTELLIGENT TINTING (v2.4.1 Robust) / CN: LOGO 智能着色 ---
+                    is_special_brand = "leica" in make.lower() or "hasselblad" in make.lower()
+                    if logo_img.mode != 'RGBA': logo_img = logo_img.convert('RGBA')
                     
-                    # EN: Paste with alpha mask / CN: 带透明蒙版粘贴
-                    draw._image.paste(logo_img, (logo_x, logo_y), logo_img)
+                    if not is_special_brand:
+                        tint_layer = Image.new("RGBA", logo_img.size, (int(m_color[0]), int(m_color[1]), int(m_color[2]), 255))
+                        alpha = logo_img.getchannel('A')
+                        logo_img = Image.composite(tint_layer, logo_img, alpha)
+
+                    # --- EN: CENTERED COMPOSITE LAYOUT (v2.4.1) / CN: 复合居中布局 ---
+                    # EN: If using PNG font, we must pre-calculate total width for center alignment
+                    # CN: 如果使用 PNG 字体，必须预计算（Logo + 文字）的总宽度以实现居中
+                    if "LEICA-1050" in str(resolved_main).upper():
+                        from .typo_engine import TypoEngine
+                        png_text_img = TypoEngine.draw_png_text(main_text, "assets/fonts/1050", spacing_ratio=0.25, color=m_color)
+                        
+                        # EN: Scale PNG text to match target_h (scaled main font height)
+                        t_canvas_h = int(m_size * 1.5)
+                        if png_text_img.height > 0:
+                            f_w = int(png_text_img.width * (t_canvas_h / png_text_img.height))
+                            png_text_img = png_text_img.resize((f_w, t_canvas_h), Image.Resampling.LANCZOS)
+                        
+                        # EN: Total Width = Logo + Gap + Text
+                        gap = int(m_size * 0.4)
+                        total_w = logo_img.width + gap + png_text_img.width
+                        start_x = (new_w - total_w) // 2
+                        
+                        # EN: Paste Logo
+                        logo_y = main_draw_pos[1] - logo_img.height // 2
+                        draw._image.paste(logo_img, (start_x, logo_y), logo_img)
+                        
+                        # EN: Paste Text
+                        text_x = start_x + logo_img.width + gap
+                        text_y = main_draw_pos[1] - png_text_img.height // 2
+                        draw._image.paste(png_text_img, (text_x, text_y), png_text_img)
+                        logo_drawn = True # Both are drawn!
+                    else:
+                        # EN: Standard vector font - Handle combined Logo + Text centering
+                        # CN: 标准矢量字体 - 处理（Logo + 文字）复合居中
+                        main_text_w = main_font.getlength(main_text)
+                        gap = int(m_size * 0.4)
+                        total_w = logo_img.width + gap + main_text_w
+                        start_x = (new_w - total_w) // 2
+                        
+                        # EN: Paste Logo
+                        logo_y = main_draw_pos[1] - logo_img.height // 2
+                        draw._image.paste(logo_img, (int(start_x), logo_y), logo_img)
+                        
+                        # EN: Paste Text
+                        text_x = start_x + logo_img.width + gap
+                        draw.text((text_x, main_draw_pos[1]), main_text, fill=m_color, font=main_font, anchor="lm")
+                        logo_drawn = True # Mark as handled to prevent draw_advanced_text call later
                     
                     # DEBUG: Draw center line
                     # draw.line([(new_w // 2, top_pad + h), (new_w // 2, new_h)], fill="red", width=2)
@@ -1025,27 +1136,65 @@ class FilmRenderer:
         t_text_sub_start = time.perf_counter()
         try:
             from .typo_engine import TypoEngine
+            
+            # --- EN: PNG VIRTUAL FONT ROUTING (v2.4.1) / CN: PNG 虚拟字体路由 ---
+            # EN: Handle "LEICA-1050" as a special image-based font
+            # CN: 将 "LEICA-1050" 作为特殊的基于图片的字体处理
+            
+            def draw_advanced_text(text, target_pos, font_path, size, color, key_prefix):
+                if "LEICA-1050" in str(font_path).upper():
+                    # EN: Generate raw PNG composite
+                    png_img = TypoEngine.draw_png_text(text, "assets/fonts/1050", spacing_ratio=0.25, color=color)
+                    
+                    # EN: Scaling: The PNG engine uses its own ref_h. We need to match it to 'size'
+                    # CN: 缩放：PNG 引擎有自己的参考高度，我们需要将其缩放至 UI 指定的 'size'
+                    current_canvas_h = png_img.height
+                    target_canvas_h = int(size * 1.5)
+                    
+                    if current_canvas_h > 0:
+                        final_w = int(png_img.width * (target_canvas_h / current_canvas_h))
+                        png_img = png_img.resize((final_w, target_canvas_h), Image.Resampling.LANCZOS)
+                    
+                    # --- EN: WIDTH CONSTRAINT REINFORCEMENT (v2.4.1) / CN: 宽度约束补强 ---
+                    # EN: Calculate safe width and shrink if necessary
+                    # CN: 计算安全宽度，如果超标则强制二次缩放
+                    max_allowed_w = int(new_w - side_pad_left - side_pad_right - 40) # 40px buffer
+                    if png_img.width > max_allowed_w:
+                        shrink_ratio = max_allowed_w / png_img.width
+                        new_h = int(png_img.height * shrink_ratio)
+                        png_img = png_img.resize((max_allowed_w, new_h), Image.Resampling.LANCZOS)
+
+                    # EN: Paste centered / CN: 居中粘贴
+                    paste_x = int(target_pos[0] - png_img.width // 2)
+                    paste_y = int(target_pos[1] - png_img.height // 2)
+                    draw._image.paste(png_img, (paste_x, paste_y), png_img)
+                else:
+                    # EN: Standard Vector Rendering / CN: 标准矢量渲染
+                    TypoEngine.draw_mixed_text(draw, target_pos, [{"type": "text", "content": text, "color": color}], font_path, size, color, timings=timings, key_prefix=key_prefix)
+
             # EN: Draw Main Text (Camera) / CN: 绘制主标题（相机）
             if not logo_drawn:
-                # EN: Construct segments for main text / CN: 为主标题构建片段
-                main_segments = [{"type": "text", "content": main_text, "color": m_color}]
-                TypoEngine.draw_mixed_text(draw, main_draw_pos, main_segments, resolved_main, m_size, m_color, timings=timings, key_prefix='text_main')
+                draw_advanced_text(main_text, main_draw_pos, resolved_main, m_size, m_color, 'text_main')
             
-            # EN: Draw Sub Text (Lens + Info) using structured segments / CN: 使用结构化片段绘制副标题（镜头+参数）
-            sub_segments = self._prepare_lens_segments(data, s_color, use_lens_branding=use_lens_branding)
-            TypoEngine.draw_mixed_text(draw, sub_draw_pos, sub_segments, resolved_sub, s_size, s_color, timings=timings, key_prefix='text_sub')
+            # EN: Draw Sub Text (Lens + Info) / CN: 绘制副标题（镜头+参数）
+            # EN: We handle Zeiss T* highlighting by passing segments to draw_mixed_text or handling it in draw_advanced
+            if "LEICA-1050" in str(resolved_sub).upper():
+                # EN: PNG engine doesn't support mixed colors yet, use sub_text
+                draw_advanced_text(sub_text, sub_draw_pos, resolved_sub, s_size, s_color, 'text_sub')
+            else:
+                sub_segments = self._prepare_lens_segments(data, s_color, use_lens_branding=use_lens_branding)
+                TypoEngine.draw_mixed_text(draw, sub_draw_pos, sub_segments, resolved_sub, s_size, s_color, timings=timings, key_prefix='text_sub')
+
         except Exception as e:
             import traceback
             traceback.print_exc()
             if not logo_drawn:
                 draw.text(main_draw_pos, main_text, fill=m_color, anchor="mm")
-            # Fallback for sub_text: try to extract plain text from segments
+            # Fallback for sub_text
             try:
-                sub_segments = self._prepare_lens_segments(data, s_color, use_lens_branding=use_lens_branding)
-                plain_sub = "".join([s["content"] for s in sub_segments if s["type"] == "text"])
-                draw.text(sub_draw_pos, plain_sub, fill=s_color, anchor="mm")
+                draw.text(sub_draw_pos, sub_text, fill=s_color, anchor="mm")
             except:
-                draw.text(sub_draw_pos, str(data.get('LensModel')), fill=s_color, anchor="mm")
+                pass
         timings['text_render_pure'] = time.perf_counter() - t_text_sub_start
 
 
@@ -1288,8 +1437,8 @@ class FilmRenderer:
         CN: 解析最终字体路径，包括中文字体降级逻辑。
         """
         # EN: Default paths / CN: 默认路径
-        resolved_main = self.font_main
-        resolved_sub  = self.font_sub
+        resolved_main = getattr(self, 'font_main_custom', self.font_main)
+        resolved_sub  = getattr(self, 'font_sub_custom', self.font_sub)
         
         # EN: Detect Chinese / CN: 检查中文并降级字库
         if self._contains_chinese(main_text) or self._contains_chinese(sub_text):
@@ -1300,7 +1449,24 @@ class FilmRenderer:
         
         # EN: Resolve to absolute paths / CN: 解析为绝对路径
         from .typo_engine import TypoEngine
-        return TypoEngine._resolve_font_path(resolved_main), TypoEngine._resolve_font_path(resolved_sub)
+        
+        def _full_resolve(p, default_val):
+            # EN: If None or "Default", use original internal defaults
+            # CN: 如果为 None 或 "Default"，则回退到原始内置默认字体
+            if not p or p == "Default": 
+                p = default_val
+                
+            # EN: Prioritize GT23_Assets/fonts for custom filenames
+            # CN: 对于自定义文件名，优先在资产目录中检索
+            if not os.path.isabs(p) and not p.startswith("assets"):
+                test_path = os.path.join(self.font_dir, p)
+                if os.path.exists(test_path): return test_path
+            
+            return TypoEngine._resolve_font_path(p)
+
+        f_main = _full_resolve(resolved_main, "assets/fonts/palab.ttf")
+        f_sub  = _full_resolve(resolved_sub, "assets/fonts/gara.ttf")
+        return f_main, f_sub
 
     def _get_system_cjk_font(self):
         """EN: Find Microsoft YaHei or similar on Windows. / CN: 在 Windows 上寻找微软雅黑。"""
@@ -1313,6 +1479,150 @@ class FilmRenderer:
             for p in paths:
                 if os.path.exists(p): return p
         return None
+
+    def _draw_iso_sprockets_vector(self, canvas, x_start, x_end, sy, top_info_h, bottom_info_h, strip_h, px_per_mm, film_name=""):
+        """
+        EN: Render high-precision sprockets using SVG + CairoSVG (Mature Port from Renderer135).
+        CN: 绘制高精度齿孔（从 Renderer135 移植的成熟方案）。
+        """
+        strip_width = int(x_end - x_start)
+        if strip_width <= 0: return
+
+        dwg = svgwrite.Drawing(size=(strip_width, strip_h), profile='tiny')
+        dwg.viewbox(0, 0, strip_width, strip_h)
+
+        # EN: Identify Movie Film (More Precise) / CN: 精确识别电影胶片
+        film_name_lower = film_name.lower()
+        is_movie = any(kw in film_name_lower for kw in ['vision', 'tungsten', '52', '72', '50d', '250d', '500t', '200t', 'double-x'])
+
+        # EN: Physical Parameters (Still 1007 vs Movie BH-1866)
+        if is_movie:
+            # EN: Movie film perfs are wider (2.79mm) but shorter (1.85mm)
+            w_mm, h_mm = 2.794, 1.854
+            r_mm = 0.25 # Sharp corner
+        else:
+            # EN: Still film perfs are 1.98mm x 2.80mm (Vertical)
+            w_mm, h_mm = 1.98, 2.80
+            r_mm = 0.50 # Balanced corner
+            
+        w_px, h_px = w_mm * px_per_mm, h_mm * px_per_mm
+        r_px = r_mm * px_per_mm
+        pitch_px = 4.75 * px_per_mm
+
+        # EN: Calculate Y coordinates (Centered within the 2.5mm available channel)
+        # CN: 计算 Y 坐标（在 2.5mm 的通道内垂直居中）
+        margin_px = 2.0 * px_per_mm # Top edge to channel start
+        # EN: Vertical center of the 2.8mm standard channel area (2.0mm to 4.8mm from edge)
+        chan_center_y = (2.0 + 1.4) * px_per_mm
+        y_top_svg = chan_center_y - h_px / 2
+        y_bottom_svg = strip_h - chan_center_y - h_px / 2
+
+        def make_rounded_rect_path(x, y, w, h, r):
+            return f"M {x+r},{y} H {x+w-r} A {r},{r} 0 0 1 {x+w},{y+r} V {y+h-r} A {r},{r} 0 0 1 {x+w-r},{y+h} H {x+r} A {r},{r} 0 0 1 {x},{y+h-r} V {y+r} A {r},{r} 0 0 1 {x+r},{y} Z"
+
+        def make_custom_sprocket_path(x, y, w, h):
+            # EN: Refined BH-1866 path geometry
+            actual_w, actual_h = w, h
+            rad_val = actual_h * (160/310)
+            sag_val = actual_h * (40/310)
+            mid_h = actual_h - 2 * sag_val
+            path = [f"M {x},{y+sag_val}", f"A {rad_val},{rad_val} 0 0 1 {x+actual_w},{y+sag_val}",
+                    f"L {x+actual_w},{y+sag_val+mid_h}", f"A {rad_val},{rad_val} 0 0 1 {x},{y+sag_val+mid_h}",
+                    "Z"]
+            return "".join(path)
+
+        # EN: Symmetrical Alignment Logic (v2.4.1) / CN: 对称对齐逻辑
+        # EN: Center the sequence of sprockets relative to the strip width
+        # CN: 将齿孔序列相对于条带宽度进行居中对齐
+        num_sprockets = int(strip_width / pitch_px)
+        if (num_sprockets * pitch_px + w_px) <= strip_width:
+            num_sprockets += 1
+        
+        total_seq_w = (num_sprockets - 1) * pitch_px + w_px
+        start_x = (strip_width - total_seq_w) / 2
+        
+        current_x = start_x
+        count = 0
+        while count < num_sprockets:
+            if current_x + w_px <= strip_width + 1:
+                path_fn = make_custom_sprocket_path if is_movie else make_rounded_rect_path
+                for ly in [y_top_svg, y_bottom_svg]:
+                    args_core = (current_x, ly, w_px, h_px) if is_movie else (current_x, ly, w_px, h_px, r_px)
+                    dwg.add(dwg.path(d=path_fn(*args_core), fill='#fffef2', fill_opacity=1.0))
+                current_x += pitch_px
+                count += 1
+            else:
+                break
+
+        try:
+            from cairosvg import svg2png
+            png_bytes = svg2png(bytestring=dwg.tostring(), dpi=1200, output_width=strip_width, output_height=int(strip_h))
+        except:
+            return
+
+        # --- EN: PHOTOREALISTIC BLOOM ENGINE (v2.4.2) ---
+        # EN: 0.5mm precision blur radius
+        blur_px = 0.5 * px_per_mm
+        try:
+            core_img = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
+            from PIL import ImageFilter
+            
+            # EN: 1. Generate Glow Layer
+            alpha_mask = core_img.getchannel('A')
+            glow_mask = alpha_mask.filter(ImageFilter.GaussianBlur(radius=blur_px))
+            
+            # EN: Boost glow intensity (Harder falloff for premium look)
+            glow_mask = glow_mask.point(lambda p: min(255, int(p * 2.2))) 
+            
+            glow_layer = Image.new('RGBA', core_img.size, (255, 254, 242, 255))
+            glow_layer.putalpha(glow_mask)
+            
+            # EN: 2. Compositing using Alpha-Composite (Scientific Blending)
+            # CN: 使用 Alpha-Composite 进行科学合成（模拟物理叠光）
+            # EN: This ensures Alpha weights are correctly merged
+            final_strip = Image.alpha_composite(glow_layer, core_img)
+            
+            canvas.paste(final_strip, (int(x_start), int(sy)), mask=final_strip)
+        except Exception as e:
+            # EN: Fallback to basic if PIL composite fails
+            vector_strip = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
+            canvas.paste(vector_strip, (int(x_start), int(sy)), mask=vector_strip)
+
+def bootstrap_fonts(resolver_func=None):
+    """
+    EN: Setup external font directory if running as EXE.
+    CN: 引导程序：如果作为 EXE 运行，设置外部 Font 目录并释放默认资源。
+    """
+    # 0. EN: Try User-Defined Path first / CN: 极高优先级：尝试用户自定义路径
+    custom_path = config_manager.get("custom_asset_path")
+    if custom_path and os.path.exists(custom_path):
+        font_sub = os.path.join(custom_path, "fonts")
+        if os.path.exists(font_sub): return font_sub
+        return custom_path
+
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    decoupled_path = os.path.join(base_dir, "GT23_Assets", "fonts")
+    
+    # 1. EN: Try decoupled Assets Repo (Priority) / CN: 优先尝试解耦的资产仓库
+    if os.path.exists(decoupled_path) and os.path.isdir(decoupled_path):
+        internal_font_path = decoupled_path
+    elif resolver_func:
+        # 2. EN: Use provided resolver / CN: 使用提供的路径解析函数
+        internal_font_path = resolver_func("assets/fonts")
+    else:
+        # 3. EN: Fallback resolver for early bootstrap
+        if hasattr(sys, '_MEIPASS'):
+            internal_font_path = os.path.join(sys._MEIPASS, "assets/fonts")
+        else:
+            internal_font_path = os.path.join(base_dir, "assets", "fonts")
+    
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        # EN: Prioritize GT23_Assets folder next to EXE / CN: 优先使用 EXE 旁的 GT23_Assets 目录
+        external_font_path = os.path.join(exe_dir, "GT23_Assets", "fonts")
+        return external_font_path
+    else:
+        return internal_font_path
 
 def bootstrap_logos(resolver_func=None):
     """

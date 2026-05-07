@@ -47,6 +47,10 @@ class BorderPanel:
         self.font_scale_var = tk.StringVar(value="144")
         self.font_sub_px_var = tk.StringVar(value="112")
         self.font_offset_px_var = tk.StringVar(value="0")
+        self.font_main_path_var = tk.StringVar(value="Default")
+        self.font_sub_path_var = tk.StringVar(value="Default")
+        self.sprocket_enabled_var = tk.BooleanVar(value=False)
+        self.sprocket_text_var = tk.StringVar(value="")
         
         self.v_offset_var = tk.IntVar(value=0)
         self.h_offset_var = tk.IntVar(value=0)
@@ -103,6 +107,7 @@ class BorderPanel:
         self.layout_config = self.controller.load_layout_config()
         self.setup_ui()
         self.load_film_library()
+        self.load_font_library()
 
         # EN: Auto-load photos_in if exists / CN: 自动加载 photos_in 文件夹（如果存在）
         default_in = os.path.join(os.getcwd(), "photos_in")
@@ -273,7 +278,11 @@ class BorderPanel:
             "sync_lr": self.sync_lr_var,
             "target_ratio": self.target_ratio_var,
             "v_offset": self.v_offset_var,
-            "h_offset": self.h_offset_var
+            "h_offset": self.h_offset_var,
+            "font_main_path": self.font_main_path_var,
+            "font_sub_path": self.font_sub_path_var,
+            "sprocket_enabled": self.sprocket_enabled_var,
+            "sprocket_text": self.sprocket_text_var
         }
         self.settings_group = SettingsGroup(self.left_frame, lang=self.lang, 
                                            on_change=self.on_params_changed,
@@ -472,6 +481,12 @@ class BorderPanel:
         self.log(self.controller.get_asset_status_msg(len(self.film_list)))
         self.parent.update_idletasks()
 
+    def load_font_library(self):
+        """EN: Load font library via controller / CN: 通过控制器加载字体库"""
+        fonts = self.controller.load_font_library()
+        self.settings_group.set_font_list(fonts)
+        self.log(f"CN: 已加载 {len(fonts)} 个外部字体 / EN: Loaded {len(fonts)} external fonts")
+
     def rotate_left(self):
         self.rotation_var.set((self.rotation_var.get() - 90) % 360)
         self.on_params_changed()
@@ -627,6 +642,10 @@ class BorderPanel:
             'font_scale': self._get_int_safe(self.font_scale_var, 144),
             'font_sub_px': self._get_int_safe(self.font_sub_px_var, 112),
             'font_v_offset': self._get_int_safe(self.font_offset_px_var, 0),
+            'font_main_path': self.font_main_path_var.get(),
+            'font_sub_path': self.font_sub_path_var.get(),
+            'sprocket_enabled': self.sprocket_enabled_var.get(),
+            'sprocket_text': self.sprocket_text_var.get(),
             'v_offset': self.v_offset_var.get(),
             'h_offset': self.h_offset_var.get(),
             'theme': self.theme_var.get(),
@@ -670,6 +689,10 @@ class BorderPanel:
                 if 'theme' in cfg: self.theme_var.set(cfg['theme'])
                 if 'film_combo' in cfg: self.film_combo.set(cfg['film_combo'])
                 if 'font_v_offset' in cfg: self.font_offset_px_var.set(cfg['font_v_offset'])
+                if 'font_main_path' in cfg: self.font_main_path_var.set(cfg['font_main_path'])
+                if 'font_sub_path' in cfg: self.font_sub_path_var.set(cfg['font_sub_path'])
+                if 'sprocket_enabled' in cfg: self.sprocket_enabled_var.set(cfg['sprocket_enabled'])
+                if 'sprocket_text' in cfg: self.sprocket_text_var.set(cfg['sprocket_text'])
                 self.v_offset_var.set(cfg.get('v_offset', 0))
                 self.h_offset_var.set(cfg.get('h_offset', 0))
                 self.sync_lr_var.set(cfg.get('sync_lr', True))

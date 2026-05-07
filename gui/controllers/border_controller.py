@@ -127,6 +127,8 @@ class BorderController:
         sync_keys = [
             'left_px', 'right_px', 'top_px', 'bottom_px', 
             'font_scale', 'font_sub_px', 'font_v_offset',
+            'font_main_path', 'font_sub_path',
+            'sprocket_enabled', 'sprocket_text',
             'theme', 'branding', 'auto_detect', 'film_combo', 'sync_lr'
         ]
         sync_data = {k: params[k] for k in sync_keys if k in params}
@@ -238,6 +240,10 @@ class BorderController:
                     "font_v_offset": layout_cfg.get('font_v_offset', 0) / ref
                 })
                 
+                # EN: Apply Font Overrides / CN: 应用字体覆盖
+                self.renderer.font_main_custom = cfg.get('font_main_path')
+                self.renderer.font_sub_custom = cfg.get('font_sub_path')
+                
                 exif_cfg = cfg.get('exif') if cfg else global_cfg.get('exif')
                 if exif_cfg:
                     for k, v in exif_cfg.items():
@@ -248,6 +254,8 @@ class BorderController:
                             data[key] = v
                 
                 data['target_ratio'] = cfg.get('target_ratio', global_cfg.get('target_ratio', 'Original'))
+                data['sprocket_enabled'] = cfg.get('sprocket_enabled', False)
+                data['sprocket_text'] = cfg.get('sprocket_text', '')
 
                 # EN: Theme mapping
                 theme_val = self.resolve_theme(theme_str)
@@ -312,6 +320,10 @@ class BorderController:
             "font_v_offset": layout_cfg.get('font_v_offset', 0) / ref
         })
         
+        # EN: Apply Font Overrides / CN: 应用字体覆盖
+        self.renderer.font_main_custom = cfg.get('font_main_path')
+        self.renderer.font_sub_custom = cfg.get('font_sub_path')
+        
         exif_cfg = cfg.get('exif')
         if exif_cfg:
             for k, v in exif_cfg.items():
@@ -322,6 +334,8 @@ class BorderController:
                     data[key] = v
         
         data['target_ratio'] = cfg.get('target_ratio', 'Original')
+        data['sprocket_enabled'] = cfg.get('sprocket_enabled', False)
+        data['sprocket_text'] = cfg.get('sprocket_text', '')
 
         theme_str = cfg.get('theme', 'light')
         theme_val = self.resolve_theme(theme_str)
@@ -441,6 +455,20 @@ class BorderController:
         except:
             pass
         return film_list
+        
+    def load_font_library(self):
+        """EN: Load fonts from asset directory / CN: 从资源目录加载字体库"""
+        fonts = ["LEICA-1050"]
+        try:
+            f_dir = self.renderer.font_dir
+            if os.path.exists(f_dir):
+                for f in os.listdir(f_dir):
+                    if f.lower().endswith(('.ttf', '.otf', '.ttc')):
+                        fonts.append(f)
+            # fonts.sort() # Keep LEICA-1050 at top
+        except:
+            pass
+        return fonts
 
     def get_asset_status_msg(self, film_list_len):
         """EN: Generate unified asset status message / CN: 生成统一的资产状态消息"""

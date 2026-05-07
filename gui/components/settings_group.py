@@ -58,6 +58,15 @@ class SettingsGroup(ttk.Labelframe):
                                                command=self.on_change,
                                                bootstyle="round-toggle")
             self.sync_lr_toggle.pack(side=LEFT, padx=2)
+            
+        sprocket_enabled_var = self.vars.get("sprocket_enabled")
+        if sprocket_enabled_var:
+            self.sprocket_toggle = ttk.Checkbutton(row_sw2,
+                                                text="开启齿孔边框 (v2.4.1)" if self.lang == "zh" else "Enable Sprockets",
+                                                variable=sprocket_enabled_var,
+                                                command=self.on_change,
+                                                bootstyle="round-toggle")
+            self.sprocket_toggle.pack(side=LEFT, padx=10)
 
         # EN: Advanced settings components
         row1 = ttk.Frame(self)
@@ -91,6 +100,31 @@ class SettingsGroup(ttk.Labelframe):
         row4.columnconfigure(1, weight=1, uniform="adv")
         
         self.font_offset_label = self.add_setting(row4, "font_offset", 0)
+
+        # Row 5 & 6 for Font Path selection
+        row5 = ttk.Frame(self)
+        row5.pack(fill=X, pady=2)
+        row1.columnconfigure(0, weight=1, uniform="adv")
+        
+        row6 = ttk.Frame(self)
+        row6.pack(fill=X, pady=2)
+        row1.columnconfigure(0, weight=1, uniform="adv")
+
+        self.font_main_path_label = self.add_font_selector(row5, "font_main_path")
+        self.font_sub_path_label = self.add_font_selector(row6, "font_sub_path")
+
+        # Row 8 for Sprocket Settings
+        row8 = ttk.Frame(self)
+        row8.pack(fill=X, pady=2)
+        row8.columnconfigure(1, weight=1) # Allow text entry to expand
+        
+        spkt_enable_var = self.vars.get("sprocket_enabled")
+        if spkt_enable_var:
+            self.spkt_toggle = ttk.Checkbutton(row8, text="开启齿孔边框" if self.lang == "zh" else "Enable Sprocket Border",
+                                             variable=spkt_enable_var, command=self.on_change, bootstyle="round-toggle")
+            self.spkt_toggle.grid(row=0, column=0, sticky=W, padx=(5, 10))
+            
+        self.sprocket_text_label = self.add_setting(row8, "sprocket_text", 1)
 
         # Row 7 for Sync Button
         row7 = ttk.Frame(self)
@@ -160,6 +194,35 @@ class SettingsGroup(ttk.Labelframe):
         
         return lbl
 
+    def add_font_selector(self, parent, key):
+        container = ttk.Frame(parent)
+        container.pack(fill=X, expand=YES, padx=2)
+        
+        label_text = self._get_label_text(key)
+        lbl = ttk.Label(container, text=label_text, width=15)
+        lbl.pack(side=LEFT)
+        
+        var = self.vars.get(key)
+        if var:
+            # EN: Combobox for font selection / CN: 字体选择下拉框
+            combo = ttk.Combobox(container, textvariable=var, state="readonly")
+            combo.pack(side=LEFT, fill=X, expand=YES, padx=(0, 10))
+            combo.bind("<<ComboboxSelected>>", lambda e: self.on_change())
+            
+            # Store reference for updating list
+            if key == "font_main_path": self.font_main_combo = combo
+            else: self.font_sub_combo = combo
+        
+        return lbl
+
+    def set_font_list(self, font_names):
+        """EN: Update font list in combos / CN: 更新下拉框中的字体列表"""
+        font_list = ["Default"] + font_names
+        if hasattr(self, 'font_main_combo'):
+            self.font_main_combo['values'] = font_list
+        if hasattr(self, 'font_sub_combo'):
+            self.font_sub_combo['values'] = font_list
+
     def _get_label_text(self, key):
         mapping = {
             "left": ("左边框 (px)", "Left Border (px)"),
@@ -169,6 +232,9 @@ class SettingsGroup(ttk.Labelframe):
             "font": ("型号字号 (px)", "Model Font Size (px)"),
             "font_sub": ("参数字号 (px)", "Param Font Size (px)"),
             "font_offset": ("文字垂直偏移 (px)", "Text Vertical Offset (px)"),
+            "font_main_path": ("主标题字体", "Main Title Font"),
+            "font_sub_path": ("副标题字体", "Subtitle Font"),
+            "sprocket_text": ("自定义齿孔文字", "Custom Sprocket Text"),
             "v_offset": ("垂直平移 (上下)", "Vertical Offset (U/D)"),
             "h_offset": ("水平平移 (左右)", "Horizontal Offset (L/R)")
         }
@@ -185,6 +251,8 @@ class SettingsGroup(ttk.Labelframe):
             self.branding_toggle.config(text="开启镜头专属标识" if lang == "zh" else "Enable Lens Branding")
         if hasattr(self, 'sync_lr_toggle'):
             self.sync_lr_toggle.config(text="左右边框同时调整" if lang == "zh" else "Sync L/R Borders")
+        if hasattr(self, 'spkt_toggle'):
+            self.spkt_toggle.config(text="开启齿孔边框" if lang == "zh" else "Enable Sprocket Border")
         if hasattr(self, 'sync_btn'):
             self.sync_btn.config(text="同步到同类图片 (画幅/旋转)" if lang == "zh" else "Apply to Similar Images")
 
@@ -200,7 +268,8 @@ class SettingsGroup(ttk.Labelframe):
         # Adjust widths for English
         for lbl in [self.left_label, self.right_label, self.top_label, self.bottom_label, 
                     self.font_label, self.font_sub_label, self.font_offset_label, 
-                    self.v_label, self.h_label]:
+                    self.font_main_path_label, self.font_sub_path_label,
+                    self.sprocket_text_label, self.v_label, self.h_label]:
             lbl.configure(width=20 if self.lang == "en" else 15)
 
     def _update_theme_combo_values(self):
