@@ -14,6 +14,8 @@ from core.metadata import MetadataHandler
 from core.renderer import FilmRenderer, bootstrap_logos
 from utils.config_manager import config_manager
 
+from gui.controllers.batch_state import BatchState
+
 class BorderController:
     """
     EN: Decoupled logic for batch image processing and state management
@@ -27,10 +29,8 @@ class BorderController:
         self.error_callback = error_callback
         self.stop_requested = False
         
-        # State Management
-        self.image_configs = {} # path -> params
-        self.batch_width_cache = {} # normalized_path -> aspect_ratio
-        self.current_batch_paths = [] # List of absolute paths
+        # --- State Management (Now Encapsulated) ---
+        self.state = BatchState()
         self.input_folder = None
         
         # Load necessary singletons/handlers
@@ -64,66 +64,46 @@ class BorderController:
         
         # EN: Use stable sort to maintain order / CN: 使用稳定排序保持顺序
         found_files.sort()
-        self.current_batch_paths = [os.path.normcase(os.path.normpath(p)) for p in found_files]
+        self.state.set_paths(found_files)
         
-        # EN: Scan images to cache aspect ratios in background
-        # (This is usually handled by the Panel calling a specific method)
         return len(found_files)
 
     def update_batch_order(self, new_paths):
         """EN: Update current batch order / CN: 更新当前批次顺序"""
-        self.current_batch_paths = new_paths
+        self.state.set_paths(new_paths)
 
     def add_to_batch(self, paths):
         """EN: Add specific files to current batch / CN: 将特定文件添加到当前批次"""
         for p in paths:
-            p_norm = os.path.normcase(os.path.normpath(p))
-            if p_norm not in self.current_batch_paths:
-                self.current_batch_paths.append(p_norm)
-        return len(self.current_batch_paths)
+            self.state.add_path(p)
+        return len(self.state.get_paths())
 
     def remove_from_batch(self, path):
         """EN: Remove file from batch / CN: 从批次中移除文件"""
-        p_norm = os.path.normcase(os.path.normpath(path))
-        if p_norm in self.current_batch_paths:
-            self.current_batch_paths.remove(p_norm)
-        if p_norm in self.image_configs:
-            del self.image_configs[p_norm]
+        self.state.remove_path(path)
 
     def update_image_config(self, path, params):
         """EN: Update config for a specific image / CN: 更新单张图片的配置"""
-        p_norm = os.path.normcase(os.path.normpath(path))
-        if params is None:
-            if p_norm in self.image_configs:
-                del self.image_configs[p_norm]
-            return
-            
-        if p_norm not in self.image_configs:
-            self.image_configs[p_norm] = {}
-        self.image_configs[p_norm].update(params)
+        self.state.set_config(path, params)
 
     def clear_all_configs(self):
         """EN: Clear all image configurations / CN: 清除所有图片配置"""
-        self.image_configs = {}
+        for p in self.state.get_paths():
+            self.state.set_config(p, None)
 
     def get_image_config(self, path):
-        """EN: Get config for image, fallback to empty / CN: 获取图片配置，无则返回空"""
-        p_norm = os.path.normcase(os.path.normpath(path))
-        return self.image_configs.get(p_norm, {})
+        """EN: Get config for a specific image / CN: 获取单张图片的配置"""
+        return self.state.get_config(path) or {}
 
     def sync_config_to_similar(self, source_path, params):
         """
         EN: Apply source params to all images in batch with same aspect ratio and rotation.
         CN: 将当前图片的配置应用到批次中具有相同宽高比和旋转角度的所有图片。
         """
-        p_norm = os.path.normcase(os.path.normpath(source_path))
-        source_ratio = self.batch_width_cache.get(p_norm)
-        if source_ratio is None: return
+        source_ratio = self.state.get_width(source_path)
+        if source_ratio is None: return 0
         
         source_rotation = params.get('rotation', 0)
-        
-        # EN: Parameters to sync (exclude EXIF and path-specific stuff)
-        # CN: 需要同步的参数（不含 EXIF 等特定信息）
         sync_keys = [
             'left_px', 'right_px', 'top_px', 'bottom_px', 
             'font_scale', 'font_sub_px', 'font_v_offset', 'font_spacing',
@@ -133,29 +113,27 @@ class BorderController:
         sync_data = {k: params[k] for k in sync_keys if k in params}
         
         count = 0
-        for path in self.current_batch_paths:
-            if path == p_norm: continue
+        all_paths = self.state.get_paths()
+        source_norm = os.path.normcase(os.path.normpath(source_path))
+        
+        for path in all_paths:
+            if path == source_norm: continue
             
-            target_ratio = self.batch_width_cache.get(path)
+            target_ratio = self.state.get_width(path)
             if target_ratio is None: continue
             
-            # EN: Match aspect ratio (tolerance 0.02) and rotation
-            # CN: 匹配宽高比（容差 0.02）和旋转角度
-            if abs(target_ratio - source_ratio) < 0.05: # EN: Slightly wider tolerance for same format / CN: 同画幅稍微放宽容差
-                target_cfg = self.image_configs.get(path, {})
-                target_rotation = target_cfg.get('rotation', 0)
-                
-                if target_rotation == source_rotation:
-                    if path not in self.image_configs:
-                        self.image_configs[path] = {}
-                    self.image_configs[path].update(sync_data)
+            if abs(target_ratio - source_ratio) < 0.05:
+                target_cfg = self.state.get_config(path) or {}
+                if target_cfg.get('rotation', 0) == source_rotation:
+                    new_cfg = dict(target_cfg)
+                    new_cfg.update(sync_data)
+                    self.state.set_config(path, new_cfg)
                     count += 1
         return count
 
     def update_aspect_ratio_cache(self, path, ratio):
         """EN: Cache aspect ratio for an image / CN: 缓存图片的宽高比"""
-        norm_p = os.path.normcase(os.path.normpath(path))
-        self.batch_width_cache[norm_p] = ratio
+        self.state.update_width(path, ratio)
 
     # --- Processing Logic ---
 
@@ -165,7 +143,7 @@ class BorderController:
         CN: 使用内部状态的主批量处理循环
         """
         self.stop_requested = False
-        files = self.current_batch_paths
+        files = self.state.get_paths()
         total = len(files)
         
         if total == 0:
@@ -177,13 +155,14 @@ class BorderController:
             relative_widths = []
             total_rel_w = 0.0
             for img_path in files:
-                p_norm = os.path.normcase(os.path.normpath(img_path))
-                rel_w = self.batch_width_cache.get(p_norm)
+                rel_w = self.state.get_width(img_path)
                 if rel_w is None:
                     try:
-                        with Image.open(img_path) as img:
-                            w, h = img.size
-                            rel_w = w / h
+                        # EN: Protect image open with semaphore (#5)
+                        with self.state.image_limit:
+                            with Image.open(img_path) as img:
+                                w, h = img.size
+                                rel_w = w / h
                     except:
                         rel_w = 1.6
                 relative_widths.append(rel_w)
@@ -204,8 +183,7 @@ class BorderController:
                     self.progress_callback(i + 1, total, os.path.basename(img_path))
 
                 # EN: Resolve configuration
-                p_norm = os.path.normcase(os.path.normpath(img_path))
-                cfg = self.image_configs.get(p_norm, {})
+                cfg = self.state.get_config(img_path) or {}
                 is_digital = global_cfg.get('is_digital', False)
                 is_pure = global_cfg.get('is_pure', False)
                 theme_str = cfg.get('theme', global_cfg.get('theme', 'light'))
@@ -285,17 +263,21 @@ class BorderController:
             if self.error_callback:
                 self.error_callback(traceback.format_exc())
 
-    def get_preview_image(self, img_path, is_digital, is_pure, manual_film, rotation, use_branding=True):
+    def get_preview_image(self, img_path, is_digital, is_pure, manual_film, rotation, use_branding=True, panel_job_id=0):
         """
         EN: Generate a preview image using internal and passed state
         CN: 使用内部和传入状态生成预览图
         """
+        # EN: Sync with Panel's job ID to allow discard of stale renders (#4)
+        # CN: 与面板的 Job ID 同步，以便丢弃过时的渲染请求
+        self.state.sync_job_id(panel_job_id)
+        
+        job_id = panel_job_id
         import time
         t_start = time.perf_counter()
         render_timings = {}
         
-        p_norm = os.path.normcase(os.path.normpath(img_path))
-        cfg = self.image_configs.get(p_norm, {})
+        cfg = self.state.get_config(img_path) or {}
         m_film = manual_film
         if cfg and not cfg.get('auto_detect', True):
             m_film = cfg.get('film_combo')
@@ -341,24 +323,24 @@ class BorderController:
         r_total = 1
         r_range = (0.0, 1.0)
         
-        if theme_val in ["macaron", "rainbow", "sakura"] and self.current_batch_paths:
-            r_total = len(self.current_batch_paths)
+        all_paths = self.state.get_paths()
+        if theme_val in ["macaron", "rainbow", "sakura"] and all_paths:
+            r_total = len(all_paths)
             norm_img_path = os.path.normcase(os.path.normpath(img_path))
             
-            for idx, p in enumerate(self.current_batch_paths):
-                if os.path.normcase(os.path.normpath(p)) == norm_img_path:
+            for idx, p in enumerate(all_paths):
+                if p == norm_img_path:
                     r_index = idx % 9
                     break
             
-            total_rel_w = sum(self.batch_width_cache.get(os.path.normcase(os.path.normpath(p)), 1.6) for p in self.current_batch_paths)
+            total_rel_w = sum(self.state.get_width(p) or 1.6 for p in all_paths)
             curr_accum = 0.0
-            for p in self.current_batch_paths:
-                p_norm = os.path.normcase(os.path.normpath(p))
-                if p_norm == norm_img_path:
-                    w = self.batch_width_cache.get(p_norm, 1.6)
+            for p in all_paths:
+                if p == norm_img_path:
+                    w = self.state.get_width(p) or 1.6
                     r_range = (curr_accum / total_rel_w, (curr_accum + w) / total_rel_w)
                     break
-                curr_accum += self.batch_width_cache.get(p_norm, 1.6)
+                curr_accum += self.state.get_width(p) or 1.6
 
         # EN: Render (Unpack tuple for info)
         final_pil, _ = self.renderer.process_image(img_path, data, None, 
@@ -381,6 +363,10 @@ class BorderController:
             'render_breakdown': render_timings
         }
         
+        # EN: Final check if this job is still relevant (#4)
+        if not self.state.is_job_current(job_id):
+            return None, performance_report
+            
         return final_pil, performance_report
 
     def resolve_theme(self, theme_str):

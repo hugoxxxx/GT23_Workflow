@@ -34,16 +34,44 @@ def main():
     ver = get_version_string()
     _title = f"GT23 胶片工作流 {ver}" if _lang == "zh" else f"GT23 Film Workflow {ver}"
     
+    # --- EN: ADAPTIVE WINDOW SIZING & DPI AWARENESS (#1, #2) ---
+    # CN: 智能窗口自适应与 DPI 感知 (清单 #1, #2)
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1) # EN: Enable DPI awareness / CN: 开启原生 DPI 感知
+    except Exception:
+        pass
+
     # EN: Create application window / CN: 创建应用窗口
     app = ttk.Window(
         title=_title,
         themename="cosmo",
-        size=(1400, 1100),
         resizable=(True, True)
     )
+
+    screen_w = app.winfo_screenwidth()
+    screen_h = app.winfo_screenheight()
+    aspect_ratio = screen_w / screen_h
     
-    # EN: Center window on screen / CN: 居中显示窗口
-    app.place_window_center()
+    # EN: Logic: Maximize on regular screens, fixed center on ultrawide
+    # CN: 逻辑：常规屏幕默认最大化，带鱼屏（比例 > 2.1）保持 1400x1050 居中
+    if aspect_ratio > 2.1:
+        # EN: Ultrawide detected - Use professional fixed size
+        # CN: 检测到带鱼屏 - 使用固定比例窗口
+        win_w = min(1400, int(screen_w * 0.6))
+        win_h = min(1050, int(screen_h * 0.8))
+        
+        # EN: Manual centering calculation / CN: 手动高精度居中计算
+        app.update_idletasks()
+        x = (screen_w - win_w) // 2
+        y = (screen_h - win_h) // 2
+        app.geometry(f"{win_w}x{win_h}+{x}+{y}")
+        print(f"CN: [!] 检测到超宽屏 (比例 {aspect_ratio:.2f})，已切换至居中模式: {win_w}x{win_h}")
+    else:
+        # EN: Regular screen - Maximize by default (#1)
+        # CN: 常规屏幕 - 默认最大化
+        app.state('zoomed')
+        print(f"CN: [✔] 常规屏幕已激活默认最大化模式")
 
     # EN: Set window icon (Original PNG source, System-compliant buffer scale)
     # CN: 设置窗口图标（坚持原始 PNG 源，仅在内存中进行系统级兼容性缩放）
@@ -108,12 +136,23 @@ def main():
         bootstrap_logos()
         # EN: Bootstrap configs / CN: 引导并释放默认配置文件
         bootstrap_configs()
-    except Exception:
-        # EN: Fail silently, not critical / CN: 默认失败，不影响使用
-        pass
+    except Exception as e:
+        # EN: LOGGING (#6) / CN: 增加基本异常记录
+        print(f"CN: [!] 核心资源引导失败: {e}")
 
     # EN: Initialize main window / CN: 初始化主窗口
     MainWindow(app)
+
+    # EN: Final Centering for Ultrawide (#2)
+    # CN: 针对带鱼屏的最终居中修正 (#2)
+    if aspect_ratio > 2.1:
+        app.update_idletasks()
+        # EN: Use established win_w/win_h from above or recalculate
+        cur_w = app.winfo_width()
+        cur_h = app.winfo_height()
+        x = (screen_w - cur_w) // 2
+        y = (screen_h - cur_h) // 2
+        app.geometry(f"+{x}+{y}")
     
     # EN: Start event loop / CN: 启动事件循环
     app.mainloop()

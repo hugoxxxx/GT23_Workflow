@@ -1,7 +1,24 @@
 # Change Log / 变更日志
 
-## [2.4.1] - 2026-04-24
-🎞️ v2.4.1 核心更新：字体解耦资产化 & 高精度齿孔渲染引擎 & 自定义边框文字 & 文字排版精修
+## [2.4.1] - 2026-05-09
+🎞️ v2.4.1 核心更新：字体解耦资产化 & 核心架构并发加固 & 智能窗口适配 & 渲染管线稳定性提升
+
+### ⚡ 核心架构、并发安全与智能适配 (Core Architecture, Concurrency & Adaptive UI)
+- **[Architecture] 线程安全状态机 / BatchState Thread-Safety**:
+  - EN: Implemented a centralized `BatchState` machine using `threading.Lock` to manage image configurations, paths, and metadata cache. Eliminated all race conditions during batch updates and UI interactions.
+  - CN: 引入了基于 `threading.Lock` 的中心化 `BatchState` 状态机。所有图片配置、路径列表和元数据缓存现在均处于原子锁保护下，彻底消除了批量更新与 UI 交互时的竞态风险。
+- **[Performance] 并发限流与性能加固 / Concurrency Hardening**:
+  - EN: Integrated `ThreadPoolExecutor` for background folder scanning and `threading.Semaphore` for PIL image decoding. Effectively prevents UI freezing and system memory exhaustion during high-concurrency batch operations.
+  - CN: 集成了用于后台文件夹扫描的线程池（ThreadPoolExecutor）和用于 PIL 解码的信号量（Semaphore）限流机制。有效防止了高并发批处理时的 UI 假死和系统内存溢出。
+- **[Optimization] 原子预览渲染管线 / Atomic Preview Pipeline**:
+  - EN: Implemented an atomic `job_id` tracking system to synchronize preview requests. This resolves rendering flickers, prevents stale previews from overwriting current ones, and fixes the "missing borders" bug on initial folder load.
+  - CN: 实现了原子级 `job_id` 追踪系统。解决了预览图闪烁问题，确保旧的后台渲染任务不会覆盖最新的预览请求，并修复了刚打开文件夹时首张图片不显示边框的初始化漏洞。
+- **[UX] 智能窗口适配与 DPI 感知 / Intelligent Window Adaptation**:
+  - EN: Enabled Windows DPI awareness. Implemented a smart sizing logic: auto-maximizes on regular screens while maintaining a centered, professional 1400x1050 layout on ultrawide (21:9+) monitors.
+  - CN: 开启了 Windows 原生 DPI 感知。实现了智能尺寸逻辑：常规屏幕下默认开启最大化模式，带鱼屏（21:9+）下则自动切换至 1400x1050 居中模式，完美解决高分屏偏移问题。
+- **[Fix] EXIF 显隐逻辑与美学精修 / EXIF Toggle & Aesthetics**:
+  - EN: Fixed field visibility switches for Shutter, Aperture, ISO, and Lens. Improved footer aesthetics by automatically removing redundant separators ("|") when leading technical fields are hidden.
+  - CN: 修复了快门、光圈、ISO 和镜头的显隐开关失效问题。优化了副标题美学逻辑，当镜头等排头字段隐藏时，会自动清理掉起始位置多余的竖线分隔符。
 
 ### 🖋️ 文字排版与渲染精修 (Typography & Rendering Refinement)
 - **[Feature] 绝对行间距控制 / Absolute Line Spacing**:

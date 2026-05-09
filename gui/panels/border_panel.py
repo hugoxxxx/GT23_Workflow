@@ -13,6 +13,7 @@ from PIL import Image, ImageTk
 from gui.components import ThumbnailStrip, ExifGroup, SettingsGroup, AestheticGroup
 from gui.controllers.border_controller import BorderController
 from tkinter import simpledialog
+import concurrent.futures
 
 class BorderPanel:
     """
@@ -32,8 +33,10 @@ class BorderPanel:
         self.preview_job_id = 0  # EN: Preview job marker / CN: 预览任务标记
         self.preview_after_id = None # EN: Debounce timer ID / CN: 防抖计时器 ID
         self.film_list = []
-        self.lang = lang  # EN: Use provided language / CN: 使用传入的语言
+        self.lang = lang
         
+        # EN: Concurrency management (#20) / CN: 并发管理
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         # --- State Variables Consolidation ---
         self.mode_var = tk.StringVar(value="film")
         self.input_folder_var = tk.StringVar()
@@ -499,7 +502,8 @@ class BorderPanel:
         if os.path.exists(default_photos_in):
             count = self.controller.scan_folder(default_photos_in)
             if count > 0:
-                self._update_batch_width_cache(self.controller.current_batch_paths)
+                all_paths = self.controller.state.get_paths()
+                self._update_batch_width_cache(all_paths)
                 self.refresh_thumb_strip()
                 self.update_file_count()
                 self.log(f"CN: 已自动检测到 photos_in 文件夹，共 {count} 张图片 / EN: Auto-detected photos_in folder with {count} images")
@@ -515,7 +519,8 @@ class BorderPanel:
         self.font_offset_px_var.set("0")
         
         count = self.controller.scan_folder(folder)
-        self._update_batch_width_cache(self.controller.current_batch_paths)
+        all_paths = self.controller.state.get_paths()
+        self._update_batch_width_cache(all_paths)
         self.controller.clear_all_configs()
         self.refresh_thumb_strip()
         self.update_file_count()
@@ -551,7 +556,8 @@ class BorderPanel:
             self.input_folder_var.set(folder)
             self.controller.scan_folder(folder) # EN: Mandatory scan / CN: 必须调用扫描逻辑
             self.controller.clear_all_configs()
-            self._update_batch_width_cache(self.controller.current_batch_paths) # EN: Sync cache / CN: 同步缓存
+            all_paths = self.controller.state.get_paths()
+            self._update_batch_width_cache(all_paths) # EN: Sync cache / CN: 同步缓存
             self.update_file_count()
             self.refresh_thumb_strip()
             self.detect_layout_and_load_params(folder)
@@ -596,25 +602,32 @@ class BorderPanel:
             self.update_file_count()
 
     def refresh_thumb_strip(self):
-        self.thumb_strip.update_images(self.controller.current_batch_paths)
+        all_paths = self.controller.state.get_paths()
+        self.thumb_strip.update_images(all_paths)
         active = getattr(self, 'current_image_path', None)
-        if active in self.controller.current_batch_paths:
+        if active in all_paths:
             self.thumb_strip.set_active(active)
-        elif self.controller.current_batch_paths:
-            self.on_thumbnail_click(self.controller.current_batch_paths[0])
+        elif all_paths:
+            self.on_thumbnail_click(all_paths[0])
 
     def _update_batch_width_cache(self, paths, async_mode=True):
-        def scan_work():
-            for p in paths:
-                try:
-                    p_norm = os.path.normcase(os.path.normpath(p))
-                    if p_norm not in self.controller.batch_width_cache:
+        def scan_one(p):
+            try:
+                p_norm = os.path.normcase(os.path.normpath(p))
+                if self.controller.state.get_width(p_norm) is None:
+                    # EN: Protect image open with semaphore (#5)
+                    with self.controller.state.image_limit:
                         with Image.open(p) as img:
                             w, h = img.size
                             self.controller.update_aspect_ratio_cache(p, w/h)
-                except: pass
-        if async_mode: threading.Thread(target=scan_work, daemon=True).start()
-        else: scan_work()
+            except: pass
+
+        if async_mode:
+            for p in paths:
+                self.executor.submit(scan_one, p)
+        else:
+            for p in paths:
+                scan_one(p)
 
     def on_thumbnail_click(self, path):
         if getattr(self, 'current_image_path', None) == path: return
@@ -721,25 +734,36 @@ class BorderPanel:
 
     def _do_render_preview(self, img_path):
         try:
+            # EN: CRITICAL - Sync current UI values to state before rendering (#3, #4)
+            # CN: 关键 - 在渲染前先将当前 UI 的数值同步到状态机，确保渲染器能拿到最新参数
+            self._save_current_to_state(img_path)
+            
             manual_film = None
             if self.mode_var.get() == "film" and not self.auto_detect_var.get():
                 manual_film = self.film_combo.get().strip()
                 for display_name, keyword in self.film_list:
                     if manual_film == display_name: manual_film = keyword; break
+            
             self.preview_job_id += 1
             job_id = self.preview_job_id
             self._is_loading_preview, self._current_preview_pil = True, None
             self.redraw_preview()
+            
             def worker():
                 try:
                     final_pil, report = self.controller.get_preview_image(
                         img_path=img_path, is_digital=(self.mode_var.get()=="digital"),
                         is_pure=(self.mode_var.get()=="pure"), manual_film=manual_film,
-                        rotation=self.rotation_var.get(), use_branding=self.use_lens_branding_var.get()
+                        rotation=self.rotation_var.get(), use_branding=self.use_lens_branding_var.get(),
+                        panel_job_id=job_id # EN: Pass job_id to controller / CN: 传入 Job ID
                     )
-                    if not final_pil: raise Exception("Render failed")
+                    # EN: If final_pil is None, it means the job was discarded as stale (#4). Exit silently.
+                    # CN: 如果返回 None，说明该任务已被判定为过时并丢弃。保持沉默并退出，不要触发错误降级逻辑。
+                    if final_pil is None: return
+                    
                     img_copy = final_pil.copy()
                     def apply():
+                        # EN: Final safety check for panel-level job ID
                         if job_id != self.preview_job_id: return
                         self._is_loading_preview, self._current_preview_pil = False, img_copy
                         self._update_preview_info(img_copy.width, img_copy.height)
@@ -748,6 +772,8 @@ class BorderPanel:
                         self._check_font_overflow(report)
                     self.parent.after(0, apply)
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc() # EN: Print error for diagnostics / CN: 打印错误以供排查
                     err_msg = str(e)
                     self.parent.after(0, lambda m=err_msg, j=job_id: self._handle_preview_error(img_path, m, j))
             threading.Thread(target=worker, daemon=True).start()
@@ -914,7 +940,7 @@ class BorderPanel:
             self._save_current_to_state(self.current_image_path)
             if sync_all:
                 cfg = self.controller.get_image_config(self.current_image_path)
-                for p in self.controller.current_batch_paths:
+                for p in self.controller.state.get_paths():
                     if p != self.current_image_path: self.controller.update_image_config(p, cfg)
             self.update_preview_for_path(self.current_image_path)
 
@@ -934,7 +960,7 @@ class BorderPanel:
             
             # EN: Get current image base aspect / CN: 获取当前图片的基础比例
             path_norm = os.path.normcase(os.path.normpath(self.current_image_path))
-            img_ratio = self.controller.batch_width_cache.get(path_norm)
+            img_ratio = self.controller.state.get_width(path_norm)
             
             # EN: Fallback if cache not found / CN: 如果缓存未命中，则即时打开图片获取比例
             if not img_ratio:

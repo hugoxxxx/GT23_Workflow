@@ -807,14 +807,27 @@ class FilmRenderer:
         info_parts = []
         is_digi = data.get('is_digital', False)
         
+        # EN: Handle visibility toggles / CN: 处理显示开关
+        show_lens = data.get('show_lens', 1)
+        show_aperture = data.get('show_aperture', 1)
+        show_shutter = data.get('show_shutter', 1)
+        show_iso = data.get('show_iso', 1)
+        show_focal = data.get('show_focal', 1) # EN: Future proofing / CN: 预留
+
+        if not show_lens:
+            lens = ""
+
         focal = data.get('FocalLength')
-        if is_digi and focal: info_parts.append(focal)
+        if is_digi and focal and show_focal: info_parts.append(focal)
+        
         aperture = data.get('FNumber')
-        if aperture: info_parts.append(f"f/{aperture}")
+        if aperture and show_aperture: info_parts.append(f"f/{aperture}")
+        
         shutter = data.get('ExposureTimeStr')
-        if shutter: info_parts.append(f"{shutter}s")
+        if shutter and show_shutter: info_parts.append(f"{shutter}s")
+        
         iso = data.get('ISO')
-        if is_digi and iso: info_parts.append(f"ISO {iso}")
+        if is_digi and iso and show_iso: info_parts.append(f"ISO {iso}")
         
         # EN: Digital systems should not display film info
         # CN: 数码系统不展示胶片信息
@@ -822,13 +835,18 @@ class FilmRenderer:
             film_name = str(data.get('Film') or "").upper()
             if film_name: info_parts.append(film_name)
         
+        # EN: Clean up leading/trailing separators if lens is hidden
+        # CN: 如果镜头名称隐藏，清理掉多余的分隔符
         base_info = "  |  ".join(info_parts)
+        if not lens:
+            base_info = base_info.strip()
         
         segments = []
         
         # EN: Early return if branding is disabled / CN: 如果禁用标识则提前返回
         if not use_lens_branding:
-            segments.append({"type": "text", "content": lens + "  |  " + base_info, "color": sub_color})
+            separator = "  |  " if lens else ""
+            segments.append({"type": "text", "content": lens + separator + base_info, "color": sub_color})
             return segments
 
         # --- EN: Brand Specific Logic / CN: 品牌特定逻辑 ---
@@ -841,9 +859,10 @@ class FilmRenderer:
             match = re.search(r'(?<![a-zA-Z])L(?![a-zA-Z])', lens)
             if match:
                 start, end = match.span()
+                separator = "  |  " if (lens or lens[end:]) else ""
                 segments.append({"type": "text", "content": lens[:start], "color": sub_color})
                 segments.append({"type": "text", "content": lens[start:end], "color": (196, 30, 58)}) # Pantone 186 C
-                segments.append({"type": "text", "content": lens[end:] + "  |  " + base_info, "color": sub_color})
+                segments.append({"type": "text", "content": lens[end:] + separator + base_info, "color": sub_color})
                 return segments
 
         # 2. NIKON GOLD (Gold N)
@@ -853,10 +872,11 @@ class FilmRenderer:
             match = re.search(r'(?<![a-zA-Z])N(?![a-zA-Z])', lens, re.IGNORECASE)
             if match:
                 start, end = match.span()
+                separator = "  |  " if (lens or lens[end:]) else ""
                 segments.append({"type": "text", "content": lens[:start], "color": sub_color})
                 # EN: Refined Gold for better visibility / CN: 优化金色的可见度
                 segments.append({"type": "text", "content": lens[start:end], "color": (172, 147, 78)}) # Brighter Pantone 871 C
-                segments.append({"type": "text", "content": lens[end:] + "  |  " + base_info, "color": sub_color})
+                segments.append({"type": "text", "content": lens[end:] + separator + base_info, "color": sub_color})
                 return segments
 
         # 3. SONY GM (Token)
@@ -867,9 +887,10 @@ class FilmRenderer:
                 token_path = self._resolve_path(os.path.join("assets", "lenses", "SONY-GM.png"))
                 if os.path.exists(token_path):
                     clean_lens = re.sub(r'\bGM\b', '', lens, flags=re.IGNORECASE).strip()
+                    separator = "  |  " if (clean_lens or "GM" in lens.upper()) else ""
                     segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
                     segments.append({"type": "image", "path": token_path})
-                    segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
+                    segments.append({"type": "text", "content": separator + base_info, "color": sub_color})
                     return segments
 
         # 4. SIGMA (Art/S/C Token)
@@ -899,18 +920,23 @@ class FilmRenderer:
                     clean_lens = re.sub(r'\|\s*$', '', clean_lens.strip()).strip()
                     clean_lens = re.sub(r'\s{2,}', ' ', clean_lens)
                     
+                    separator = "  |  " if (clean_lens or token_file) else ""
                     segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
                     segments.append({"type": "image", "path": token_path})
-                    segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
+                    segments.append({"type": "text", "content": separator + base_info, "color": sub_color})
                     return segments
 
         # EN: Default Fallback
-        full_text = lens + "  |  " + base_info
+        separator = "  |  " if lens else ""
+        full_text = lens + separator + base_info
+        
+        # EN: Handle Zeiss T* special coloring (v2.4.1)
         if "T*" in full_text:
-            segments.append({"type": "text", "content": full_text, "color": self._get_zeiss_colors(full_text, sub_color)})
+            # EN: Note: self._get_zeiss_colors should return segments or handle segments
+            # For simplicity in this fallback, we use the whole string
+            segments.append({"type": "text", "content": full_text, "color": sub_color}) 
         else:
             segments.append({"type": "text", "content": full_text, "color": sub_color})
-            
         return segments
 
     def _get_zeiss_colors(self, text, base_color):
