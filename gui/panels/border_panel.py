@@ -49,8 +49,7 @@ class BorderPanel:
         self.font_offset_px_var = tk.StringVar(value="0")
         self.font_main_path_var = tk.StringVar(value="Default")
         self.font_sub_path_var = tk.StringVar(value="Default")
-        self.sprocket_enabled_var = tk.BooleanVar(value=False)
-        self.sprocket_text_var = tk.StringVar(value="")
+        self.font_spacing_var = tk.StringVar(value="180")
         
         self.v_offset_var = tk.IntVar(value=0)
         self.h_offset_var = tk.IntVar(value=0)
@@ -281,8 +280,7 @@ class BorderPanel:
             "h_offset": self.h_offset_var,
             "font_main_path": self.font_main_path_var,
             "font_sub_path": self.font_sub_path_var,
-            "sprocket_enabled": self.sprocket_enabled_var,
-            "sprocket_text": self.sprocket_text_var
+            "font_spacing": self.font_spacing_var,
         }
         self.settings_group = SettingsGroup(self.left_frame, lang=self.lang, 
                                            on_change=self.on_params_changed,
@@ -644,8 +642,6 @@ class BorderPanel:
             'font_v_offset': self._get_int_safe(self.font_offset_px_var, 0),
             'font_main_path': self.font_main_path_var.get(),
             'font_sub_path': self.font_sub_path_var.get(),
-            'sprocket_enabled': self.sprocket_enabled_var.get(),
-            'sprocket_text': self.sprocket_text_var.get(),
             'v_offset': self.v_offset_var.get(),
             'h_offset': self.h_offset_var.get(),
             'theme': self.theme_var.get(),
@@ -654,6 +650,7 @@ class BorderPanel:
             'film_combo': self.film_combo.get(),
             'sync_lr': self.sync_lr_var.get(),
             'target_ratio': self.target_ratio_var.get(),
+            'font_spacing': self._get_int_safe(self.font_spacing_var, 0),
             'exif': {
                 'Make': self.exif_make_var.get().strip(), 'Model': self.exif_model_var.get().strip(),
                 'Lens': self.exif_lens_var.get().strip(), 'Shutter': self.exif_shutter_var.get().strip(),
@@ -689,10 +686,9 @@ class BorderPanel:
                 if 'theme' in cfg: self.theme_var.set(cfg['theme'])
                 if 'film_combo' in cfg: self.film_combo.set(cfg['film_combo'])
                 if 'font_v_offset' in cfg: self.font_offset_px_var.set(cfg['font_v_offset'])
+                if 'font_spacing' in cfg: self.font_spacing_var.set(cfg['font_spacing'])
                 if 'font_main_path' in cfg: self.font_main_path_var.set(cfg['font_main_path'])
                 if 'font_sub_path' in cfg: self.font_sub_path_var.set(cfg['font_sub_path'])
-                if 'sprocket_enabled' in cfg: self.sprocket_enabled_var.set(cfg['sprocket_enabled'])
-                if 'sprocket_text' in cfg: self.sprocket_text_var.set(cfg['sprocket_text'])
                 self.v_offset_var.set(cfg.get('v_offset', 0))
                 self.h_offset_var.set(cfg.get('h_offset', 0))
                 self.sync_lr_var.set(cfg.get('sync_lr', True))

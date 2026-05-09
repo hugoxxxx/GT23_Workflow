@@ -41,8 +41,6 @@ class FilmRenderer:
         # EN: Handle dynamic fonts / CN: 处理动态字体解耦
         self.font_dir = bootstrap_fonts(self._resolve_path)
         
-        self.sprocket_enabled = False
-        self.sprocket_text = ""
         
         self._setup_cairo_dll()
 
@@ -300,10 +298,6 @@ class FilmRenderer:
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
-            # v2.4.1: Ensure pure black for sprockets even if theme is light
-            if data.get('sprocket_enabled', False):
-                canvas.paste((0,0,0), [0, 0, new_w, new_h])
-            
             if theme in ["frosted", "slate_teal"]:
                 # EN: Floating Photo Effect (Inner Shadow + Image + Border)
                 self._draw_floating_photo(canvas, img, side_pad_left, top_pad, line_color)
@@ -314,22 +308,6 @@ class FilmRenderer:
             
             draw = ImageDraw.Draw(canvas)
             timings['canvas_paste'] = time.perf_counter() - t_canvas_start
-            # --- EN: SPROCKET HOLES BORDER (v2.4.1) / CN: 齿孔边框 (v2.4.1) ---
-            if data.get('sprocket_enabled', False):
-                # EN: 135 Film Standard: Image Height = 24mm, Total Margin ~5.5mm (each)
-                # CN: 135 胶卷标准：成像高度 24mm，单边留白约 5.5mm
-                # EN: Use min(w,h) to handle vertical/horizontal correctly / CN: 使用较短边确保比例一致
-                px_per_mm = min(w, h) / 24.0
-                margin_px = int(5.5 * px_per_mm)
-                film_total_h = int(35.0 * px_per_mm)
-                
-                s_text = data.get('sprocket_text', '')
-                if not s_text:
-                    s_text = data.get('Film', '') or data.get('EdgeCode', '') or "FILM SPROCKET"
-                
-                # EN: Draw both top and bottom sprockets in one pass
-                self._draw_iso_sprockets_vector(canvas, 0, new_w, 0, margin_px, margin_px, film_total_h, px_per_mm, s_text)
-            
             # --- EN: TYPOGRAPHY HIERARCHY ---
             t_draw_start = time.perf_counter()
             main_text, sub_text = self._prepare_strings(data)
@@ -992,6 +970,13 @@ class FilmRenderer:
         # EN: Detect CJK characters and resolve paths / CN: 检测 CJK 字符并解析路径
         resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
 
+        # --- EN: TEXT SPACING RESOLUTION / CN: 文字间距解析 ---
+        # EN: Scale spacing relative to image's long edge for resolution consistency
+        # CN: 间距随照片长边等比缩放，确保在不同分辨率下观感一致
+        total_h = top_pad + h + bottom_splice
+        long_edge = max(new_w, total_h)
+        spacing_px = int(data['layout'].get('font_spacing_scale', 0) * long_edge)
+
         # EN: Positioning Logic
         inner_bottom_margin = 0
         if spkt_on:
@@ -1007,10 +992,14 @@ class FilmRenderer:
             m_size = min(m_size, target_px)
             s_size = min(s_size, target_px)
         else:
-            base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2 + v_offset
             v_gap_ref = max(m_size, s_size)
-            main_draw_pos = (new_w // 2, base_y - int(v_gap_ref * 0.55))
-            sub_draw_pos = (new_w // 2, base_y + int(v_gap_ref * 0.75))
+            
+            # EN: Fallback to dynamic default if 0 / CN: 如果为 0 则回退到动态默认值
+            actual_gap = spacing_px if spacing_px > 0 else int(v_gap_ref * 1.3)
+            
+            base_y = top_pad + h + (inner_bottom_margin + bottom_splice) // 2 + v_offset
+            main_draw_pos = (new_w // 2, base_y - int(actual_gap * 0.42))
+            sub_draw_pos = (new_w // 2, base_y + int(actual_gap * 0.58))
 
         # --- EN: CAMERA LOGO RENDERING / CN: 相机 LOGO 渲染 ---
         logo_drawn = False
@@ -1056,58 +1045,40 @@ class FilmRenderer:
                         scaled_w = int(orig_w * (target_h / orig_h))
                         logo_img = logo_img.resize((scaled_w, target_h), Image.Resampling.LANCZOS)
 
-                    # --- EN: LOGO INTELLIGENT TINTING (v2.4.1 Robust) / CN: LOGO 智能着色 ---
-                    is_special_brand = "leica" in make.lower() or "hasselblad" in make.lower()
-                    if logo_img.mode != 'RGBA': logo_img = logo_img.convert('RGBA')
-                    
-                    if not is_special_brand:
-                        tint_layer = Image.new("RGBA", logo_img.size, (int(m_color[0]), int(m_color[1]), int(m_color[2]), 255))
-                        alpha = logo_img.getchannel('A')
-                        logo_img = Image.composite(tint_layer, logo_img, alpha)
+                    # --- EN: LOGO INTELLIGENT TINTING (v2.4.0 Original) / CN: LOGO 智能着色 ---
+                    # EN: If theme color is NOT black, adapt dark parts to match while preserving brand colors
+                    # CN: 如果文字颜色不是黑色，则将 Logo 暗部适配为该颜色，同时保留其品牌特有色彩
+                    is_black_theme = (m_color[0] < 40 and m_color[1] < 40 and m_color[2] < 40)
+                    if not is_black_theme:
+                        if logo_img.mode != 'RGBA': logo_img = logo_img.convert('RGBA')
+                        # EN: Pixel-level scan to protect color brands while tinting "ink" parts
+                        # CN: 像素级扫描，在染色“墨迹”部分的同时保护徕卡红等专业标识
+                        pixels = list(logo_img.getdata())
+                        new_pixels = []
+                        for r, g, b, a in pixels:
+                            # EN: Identify dark neutral pixels (potential candidates for theme tinting)
+                            # CN: 识别暗中性色像素（可能是黑色文字或线条）
+                            is_dark = (r < 180 and g < 180 and b < 180) # EN: Wider range / CN: 更宽的识别范围
+                            is_neutral = (abs(r-g) < 40 and abs(g-b) < 40)
+                            if is_dark and is_neutral:
+                                # EN: Tint to theme color / CN: 染色为主题色
+                                new_pixels.append((*m_color, a))
+                            else:
+                                # EN: Preserve brand colors (e.g. Leica Red, Nikon Yellow)
+                                # CN: 保留品牌特有色彩
+                                new_pixels.append((r, g, b, a))
+                        logo_img.putdata(new_pixels)
 
-                    # --- EN: CENTERED COMPOSITE LAYOUT (v2.4.1) / CN: 复合居中布局 ---
-                    # EN: If using PNG font, we must pre-calculate total width for center alignment
-                    # CN: 如果使用 PNG 字体，必须预计算（Logo + 文字）的总宽度以实现居中
-                    if "LEICA-1050" in str(resolved_main).upper():
-                        from .typo_engine import TypoEngine
-                        png_text_img = TypoEngine.draw_png_text(main_text, "assets/fonts/1050", spacing_ratio=0.25, color=m_color)
-                        
-                        # EN: Scale PNG text to match target_h (scaled main font height)
-                        t_canvas_h = int(m_size * 1.5)
-                        if png_text_img.height > 0:
-                            f_w = int(png_text_img.width * (t_canvas_h / png_text_img.height))
-                            png_text_img = png_text_img.resize((f_w, t_canvas_h), Image.Resampling.LANCZOS)
-                        
-                        # EN: Total Width = Logo + Gap + Text
-                        gap = int(m_size * 0.4)
-                        total_w = logo_img.width + gap + png_text_img.width
-                        start_x = (new_w - total_w) // 2
-                        
-                        # EN: Paste Logo
-                        logo_y = main_draw_pos[1] - logo_img.height // 2
-                        draw._image.paste(logo_img, (start_x, logo_y), logo_img)
-                        
-                        # EN: Paste Text
-                        text_x = start_x + logo_img.width + gap
-                        text_y = main_draw_pos[1] - png_text_img.height // 2
-                        draw._image.paste(png_text_img, (text_x, text_y), png_text_img)
-                        logo_drawn = True # Both are drawn!
-                    else:
-                        # EN: Standard vector font - Handle combined Logo + Text centering
-                        # CN: 标准矢量字体 - 处理（Logo + 文字）复合居中
-                        main_text_w = main_font.getlength(main_text)
-                        gap = int(m_size * 0.4)
-                        total_w = logo_img.width + gap + main_text_w
-                        start_x = (new_w - total_w) // 2
-                        
-                        # EN: Paste Logo
-                        logo_y = main_draw_pos[1] - logo_img.height // 2
-                        draw._image.paste(logo_img, (int(start_x), logo_y), logo_img)
-                        
-                        # EN: Paste Text
-                        text_x = start_x + logo_img.width + gap
-                        draw.text((text_x, main_draw_pos[1]), main_text, fill=m_color, font=main_font, anchor="lm")
-                        logo_drawn = True # Mark as handled to prevent draw_advanced_text call later
+                    # EN: Center horizontally, align vertically with text pos
+                    # CN: 水平居中，垂直与文字位置对齐
+                    logo_x = (new_w - logo_img.width) // 2
+                    logo_y = main_draw_pos[1] - logo_img.height // 2
+                    
+                    # EN: Paste with alpha mask / CN: 带透明蒙版粘贴
+                    draw._image.paste(logo_img, (logo_x, logo_y), logo_img)
+                    
+                    logo_drawn = True
+                    timings['logo_render'] = time.perf_counter() - t_logo_sub_start
                     
                     # DEBUG: Draw center line
                     # draw.line([(new_w // 2, top_pad + h), (new_w // 2, new_h)], fill="red", width=2)
@@ -1137,19 +1108,16 @@ class FilmRenderer:
         try:
             from .typo_engine import TypoEngine
             
-            # --- EN: PNG VIRTUAL FONT ROUTING (v2.4.1) / CN: PNG 虚拟字体路由 ---
-            # EN: Handle "LEICA-1050" as a special image-based font
-            # CN: 将 "LEICA-1050" 作为特殊的基于图片的字体处理
-            
-            def draw_advanced_text(text, target_pos, font_path, size, color, key_prefix):
+            def draw_advanced_text(text, target_pos, font_path, size, color, key_prefix, spacing=0):
                 if "LEICA-1050" in str(font_path).upper():
                     # EN: Generate raw PNG composite
-                    png_img = TypoEngine.draw_png_text(text, "assets/fonts/1050", spacing_ratio=0.25, color=color)
+                    # For PNG fonts, we use default spacing
+                    png_img = TypoEngine.draw_png_text(text, "assets/fonts/1050", spacing_ratio=0.15, color=color)
                     
                     # EN: Scaling: The PNG engine uses its own ref_h. We need to match it to 'size'
                     # CN: 缩放：PNG 引擎有自己的参考高度，我们需要将其缩放至 UI 指定的 'size'
                     current_canvas_h = png_img.height
-                    target_canvas_h = int(size * 1.5)
+                    target_canvas_h = int(size)
                     
                     if current_canvas_h > 0:
                         final_w = int(png_img.width * (target_canvas_h / current_canvas_h))
@@ -1480,113 +1448,7 @@ class FilmRenderer:
                 if os.path.exists(p): return p
         return None
 
-    def _draw_iso_sprockets_vector(self, canvas, x_start, x_end, sy, top_info_h, bottom_info_h, strip_h, px_per_mm, film_name=""):
-        """
-        EN: Render high-precision sprockets using SVG + CairoSVG (Mature Port from Renderer135).
-        CN: 绘制高精度齿孔（从 Renderer135 移植的成熟方案）。
-        """
-        strip_width = int(x_end - x_start)
-        if strip_width <= 0: return
 
-        dwg = svgwrite.Drawing(size=(strip_width, strip_h), profile='tiny')
-        dwg.viewbox(0, 0, strip_width, strip_h)
-
-        # EN: Identify Movie Film (More Precise) / CN: 精确识别电影胶片
-        film_name_lower = film_name.lower()
-        is_movie = any(kw in film_name_lower for kw in ['vision', 'tungsten', '52', '72', '50d', '250d', '500t', '200t', 'double-x'])
-
-        # EN: Physical Parameters (Still 1007 vs Movie BH-1866)
-        if is_movie:
-            # EN: Movie film perfs are wider (2.79mm) but shorter (1.85mm)
-            w_mm, h_mm = 2.794, 1.854
-            r_mm = 0.25 # Sharp corner
-        else:
-            # EN: Still film perfs are 1.98mm x 2.80mm (Vertical)
-            w_mm, h_mm = 1.98, 2.80
-            r_mm = 0.50 # Balanced corner
-            
-        w_px, h_px = w_mm * px_per_mm, h_mm * px_per_mm
-        r_px = r_mm * px_per_mm
-        pitch_px = 4.75 * px_per_mm
-
-        # EN: Calculate Y coordinates (Centered within the 2.5mm available channel)
-        # CN: 计算 Y 坐标（在 2.5mm 的通道内垂直居中）
-        margin_px = 2.0 * px_per_mm # Top edge to channel start
-        # EN: Vertical center of the 2.8mm standard channel area (2.0mm to 4.8mm from edge)
-        chan_center_y = (2.0 + 1.4) * px_per_mm
-        y_top_svg = chan_center_y - h_px / 2
-        y_bottom_svg = strip_h - chan_center_y - h_px / 2
-
-        def make_rounded_rect_path(x, y, w, h, r):
-            return f"M {x+r},{y} H {x+w-r} A {r},{r} 0 0 1 {x+w},{y+r} V {y+h-r} A {r},{r} 0 0 1 {x+w-r},{y+h} H {x+r} A {r},{r} 0 0 1 {x},{y+h-r} V {y+r} A {r},{r} 0 0 1 {x+r},{y} Z"
-
-        def make_custom_sprocket_path(x, y, w, h):
-            # EN: Refined BH-1866 path geometry
-            actual_w, actual_h = w, h
-            rad_val = actual_h * (160/310)
-            sag_val = actual_h * (40/310)
-            mid_h = actual_h - 2 * sag_val
-            path = [f"M {x},{y+sag_val}", f"A {rad_val},{rad_val} 0 0 1 {x+actual_w},{y+sag_val}",
-                    f"L {x+actual_w},{y+sag_val+mid_h}", f"A {rad_val},{rad_val} 0 0 1 {x},{y+sag_val+mid_h}",
-                    "Z"]
-            return "".join(path)
-
-        # EN: Symmetrical Alignment Logic (v2.4.1) / CN: 对称对齐逻辑
-        # EN: Center the sequence of sprockets relative to the strip width
-        # CN: 将齿孔序列相对于条带宽度进行居中对齐
-        num_sprockets = int(strip_width / pitch_px)
-        if (num_sprockets * pitch_px + w_px) <= strip_width:
-            num_sprockets += 1
-        
-        total_seq_w = (num_sprockets - 1) * pitch_px + w_px
-        start_x = (strip_width - total_seq_w) / 2
-        
-        current_x = start_x
-        count = 0
-        while count < num_sprockets:
-            if current_x + w_px <= strip_width + 1:
-                path_fn = make_custom_sprocket_path if is_movie else make_rounded_rect_path
-                for ly in [y_top_svg, y_bottom_svg]:
-                    args_core = (current_x, ly, w_px, h_px) if is_movie else (current_x, ly, w_px, h_px, r_px)
-                    dwg.add(dwg.path(d=path_fn(*args_core), fill='#fffef2', fill_opacity=1.0))
-                current_x += pitch_px
-                count += 1
-            else:
-                break
-
-        try:
-            from cairosvg import svg2png
-            png_bytes = svg2png(bytestring=dwg.tostring(), dpi=1200, output_width=strip_width, output_height=int(strip_h))
-        except:
-            return
-
-        # --- EN: PHOTOREALISTIC BLOOM ENGINE (v2.4.2) ---
-        # EN: 0.5mm precision blur radius
-        blur_px = 0.5 * px_per_mm
-        try:
-            core_img = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
-            from PIL import ImageFilter
-            
-            # EN: 1. Generate Glow Layer
-            alpha_mask = core_img.getchannel('A')
-            glow_mask = alpha_mask.filter(ImageFilter.GaussianBlur(radius=blur_px))
-            
-            # EN: Boost glow intensity (Harder falloff for premium look)
-            glow_mask = glow_mask.point(lambda p: min(255, int(p * 2.2))) 
-            
-            glow_layer = Image.new('RGBA', core_img.size, (255, 254, 242, 255))
-            glow_layer.putalpha(glow_mask)
-            
-            # EN: 2. Compositing using Alpha-Composite (Scientific Blending)
-            # CN: 使用 Alpha-Composite 进行科学合成（模拟物理叠光）
-            # EN: This ensures Alpha weights are correctly merged
-            final_strip = Image.alpha_composite(glow_layer, core_img)
-            
-            canvas.paste(final_strip, (int(x_start), int(sy)), mask=final_strip)
-        except Exception as e:
-            # EN: Fallback to basic if PIL composite fails
-            vector_strip = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
-            canvas.paste(vector_strip, (int(x_start), int(sy)), mask=vector_strip)
 
 def bootstrap_fonts(resolver_func=None):
     """

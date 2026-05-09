@@ -1,7 +1,30 @@
 # Change Log / 变更日志
 
 ## [2.4.1] - 2026-04-24
-🎞️ v2.4.1 核心更新：字体解耦资产化 & 高精度齿孔渲染引擎 & 自定义边框文字
+🎞️ v2.4.1 核心更新：字体解耦资产化 & 高精度齿孔渲染引擎 & 自定义边框文字 & 文字排版精修
+
+### 🖋️ 文字排版与渲染精修 (Typography & Rendering Refinement)
+- **[Feature] 绝对行间距控制 / Absolute Line Spacing**:
+  - EN: Added "Line Spacing (px)" control in Advanced Settings. Implemented a resolution-aware absolute gap logic that adjusts the vertical distance between the title and subtitle proportionally to the image's long edge.
+  - CN: 在高级设置中新增了“行间距 (px)”控制。实现了具有“分辨率感知”的绝对间距逻辑，确保主副标题之间的垂直距离在不同分辨率下始终保持一致的视觉比例。
+- **[Aesthetics] 字体缩放比例对齐 / Unified Font Scaling**:
+  - EN: Eliminated the legacy 1.5x height multiplier for PNG fonts (LEICA-1050). Vector and bitmap fonts now share a unified 1:1 physical height reference for professional layout parity.
+  - CN: 彻底废除了 PNG 字体（LEICA-1050）遗留的 1.5 倍高度补偿。实现了矢量字体与位图字体在物理高度上的 1:1 对齐，确保了排版视觉高度的整齐划一。
+- **[Feature] 相机 Logo 渲染回归 / Camera Logo Pipeline Restoration**:
+  - EN: Reverted the camera logo engine to the stable v2.4.0 pixel-level scan algorithm. Improved theme-adaptive tinting accuracy while strictly preserving iconic brand colors like Leica Red.
+  - CN: 将相机 Logo 渲染引擎回归至最稳定的 v2.4.0 像素级扫描算法。提升了不同主题下的色调自适应精度，并严格保护了徕卡红等品牌标志性色彩。
+- **[Fix] 相机型号重复显示修复 / Duplicate Model Display Fix**:
+  - EN: Resolved an issue where the camera model text would redundantly display next to a custom camera logo. The renderer now intelligently skips text generation if a brand-specific logo is successfully drawn.
+  - CN: 修复了自定义相机 Logo 与 EXIF 相机型号文本重复显示的 Bug。渲染引擎现在会智能判断，若已成功绘制品牌 Logo，则自动跳过冗余的型号文本渲染。
+- **[Fix] 渲染引擎全局鲁棒性加固 / Renderer Global Hardening**:
+  - EN: Resolved critical `NameError` and `UnboundLocalError` in the rendering pipeline. Stabilized the variable resolution order for text spacing and font scaling across all layout modes.
+  - CN: 修复了渲染流水线中严重的 `NameError` 与 `UnboundLocalError`。通过重构变量解析顺序，确保了文字间距、字号缩放等关键参数在所有布局模式下的全局稳定性。
+- **[Fix] 预览与导出逻辑 1:1 对齐 / Preview-Render Parity**:
+  - EN: Synchronized the parameter assembly logic in `BorderController.get_preview_image` to include the new spacing and scaling parameters, achieving perfect visual parity between the GUI preview and final output.
+  - CN: 彻底同步了 `BorderController.get_preview_image` 中的参数组装逻辑。确保预览图能实时、精准地反映间距与缩放调整，实现了“所见即所得”的 1:1 视觉对齐。
+- **[UX] 参数持久化增强 / Enhanced Parameter Persistence**:
+  - EN: Integrated line spacing into the state persistence and batch synchronization pipeline. Users can now save, load, and batch-apply custom spacing settings across their entire catalog.
+  - CN: 将行间距参数纳入了状态持久化与批量同步体系。支持间距设置的自动保存、读取以及跨图片的一键批量同步。
 
 ### 🖋️ 字体系统解耦 (Font Decoupling & Assetization)
 - **[Feature] 外部字体动态加载 / Dynamic External Fonts**:
@@ -14,16 +37,37 @@
   - EN: Integrated "Default" option for fonts to ensure out-of-the-box usability while prioritizing external overrides if selected.
   - CN: 集成了“Default”默认字体选项，确保开箱即用的稳定性，同时支持一键切换至选定的外部字体，实现了真正的资产隔离。
 
-### ⚙️ 齿孔渲染与自定义边框 (Sprocket Rendering & Custom Border)
-- **[Feature] 高精度矢量齿孔渲染 / High-Precision Vector Sprockets**:
-  - EN: Ported the high-precision BH-1866 movie film sprocket rendering engine to the main renderer. Uses SVG + CairoSVG for sub-pixel anti-aliased geometry.
-  - CN: 移植了高精度 BH-1866 电影胶片齿孔渲染引擎。采用 SVG + CairoSVG 矢量技术，实现了次像素级的抗锯齿几何呈现。
-- **[Feature] 自定义齿孔文字 / Custom Sprocket Text**:
-  - EN: Added custom text rendering in the sprocket area. Supports using EXIF tags (Film/EdgeCode) or manual text entry with color-coded "Film Orange" styling.
-  - CN: 支持在齿孔边框区域绘制自定义文字。可自动提取 EXIF 中的卷名/编号，或手动输入，并默认采用经典的“胶片橙”配色方案。
-- **[Interactive] 实时齿孔开关 / Live Sprocket Toggle**:
-  - EN: Added "Enable Sprockets" switch and text entry in Advanced Settings for instantaneous preview feedback.
-  - CN: 在高级设置面板新增了“开启齿孔边框”开关与文字输入框，支持预览界面瞬间响应，创作直观快捷。
+### 🛠️ GUI 边框控制逻辑深度优化 (Border Panel Core Logic Refactor)
+- **[Debug] 日志系统注入 / Debug Logging System**:
+  - EN: Integrated a dedicated logging system (`GT23.BorderPanel`) recorded in `logs/border_debug.log` to track margin calculations and state transitions.
+  - CN: 引入了专用日志系统 (`GT23.BorderPanel`)，记录于 `logs/border_debug.log`，用于实时追踪边距计算逻辑与状态机跳转。
+- **[Fix] 比例切换跳变修复 / Aspect Ratio Switch Reset Fix**:
+  - EN: Decoupled aspect ratio switching from offset slider events. Switching ratios now correctly applies aesthetic presets without being overwritten by stale offset values.
+  - CN: 实现了比例切换与偏移量滑块事件的彻底解耦。切换画幅比例时将精准应用美学预设，不再会被旧的偏移量数值错误覆盖导致边距跳变。
+- **[Fix] 比例锁定时偏移量联动 / Unified Offset Redistribution**:
+  - EN: Unified the redistribution logic in `_handle_ratio_locked_sync`. Offset sliders (V/H) are now respected during all layout updates, including ratio switches and manual margin edits.
+  - CN: 统合了比例锁定下的重分配逻辑。现在无论是拖动滑块、切换比例还是手动改值，偏移量滑块（V/H）的物理权重都会被严格执行。
+- **[Optimization] 动态文字安全区 / Dynamic Text Safety Buffer**:
+  - EN: Optimized `TEXT_RESERVE` with a dynamic threshold (12% of ref). Added a 50/50 split fallback for tight vertical spaces to prevent images from hitting the top edge.
+  - CN: 优化了 `TEXT_RESERVE` 防撞区逻辑。引入了动态阈值（基准 12%），并在垂直空间不足时自动降级为居中对齐，消除了小边距下照片“顶到头”的问题。
+- **[Fix] 旋转感知比例锁定 / Rotation-Aware Ratio Locking**:
+  - EN: Implemented rotation awareness for aspect ratio calculations. Clearing the cache upon rotation ensures that margin redistribution correctly accounts for 90/270-degree UI rotations.
+  - CN: 实现了具有“旋转感知”的比例锁定。旋转图片时会自动清空宽高比缓存并重新计算物理比例，确保 90/270 度旋转后的边距分布依然符合视觉逻辑。
+- **[UX] 比例切换自动归零 / Auto-Reset Offsets on Ratio Change**:
+  - EN: Automatically resets offset sliders to zero when choosing a new aspect ratio preset to provide a clean layout baseline.
+  - CN: 在选择新的比例预设时会自动将偏移量滑块重置为零，为创作者提供干净的初始布局基准。
+- **[Fix] 原图模式边距锁定修复 / Free Mode Margin Preservation**:
+  - EN: Deactivated legacy ratio-solver intervention in "Original (Free)" mode. Fixed the bug where custom non-symmetric margins were being forcibly reset by a 1:1 square logic.
+  - CN: 彻底封印了遗留解算器在“原图（自由）”模式下的干预行为。解决了哈苏等画幅在手动设置大底留白后，被 1:1 正方形逻辑强行重置导致文字压图的 Bug。
+- **[Fix] 全链路像素精度对齐 / Full-Stack Pixel Precision Sync**:
+  - EN: Re-engineered the parameter pipeline from UI to Renderer to support absolute pixel pass-through. The rendering engine now prioritizes raw `_px` values, ensuring 1:1 parity between GUI input and rendered output.
+  - CN: 重构了从 UI 到渲染器的参数传递机制，实现了“像素级”直连。渲染引擎现在优先识别 UI 传入的 `_px` 绝对数值，彻底杜绝了因比例换算误差导致的布局偏移。
+- **[Optimization] 渲染器逻辑硬化 / Renderer Logic Hardening**:
+  - EN: Hardened `FilmRenderer` parameter priority model. Enforced a "Pixel > Ratio > Default" resolution path in Free Mode to strictly preserve format-aware golden layouts.
+  - CN: 加固了渲染器的参数优先级模型。在自由模式下强制执行“像素 > 比例 > 默认”的解析路径，确保哈苏 6x6 等特殊画幅的黄金布局在任何情况下都能 100% 物理还原。
+- **[Interactive] UI 响应降噪 / UI Response De-noising**:
+  - EN: Integrated atomic loading guards during ratio transitions to eliminate intermediate preview flicker and state race conditions.
+  - CN: 在比例切换与恢复过程中引入了原子化加载保护，消除了变量批量更新时的中间态预览跳变，提升了操作流畅度。
 
 ### 🛠️ 稳定性与 UI 优化 (Stability & UI Refinement)
 - **[Architecture] 资源引导加固 / Asset Bootstrap Hardening**:

@@ -126,9 +126,8 @@ class BorderController:
         # CN: 需要同步的参数（不含 EXIF 等特定信息）
         sync_keys = [
             'left_px', 'right_px', 'top_px', 'bottom_px', 
-            'font_scale', 'font_sub_px', 'font_v_offset',
+            'font_scale', 'font_sub_px', 'font_v_offset', 'font_spacing',
             'font_main_path', 'font_sub_path',
-            'sprocket_enabled', 'sprocket_text',
             'theme', 'branding', 'auto_detect', 'film_combo', 'sync_lr'
         ]
         sync_data = {k: params[k] for k in sync_keys if k in params}
@@ -237,7 +236,8 @@ class BorderController:
                     "bottom": layout_cfg.get('bottom_px', 585) / ref,
                     "font_main_scale": layout_cfg.get('font_scale', 144) / ref,
                     "font_sub_scale": layout_cfg.get('font_sub_px', 112) / ref,
-                    "font_v_offset": layout_cfg.get('font_v_offset', 0) / ref
+                    "font_v_offset": layout_cfg.get('font_v_offset', 0) / ref,
+                    "font_spacing_scale": layout_cfg.get('font_spacing', 0) / ref
                 })
                 
                 # EN: Apply Font Overrides / CN: 应用字体覆盖
@@ -254,8 +254,6 @@ class BorderController:
                             data[key] = v
                 
                 data['target_ratio'] = cfg.get('target_ratio', global_cfg.get('target_ratio', 'Original'))
-                data['sprocket_enabled'] = cfg.get('sprocket_enabled', False)
-                data['sprocket_text'] = cfg.get('sprocket_text', '')
 
                 # EN: Theme mapping
                 theme_val = self.resolve_theme(theme_str)
@@ -307,7 +305,7 @@ class BorderController:
 
         layout_cfg = cfg if cfg else {
             "left_px": 180, "right_px": 180, "top_px": 180, "bottom_px": 585, 
-            "font_scale": 144, "font_sub_px": 112, "font_v_offset": 0
+            "font_scale": 144, "font_sub_px": 112, "font_v_offset": 0, "font_spacing": 0
         }
         ref = 4500.0
         data['layout'].update({
@@ -317,7 +315,8 @@ class BorderController:
             "bottom": layout_cfg.get('bottom_px', 585) / ref,
             "font_main_scale": layout_cfg.get('font_scale', 144) / ref,
             "font_sub_scale": layout_cfg.get('font_sub_px', 112) / ref,
-            "font_v_offset": layout_cfg.get('font_v_offset', 0) / ref
+            "font_v_offset": layout_cfg.get('font_v_offset', 0) / ref,
+            "font_spacing_scale": layout_cfg.get('font_spacing', 0) / ref
         })
         
         # EN: Apply Font Overrides / CN: 应用字体覆盖
@@ -334,8 +333,6 @@ class BorderController:
                     data[key] = v
         
         data['target_ratio'] = cfg.get('target_ratio', 'Original')
-        data['sprocket_enabled'] = cfg.get('sprocket_enabled', False)
-        data['sprocket_text'] = cfg.get('sprocket_text', '')
 
         theme_str = cfg.get('theme', 'light')
         theme_val = self.resolve_theme(theme_str)
