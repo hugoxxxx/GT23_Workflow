@@ -53,12 +53,29 @@ class LogoFinder:
                     if os.path.exists(brand_path):
                         return brand_path
             
-            # 3. EN: Fuzzy brand match in current directory
+            # 3. EN: Fuzzy brand match (Last resort, only if we can't find a brand-only logo)
+            # CN: 模糊品牌匹配（作为最后手段，且尽可能寻找纯品牌 Logo）
             try:
                 files = os.listdir(l_dir)
+                # EN: Sort files to ensure stable matching / CN: 排序确保匹配稳定性
+                files.sort()
+                
+                # EN: Look for a file that is EXACTLY the brand name (ignoring case/ext)
+                # CN: 优先寻找文件名刚好等于品牌名的文件
                 for f in files:
-                    if make_u and make_u in f.upper() and any(f.lower().endswith(ext) for ext in [".png", ".svg", ".jpg"]):
+                    stem = os.path.splitext(f)[0].upper()
+                    if stem == make_u:
                         return os.path.join(l_dir, f)
+                
+                # EN: If still nothing, pick the first one that contains the brand name BUT is not another specific model
+                # CN: 如果还是没有，寻找包含品牌名但不是其他特定型号的文件
+                for f in files:
+                    f_up = f.upper()
+                    if make_u and make_u in f_up and any(f_up.endswith(ext) for ext in [".PNG", ".SVG", ".JPG"]):
+                        # EN: Safety check: if there's an underscore, it might be another model
+                        # CN: 安全检查：如果包含下划线且不是纯品牌，可能误中其他型号
+                        if "_" not in f or f_up.startswith(make_u + "_LOGO"):
+                            return os.path.join(l_dir, f)
             except:
                 pass
                 

@@ -93,6 +93,18 @@ class FilmRenderer:
             
             w, h = img.size
             
+            # --- EN: AUTO-IDENTIFY METADATA (v2.4.1 Parity) ---
+            # CN: 自动识别元数据（确保与 v2.4.1 逻辑对齐）
+            # EN: If data is minimal, try to fill it from EXIF
+            # CN: 如果 data 为空或缺少核心信息，尝试从 EXIF 中提取
+            if not data.get('Make') or not data.get('Model'):
+                auto_data = ImageLoader.get_metadata(img_path)
+                # EN: Only fill if manual overrides are not present
+                # CN: 仅在没有手动覆盖值时进行填充
+                for k, v in auto_data.items():
+                    if k not in data or not data[k]:
+                        data[k] = v
+            
             # --- EN: THEME SETUP / CN: 主题颜色设置 ---
             t_layout_start = time.perf_counter()
             bg_color, main_color, sub_color, line_color = self._apply_theme_colors(theme, index=rainbow_index)

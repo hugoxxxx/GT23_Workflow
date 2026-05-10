@@ -70,3 +70,40 @@ class ImageLoader:
         new_h = int(h * scale)
         
         return img.resize((new_w, new_h), algo)
+    @staticmethod
+    def get_metadata(img_path):
+        """
+        EN: Extracts basic camera metadata from image EXIF.
+        CN: 从图片 EXIF 中提取基础相机元数据（品牌、型号、曝光参数等）。
+        """
+        data = {}
+        try:
+            with Image.open(img_path) as img:
+                exif = img.getexif()
+                if not exif:
+                    return data
+                
+                # EN: Mapping standard EXIF tags / CN: 映射标准 EXIF 标签
+                # 271: Make, 272: Model
+                data['Make'] = exif.get(271, "")
+                data['Model'] = exif.get(272, "")
+                
+                # EN: Advanced Exif IFD / CN: 进阶 Exif 信息
+                exif_ifd = exif.get_ifd(0x8769)
+                if exif_ifd:
+                    # 33434: ExposureTime, 33437: FNumber, 34855: ISOSpeedRatings, 42036: LensModel
+                    data['ISO'] = str(exif_ifd.get(34855, ""))
+                    data['FNumber'] = str(exif_ifd.get(33437, ""))
+                    data['LensModel'] = exif_ifd.get(42036, "")
+                    
+                    # EN: Exposure Time Fraction / CN: 快门时间分数处理
+                    shutter = exif_ifd.get(33434)
+                    if shutter:
+                        if shutter < 1:
+                            data['ExposureTimeStr'] = f"1/{int(1/shutter)}"
+                        else:
+                            data['ExposureTimeStr'] = str(shutter)
+        except Exception as e:
+            print(f"CN: [!] 自动提取 EXIF 失败: {e}")
+            
+        return data
