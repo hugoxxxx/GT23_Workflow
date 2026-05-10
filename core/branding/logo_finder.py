@@ -58,6 +58,24 @@ class LogoFinder:
                     target_path = os.path.join(l_dir, cand)
                     if os.path.exists(target_path):
                         return target_path
+                        
+                # 1.1 EN: Try Normalized match (ignore all separators in filename)
+                # CN: 尝试去重匹配（忽略文件名中的所有分隔符和空格）
+                try:
+                    files = os.listdir(l_dir)
+                    def _norm(s): return "".join(c for c in s if c.isalnum()).upper()
+                    norm_target = _norm(make_u + clean_model)
+                    
+                    for f in files:
+                        f_up = f.upper()
+                        if f_up.endswith(('.PNG', '.SVG', '.JPG')):
+                            if norm_target == _norm(os.path.splitext(f_up)[0]):
+                                return os.path.join(l_dir, f)
+                            # EN: Also allow if model is contained and brand matches
+                            if make_u in f_up and clean_model in _norm(f_up):
+                                return os.path.join(l_dir, f)
+                except:
+                    pass
             
             # 2. EN: Try brand match (MAKE.svg or MAKE.png)
             if make_u:
