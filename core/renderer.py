@@ -1,14 +1,8 @@
 import os
 import io
 import sys
-import shutil
 import time
-from fractions import Fraction
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
-try:
-    import piexif
-except ImportError:
-    piexif = None
 from utils.config_manager import config_manager
 
 try:
@@ -1050,29 +1044,7 @@ class FilmRenderer:
         full_canvas.paste(canvas_rgba, (shadow_margin // 2, shadow_margin // 2), canvas_rgba)
         return full_canvas
 
-    def _save_with_limit(self, img, original_path, output_dir, data, current_res, layout_name, output_prefix="", theme="light"):
-        # EN: Default to JPG for better social media compatibility, fallback to PNG if requested
-        # CN: 默认输出 JPG 以获得更好的社交平台兼容性（自动硬化阴影）
-        ext = ".jpg"
-        out_name = f"GT23_{output_prefix}{os.path.splitext(os.path.basename(original_path))[0]}{ext}"
-        save_path = os.path.join(output_dir, out_name)
-        
-        try:
-            # EN: Build updated EXIF bytes / CN: 构建更新后的 EXIF 字节流
-            exif_bytes = ExifEditor.build_exif_bytes(original_path, data)
-            
-            # EN: Modular Save / CN: 模块化保存
-            out_name, f_size = ImageSaver.flatten_and_save(img, save_path, exif_bytes, theme=theme)
-            
-            print(f"CN: [OK] 批量任务保存成功: {out_name}")
-        except Exception as e:
-            print(f"CN: [!] JPG 保存失败，回退至 PNG: {e}")
-            save_path = save_path.replace(".jpg", ".png")
-            img.save(save_path, "PNG", optimize=True)
-        
-        # EN: Log the identified format clearly / CN: 明确记录识别出的画幅
-        print(f"CN: [OK] 渲染完成: {out_name} | 画幅: {layout_name}")
-        return out_name
+
 
     def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
         """
