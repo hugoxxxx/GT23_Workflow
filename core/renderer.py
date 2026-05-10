@@ -22,6 +22,8 @@ except ImportError:
     svgwrite = None
 
 from .io.image_loader import ImageLoader
+from .io.exif_editor import ExifEditor
+from .io.saver import ImageSaver
 
 class FilmRenderer:
     """
@@ -437,16 +439,12 @@ class FilmRenderer:
                     save_name = os.path.splitext(save_name)[0] + ".jpg"
                 save_path = os.path.join(output_dir, save_name)
 
-                # EN: Flatten before saving / CN: 保存前进行底色复合处理
-                flatten_bg_color = (0, 0, 0) if theme in ["dark", "slate_teal"] else (255, 255, 255)
-                bg = Image.new("RGB", final_output.size, flatten_bg_color)
-                if final_output.mode == 'RGBA':
-                    bg.paste(final_output, mask=final_output.split()[3])
-                else:
-                    bg.paste(final_output)
-                bg.save(save_path, quality=95, subsampling=0)
+                # EN: Modular Save / CN: 模块化保存（自动处理打平与 EXIF）
+                exif_bytes = ExifEditor.build_exif_bytes(img_path, data)
+                out_name, f_size = ImageSaver.flatten_and_save(final_output, save_path, exif_bytes, theme=theme)
+                
                 timings['save'] = time.perf_counter() - t_save_start
-                final_output = bg
+                final_output = out_name
 
             timings['total'] = time.perf_counter() - t_start
             return final_output, timings
@@ -1259,96 +1257,22 @@ class FilmRenderer:
         save_path = os.path.join(output_dir, out_name)
         
         try:
-            if img.mode == 'RGBA':
-                # EN: Flatten onto matching background color for JPEG
-                # CN: 为 JPG 复合底色，强制“硬化”阴影效果（深色模式用黑底，其余用白底）
-                flatten_bg_color = (0, 0, 0) if theme == "dark" else (255, 255, 255)
-                background = Image.new("RGB", img.size, flatten_bg_color)
-                background.paste(img, mask=img.split()[3]) # Use alpha channel as mask
-                img_to_save = background
-            else:
-                img_to_save = img
-
             # EN: Build updated EXIF bytes / CN: 构建更新后的 EXIF 字节流
-            exif_bytes = self._build_exif_bytes(original_path, data)
-
-            img_to_save.save(save_path, "JPEG", quality=98, subsampling=0, exif=exif_bytes)
+            exif_bytes = ExifEditor.build_exif_bytes(original_path, data)
+            
+            # EN: Modular Save / CN: 模块化保存
+            out_name, f_size = ImageSaver.flatten_and_save(img, save_path, exif_bytes, theme=theme)
+            
+            print(f"CN: [OK] 批量任务保存成功: {out_name}")
         except Exception as e:
             print(f"CN: [!] JPG 保存失败，回退至 PNG: {e}")
             save_path = save_path.replace(".jpg", ".png")
-            out_name = out_name.replace(".jpg", ".png")
             img.save(save_path, "PNG", optimize=True)
-
-        f_size = os.path.getsize(save_path) / (1024 * 1024)
-        # EN: 10MB limit is generous for JPG, only slight adjustment if exceeded
-        # CN: 对于 JPG，10MB 限制非常充裕，若超标仅需微调质量
-        if f_size > 10.0:
-            print(f"CN: [!] 文件较大 ({f_size:.1f}MB)，正尝试以 Quality 92 重新保存...")
-            img_to_save.save(save_path, "JPEG", quality=92, subsampling=0, exif=exif_bytes)
         
         # EN: Log the identified format clearly / CN: 明确记录识别出的画幅
         print(f"CN: [OK] 渲染完成: {out_name} | 画幅: {layout_name}")
         return out_name
 
-    def _build_exif_bytes(self, original_path, data):
-        """
-        EN: Extract original EXIF and patch it with manual UI overrides.
-        CN: 提取原始 EXIF 并根据 UI 手动覆盖参数进行 Patch。
-        """
-        raw_fallback = b""
-        try:
-            with Image.open(original_path) as test_img:
-                raw_fallback = test_img.info.get("exif", b"")
-        except: pass
-
-        if not piexif:
-            return raw_fallback
-        
-        try:
-            # 1. EN: Load original EXIF / CN: 加载原始 EXIF
-            exif_dict = piexif.load(original_path)
-            
-            # 2. EN: Patch 0th IFD (Make, Model) / CN: 更新 0th IFD (品牌、型号)
-            # ... (lines 740-784) ...
-            # (Note: I'll use a larger block to ensure correct context)
-            if data.get('Make'):
-                exif_dict["0th"][piexif.ImageIFD.Make] = data['Make'].encode('utf-8')
-            if data.get('Model'):
-                exif_dict["0th"][piexif.ImageIFD.Model] = data['Model'].encode('utf-8')
-                
-            if "Exif" not in exif_dict: exif_dict["Exif"] = {}
-            if data.get('LensModel'):
-                exif_dict["Exif"][piexif.ExifIFD.LensModel] = data['LensModel'].encode('utf-8')
-            if data.get('ISO'):
-                try: exif_dict["Exif"][piexif.ExifIFD.ISOSpeedRatings] = int(float(data['ISO']))
-                except: pass
-            
-            shutter = data.get('ExposureTimeStr')
-            if shutter:
-                try:
-                    if "/" in shutter:
-                        num, den = map(int, shutter.split("/"))
-                        exif_dict["Exif"][piexif.ExifIFD.ExposureTime] = (num, den)
-                    else:
-                        val = float(shutter)
-                        f = Fraction(val).limit_denominator(1000000)
-                        exif_dict["Exif"][piexif.ExifIFD.ExposureTime] = (f.numerator, f.denominator)
-                except: pass
-            
-            aperture = data.get('FNumber')
-            if aperture:
-                try:
-                    val = float(aperture)
-                    exif_dict["Exif"][piexif.ExifIFD.FNumber] = (int(val * 100), 100)
-                except: pass
-
-            if "thumbnail" in exif_dict: del exif_dict["thumbnail"]
-
-            return piexif.dump(exif_dict)
-        except Exception as e:
-            print(f"CN: [!] EXIF 处理失败 (降级回退): {e}")
-            return raw_fallback
-    
     def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
         """
         调整字体大小使其适应可用宽度
