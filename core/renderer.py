@@ -1175,6 +1175,14 @@ def bootstrap_fonts(resolver_func=None):
         exe_dir = os.path.dirname(sys.executable)
         # EN: Prioritize GT23_Assets folder next to EXE / CN: 优先使用 EXE 旁的 GT23_Assets 目录
         external_font_path = os.path.join(exe_dir, "GT23_Assets", "fonts")
+        
+        if not os.path.exists(external_font_path):
+            try:
+                import shutil
+                os.makedirs(os.path.dirname(external_font_path), exist_ok=True)
+                shutil.copytree(internal_font_path, external_font_path)
+            except Exception as e:
+                print(f"CN: [!] 无法释放字体资源: {e}")
         return external_font_path
     else:
         return internal_font_path
@@ -1218,6 +1226,14 @@ def bootstrap_logos(resolver_func=None):
             legacy_path = os.path.join(exe_dir, "logos")
             if os.path.exists(legacy_path):
                 return legacy_path
+            
+            # EN: Auto-release assets / CN: 自动释放资源
+            try:
+                import shutil
+                os.makedirs(os.path.dirname(external_logo_path), exist_ok=True)
+                shutil.copytree(internal_logo_path, external_logo_path)
+            except Exception as e:
+                print(f"CN: [!] 无法释放 Logo 资源: {e}")
         return external_logo_path
     else:
         return internal_logo_path
