@@ -26,6 +26,8 @@ from .io.exif_editor import ExifEditor
 from .io.saver import ImageSaver
 from .utils.path import resolve_path
 from .utils.text import contains_chinese
+from .branding.lens_parser import LensParser
+from .branding.logo_finder import LogoFinder
 
 class FilmRenderer:
     """
@@ -761,159 +763,7 @@ class FilmRenderer:
         # CN: 使用较小的模糊半径，保持“条纹感”且柔和
         return canvas.filter(ImageFilter.GaussianBlur(radius=15))
 
-    def _prepare_lens_segments(self, data, sub_color, use_lens_branding=True):
-        """EN: Parse lens string into styled segments / CN: 将镜头字符串解析为带样式的片段"""
-        lens = str(data.get('LensModel') or "").strip()
-        make = str(data.get('Make') or "").strip().upper()
-        
-        # EN: Basic info parts / CN: 基础信息部分
-        info_parts = []
-        is_digi = data.get('is_digital', False)
-        
-        # EN: Handle visibility toggles / CN: 处理显示开关
-        show_lens = data.get('show_lens', 1)
-        show_aperture = data.get('show_aperture', 1)
-        show_shutter = data.get('show_shutter', 1)
-        show_iso = data.get('show_iso', 1)
-        show_focal = data.get('show_focal', 1) # EN: Future proofing / CN: 预留
 
-        if not show_lens:
-            lens = ""
-
-        focal = data.get('FocalLength')
-        if is_digi and focal and show_focal: info_parts.append(focal)
-        
-        aperture = data.get('FNumber')
-        if aperture and show_aperture: info_parts.append(f"f/{aperture}")
-        
-        shutter = data.get('ExposureTimeStr')
-        if shutter and show_shutter: info_parts.append(f"{shutter}s")
-        
-        iso = data.get('ISO')
-        if is_digi and iso and show_iso: info_parts.append(f"ISO {iso}")
-        
-        # EN: Digital systems should not display film info
-        # CN: 数码系统不展示胶片信息
-        if not is_digi:
-            film_name = str(data.get('Film') or "").upper()
-            if film_name: info_parts.append(film_name)
-        
-        # EN: Clean up leading/trailing separators if lens is hidden
-        # CN: 如果镜头名称隐藏，清理掉多余的分隔符
-        base_info = "  |  ".join(info_parts)
-        if not lens:
-            base_info = base_info.strip()
-        
-        segments = []
-        
-        # EN: Early return if branding is disabled / CN: 如果禁用标识则提前返回
-        if not use_lens_branding:
-            separator = "  |  " if lens else ""
-            segments.append({"type": "text", "content": lens + separator + base_info, "color": sub_color})
-            return segments
-
-        # --- EN: Brand Specific Logic / CN: 品牌特定逻辑 ---
-        
-        # 1. CANON L (Red L)
-        if "CANON" in make:
-            import re
-            # EN: Match standalone "L" (Luxury series) - Not surrounded by letters
-            # CN: 匹配独立的 "L" 红圈标识 - 前后不能是字母（允许数字/符号）
-            match = re.search(r'(?<![a-zA-Z])L(?![a-zA-Z])', lens)
-            if match:
-                start, end = match.span()
-                separator = "  |  " if (lens or lens[end:]) else ""
-                segments.append({"type": "text", "content": lens[:start], "color": sub_color})
-                segments.append({"type": "text", "content": lens[start:end], "color": (196, 30, 58)}) # Pantone 186 C
-                segments.append({"type": "text", "content": lens[end:] + separator + base_info, "color": sub_color})
-                return segments
-
-        # 2. NIKON GOLD (Gold N)
-        if "NIKON" in make:
-            import re
-            # EN: Match standalone "N" (Nano Coating) - Not surrounded by letters
-            match = re.search(r'(?<![a-zA-Z])N(?![a-zA-Z])', lens, re.IGNORECASE)
-            if match:
-                start, end = match.span()
-                separator = "  |  " if (lens or lens[end:]) else ""
-                segments.append({"type": "text", "content": lens[:start], "color": sub_color})
-                # EN: Refined Gold for better visibility / CN: 优化金色的可见度
-                segments.append({"type": "text", "content": lens[start:end], "color": (172, 147, 78)}) # Brighter Pantone 871 C
-                segments.append({"type": "text", "content": lens[end:] + separator + base_info, "color": sub_color})
-                return segments
-
-        # 3. SONY GM (Token)
-        if "SONY" in make:
-            import re
-            # EN: Use word boundaries for GM to avoid partial matches within "SIGMA"
-            if re.search(r'\bGM\b', lens.upper()):
-                token_path = self._resolve_path(os.path.join("assets", "lenses", "SONY-GM.png"))
-                if os.path.exists(token_path):
-                    clean_lens = re.sub(r'\bGM\b', '', lens, flags=re.IGNORECASE).strip()
-                    separator = "  |  " if (clean_lens or "GM" in lens.upper()) else ""
-                    segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
-                    segments.append({"type": "image", "path": token_path})
-                    segments.append({"type": "text", "content": separator + base_info, "color": sub_color})
-                    return segments
-
-        # 4. SIGMA (Art/S/C Token)
-        # EN: More lenient check to capture Sigma series even if brand string is missing
-        # CN: 更宽泛的检测逻辑，捕获即便没有 "SIGMA" 字样的适马系列
-        keywords_art = ["ART", "| A", "(A)"]
-        keywords_sport = ["SPORT", "| S", "(S)"]
-        keywords_contemp = ["CONTEMP", "| C", "(C)"]
-        
-        upper_lens = lens.upper()
-        token_file = None
-        if any(k in upper_lens for k in keywords_art):
-            token_file = "SIGMA-ART.png"
-        elif any(k in upper_lens for k in keywords_sport):
-            token_file = "SIGMA-SPORTS.png"
-        elif any(k in upper_lens for k in keywords_contemp):
-            token_file = "SIGMA-CONTEMPORARY.png"
-        
-        if token_file:
-            token_path = resolve_path(os.path.join("assets", "lenses", token_file))
-            if os.path.exists(token_path):
-                    import re
-                    # EN: Dynamic cleaning for Sigma series markers / CN: 动态清洗适马系列标识
-                    all_k = ["ART", "SPORTS", "SPORT", "CONTEMPORARY", "CONTEMP"]
-                    pattern = r'\b(?:' + r'|'.join([re.escape(k) for k in all_k]) + r')\b|\|\s*[ASC]\b|\([ASC]\)'
-                    clean_lens = re.sub(pattern, '', lens, flags=re.IGNORECASE)
-                    clean_lens = re.sub(r'\|\s*$', '', clean_lens.strip()).strip()
-                    clean_lens = re.sub(r'\s{2,}', ' ', clean_lens)
-                    
-                    separator = "  |  " if (clean_lens or token_file) else ""
-                    segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
-                    segments.append({"type": "image", "path": token_path})
-                    segments.append({"type": "text", "content": separator + base_info, "color": sub_color})
-                    return segments
-
-        # EN: Default Fallback
-        separator = "  |  " if lens else ""
-        full_text = lens + separator + base_info
-        
-        # EN: Handle Zeiss T* special coloring (v2.4.1)
-        if "T*" in full_text:
-            # EN: Note: self._get_zeiss_colors should return segments or handle segments
-            # For simplicity in this fallback, we use the whole string
-            segments.append({"type": "text", "content": full_text, "color": sub_color}) 
-        else:
-            segments.append({"type": "text", "content": full_text, "color": sub_color})
-        return segments
-
-    def _get_zeiss_colors(self, text, base_color):
-        colors = [base_color] * len(text)
-        zeiss_red = (237, 31, 37)
-        i = 0
-        while i < len(text) - 1:
-            if text[i:i+2] == "T*":
-                colors[i] = zeiss_red
-                colors[i+1] = zeiss_red
-                i += 2
-            else:
-                i += 1
-        return colors
 
     def _prepare_strings(self, data):
         """EN: Legacy signature support / CN: 保留旧版签名支持"""
@@ -936,7 +786,7 @@ class FilmRenderer:
         else:
             main_text = f"{make} {dedup_model}".strip() if make and dedup_model else (dedup_model or make)
         
-        sub_segments = self._prepare_lens_segments(data, (0,0,0))
+        sub_segments = LensParser.prepare_segments(data, (0,0,0))
         sub_text = "".join([s["content"] for s in sub_segments if s["type"] == "text"])
         return main_text, sub_text
 
@@ -997,7 +847,7 @@ class FilmRenderer:
         if data and data.get('show_model', 1):
             make = str(data.get('Make') or "").strip()
             model = str(data.get('Model') or "").strip()
-            logo_path = self._find_logo_path(make, model)
+            logo_path = LogoFinder.find_logo_path(make, model, self.logo_dir)
             
             if logo_path:
                 t_logo_sub_start = time.perf_counter()
@@ -1139,7 +989,7 @@ class FilmRenderer:
                 # EN: PNG engine doesn't support mixed colors yet, use sub_text
                 draw_advanced_text(sub_text, sub_draw_pos, resolved_sub, s_size, s_color, 'text_sub')
             else:
-                sub_segments = self._prepare_lens_segments(data, s_color, use_lens_branding=use_lens_branding)
+                sub_segments = LensParser.prepare_segments(data, s_color, use_lens_branding=use_lens_branding)
                 TypoEngine.draw_mixed_text(draw, sub_draw_pos, sub_segments, resolved_sub, s_size, s_color, timings=timings, key_prefix='text_sub')
 
         except Exception as e:
@@ -1155,54 +1005,7 @@ class FilmRenderer:
         timings['text_render_pure'] = time.perf_counter() - t_text_sub_start
 
 
-    def _find_logo_path(self, make, model):
-        """EN: Universal case-insensitive logo lookup.
-           CN: 通用的不区分大小写 Logo 检索逻辑。支持多路径（源码 + dist）搜索。"""
-        # EN: Multi-path search (Source + Dist fallback)
-        search_dirs = [self.logo_dir]
-        dist_logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist", "GT23_Assets", "logos")
-        if os.path.exists(dist_logo_path) and dist_logo_path not in search_dirs:
-            search_dirs.append(dist_logo_path)
-        
-        # 1. EN: Normalize input / CN: 正则化输入
-        make_u = str(make or "").upper().strip()
-        model_u = str(model or "").upper().strip()
-        if not model_u: return None
 
-        def _norm(s): return "".join(c for c in s if c.isalnum())
-        norm_model = _norm(model_u)
-
-        search_stems = []
-        if make_u:
-            search_stems.append(f"{make_u}-{model_u}")
-            search_stems.append(f"{make_u}_{model_u}")
-            search_stems.append(f"{make_u}{model_u}")
-        search_stems.append(model_u)
-
-        for l_dir in search_dirs:
-            if not os.path.exists(l_dir): continue
-            try:
-                files = os.listdir(l_dir)
-                supported_exts = [".svg", ".png", ".jpg", ".jpeg"]
-                file_map = {f.upper(): f for f in files if any(f.lower().endswith(ext) for ext in supported_exts)}
-                
-                # EN: First pass - strict matching with candidate stems
-                for stem in search_stems:
-                    for ext in [".svg", ".png", ".jpg"]:
-                        target_key = f"{stem}{ext.upper()}"
-                        if target_key in file_map:
-                            return os.path.join(l_dir, file_map[target_key])
-                
-                # EN: Second pass - Suffix matching
-                for file_key, actual_name in file_map.items():
-                    name_stem = os.path.splitext(file_key)[0]
-                    if name_stem.endswith(f"-{model_u}") or name_stem.endswith(f"_{model_u}"):
-                        return os.path.join(l_dir, actual_name)
-                    if _norm(name_stem) == norm_model:
-                        return os.path.join(l_dir, actual_name)
-            except:
-                continue
-        return None
 
     def _apply_pro_shadow(self, canvas, radius=20):
         shadow_margin = 80
