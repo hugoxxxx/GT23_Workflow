@@ -28,6 +28,7 @@ from .utils.path import resolve_path
 from .utils.text import contains_chinese
 from .branding.lens_parser import LensParser
 from .branding.logo_finder import LogoFinder
+from .metadata import MetadataHandler
 
 class FilmRenderer:
     """
@@ -98,11 +99,15 @@ class FilmRenderer:
             # EN: If data is minimal, try to fill it from EXIF
             # CN: 如果 data 为空或缺少核心信息，尝试从 EXIF 中提取
             if not data.get('Make') or not data.get('Model'):
-                auto_data = ImageLoader.get_metadata(img_path)
+                # EN: Use dedicated MetadataHandler for extraction
+                # CN: 使用专业的 MetadataHandler 进行提取
+                handler = MetadataHandler()
+                auto_data = handler.get_data(img_path)
+                
                 # EN: Only fill if manual overrides are not present
                 # CN: 仅在没有手动覆盖值时进行填充
                 for k, v in auto_data.items():
-                    if k not in data or not data[k]:
+                    if k not in data or not data[k] or data[k] == "Unknown":
                         data[k] = v
             
             # --- EN: THEME SETUP / CN: 主题颜色设置 ---
