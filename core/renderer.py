@@ -21,6 +21,8 @@ try:
 except ImportError:
     svgwrite = None
 
+from .io.image_loader import ImageLoader
+
 class FilmRenderer:
     """
     EN: Pro-grade renderer with dynamic typography hierarchy.
@@ -101,28 +103,8 @@ class FilmRenderer:
                 # EN: Skip rotation and initial resize as it's assumed pre-processed
                 # CN: 跳过旋转和初始缩放，假定已预处理
             else:
-                t_load_start = time.perf_counter()
-                # EN: Use draft mode for faster loading if it's a preview
-                # CN: 如果是预览模式，使用 draft 模式加速加载
-                img = Image.open(img_path)
-                if target_long_edge <= 1200 and img.format == 'JPEG':
-                    # EN: Target approx 2x preview size for draft to keep some head room
-                    # CN: 为 draft 设置约 2 倍预览尺寸的目标，保留一定的余量
-                    img.draft(img.mode, (target_long_edge * 2, target_long_edge * 2))
-                
-                # EN: Handle EXIF orientation automatically / CN: 自动处理 EXIF 旋转信息
-                img = ImageOps.exif_transpose(img)
-                
-                # EN: Apply manual rotation (0, 90, 180, 270) / CN: 应用手动旋转
-                if manual_rotation != 0:
-                    img = img.rotate(-manual_rotation, expand=True)
-
-                if img.mode != "RGB": img = img.convert("RGB")
-                timings['load_rotate'] = time.perf_counter() - t_load_start
-
-                t_resize_start = time.perf_counter()
-                img = self._smart_resize(img, target_long_edge)
-                timings['resize'] = time.perf_counter() - t_resize_start
+                img, load_timings = ImageLoader.load_and_preprocess(img_path, target_long_edge, manual_rotation)
+                timings.update(load_timings)
             
             w, h = img.size
             
@@ -338,6 +320,8 @@ class FilmRenderer:
                 else:
                     font_main_scale = layout.get('font_main_scale', font_base_scale) if layout else font_base_scale
                     base_main_font_size = int(long_edge * font_main_scale)
+                
+
 
                 ui_font_sub_px = data.get('font_sub_px')
                 if ui_font_sub_px is not None:
@@ -1041,7 +1025,7 @@ class FilmRenderer:
                 try:
                     # EN: cairosvg is now imported at top level or handled gracefully
                     # CN: cairosvg 现在在顶层导入
-                    from .typo_engine import TypoEngine
+                    from .typography.engine import TypoEngine
                     resolved_main_font = TypoEngine._resolve_font_path(resolved_main)
                     main_font = self._get_font(resolved_main_font, m_size)
                     
@@ -1132,7 +1116,7 @@ class FilmRenderer:
         # EN: Text drawing / CN: 文字绘制
         t_text_sub_start = time.perf_counter()
         try:
-            from .typo_engine import TypoEngine
+            from .typography.engine import TypoEngine
             
             def draw_advanced_text(text, target_pos, font_path, size, color, key_prefix, spacing=0):
                 if "LEICA-1050" in str(font_path).upper():
@@ -1240,14 +1224,6 @@ class FilmRenderer:
             except:
                 continue
         return None
-
-    def _smart_resize(self, img, target):
-        w, h = img.size
-        scale = target / max(w, h)
-        # EN: Use BILINEAR for fast preview, LANCZOS for high-quality production
-        # CN: 预览使用 BILINEAR 加速，正式输出使用 LANCZOS 保证质量
-        algo = Image.Resampling.BILINEAR if target <= 1200 else Image.Resampling.LANCZOS
-        return img.resize((int(w * scale), int(h * scale)), algo)
 
     def _apply_pro_shadow(self, canvas, radius=20):
         shadow_margin = 80
@@ -1442,7 +1418,7 @@ class FilmRenderer:
                 resolved_sub  = cjk_path
         
         # EN: Resolve to absolute paths / CN: 解析为绝对路径
-        from .typo_engine import TypoEngine
+        from .typography.engine import TypoEngine
         
         def _full_resolve(p, default_val):
             # EN: If None or "Default", use original internal defaults

@@ -76,8 +76,9 @@ class TypoEngine:
         if getattr(sys, 'frozen', False):
             project_root = sys._MEIPASS
         else:
+            # EN: Now two levels deep (core/typography/) / CN: 现在是两层深，需要向上跳两次
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.dirname(current_dir)
+            project_root = os.path.dirname(os.path.dirname(current_dir))
         
         return os.path.normcase(os.path.normpath(os.path.join(project_root, font_path)))
 
