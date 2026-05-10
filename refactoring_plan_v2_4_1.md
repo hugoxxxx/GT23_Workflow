@@ -26,7 +26,7 @@
 ### 第二阶段：品牌识别与文字系统 (Visual Identity)
 4. **品牌与 Logo 剥离** (`core/branding/`) [x]
    - 迁移镜头勋章正则识别逻辑 (`LensParser`) 及 Logo 路径检索 (`LogoFinder`)。
-5. **排版引擎升级** (`core/typography/`)
+5. **排版引擎升级** (`core/typography/`) [x]
    - 迁移 CJK 降级逻辑 (`FontResolver`) 与字号自适应缩放逻辑 (`TextAdjuster`)。
 
 ### 第三阶段：几何布局与齿孔模式 (Geometry)

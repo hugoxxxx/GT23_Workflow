@@ -11,7 +11,8 @@ import subprocess
 import threading
 import json
 from core.metadata import MetadataHandler
-from core.renderer import FilmRenderer, bootstrap_logos
+from core.renderer import FilmRenderer
+from core.utils.bootstrapper import bootstrap_logos
 from utils.config_manager import config_manager
 
 from gui.controllers.batch_state import BatchState

@@ -101,7 +101,7 @@ class MainWindow:
     
     def check_missing_assets(self):
         """EN: Prompt user to sync if logos are missing. / CN: 如果缺少图标，提示用户进行同步。"""
-        from core.renderer import bootstrap_logos
+        from core.utils.bootstrapper import bootstrap_logos
         try:
             logo_dir = bootstrap_logos()
             logo_count = 0

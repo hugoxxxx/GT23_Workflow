@@ -19,7 +19,9 @@ from .io.image_loader import ImageLoader
 from .io.exif_editor import ExifEditor
 from .io.saver import ImageSaver
 from .utils.path import resolve_path
-from .utils.text import contains_chinese
+from .utils.bootstrapper import bootstrap_logos, bootstrap_fonts
+from .typography.font_resolver import FontResolver
+from .typography.text_adjuster import TextAdjuster
 from .branding.lens_parser import LensParser
 from .branding.logo_finder import LogoFinder
 from .metadata import MetadataHandler
@@ -43,6 +45,7 @@ class FilmRenderer:
         
         # EN: Handle dynamic fonts / CN: 处理动态字体解耦
         self.font_dir = bootstrap_fonts(resolve_path)
+        self.font_resolver = FontResolver(self.font_dir, self.font_main, self.font_sub)
         
         
         self._setup_cairo_dll()
@@ -299,6 +302,7 @@ class FilmRenderer:
                 pass
             else:
                 long_edge = max(new_w, new_h)
+                layout = data.get('layout', {})
                 
                 # EN: Resolve independent main/sub font scales (v2.4.1: Priority to manual PX values)
                 # CN: 解决独立的主副标题比例 (v2.4.1: 优先使用手动设置的像素值)
@@ -352,9 +356,12 @@ class FilmRenderer:
                     else: # Dark
                         main_color, sub_color = (255, 255, 255), (242, 242, 242)
                 
-                actual_main_size, actual_sub_size, m_factor, s_factor = self._adjust_font_sizes_to_fit(
+                # --- EN: TEXT ADJUSTMENT / CN: 字体自适应调整 ---
+                # EN: Calculate optimal font sizes to fit available width
+                # CN: 计算最佳字号以适应可用宽度
+                actual_main_size, actual_sub_size, m_factor, s_factor = TextAdjuster.adjust(
                     draw, main_text, sub_text, available_width, 
-                    base_main_font_size, base_sub_font_size
+                    base_main_font_size, base_sub_font_size, self.font_resolver
                 )
 
                 # EN: High-precision calculation of overflow-free max in reference pixels (4500px)
@@ -368,8 +375,8 @@ class FilmRenderer:
 
                 # EN: Vertical collision detection (CN: 垂直重叠/压图检测)
                 ref_factor = long_edge / 4500.0
-                resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
-                m_font = self._get_font(resolved_main, actual_main_size)
+                resolved_main, resolved_sub = self.font_resolver.resolve(main_text, sub_text)
+                m_font = TextAdjuster._get_font(resolved_main, actual_main_size)
                 m_ascent, m_descent = m_font.getmetrics()
                 # EN: Anchor text proportionally to image bottom (38% of space) for tighter visual gestalt
                 # CN: 文字锚点调整至底部留白的 38% 处（微调），让文字与照片的“呼吸感”更紧密，避免在大画幅下显得疏离
@@ -818,7 +825,7 @@ class FilmRenderer:
             s_color = (235, 235, 235) # Luminous White
         
         # EN: Detect CJK characters and resolve paths / CN: 检测 CJK 字符并解析路径
-        resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
+        resolved_main, resolved_sub = self.font_resolver.resolve(main_text, sub_text)
 
         # --- EN: TEXT SPACING RESOLUTION / CN: 文字间距解析 ---
         # EN: Scale spacing relative to image's long edge for resolution consistency
@@ -867,7 +874,7 @@ class FilmRenderer:
                     # CN: cairosvg 现在在顶层导入
                     from .typography.engine import TypoEngine
                     resolved_main_font = TypoEngine._resolve_font_path(resolved_main)
-                    main_font = self._get_font(resolved_main_font, m_size)
+                    main_font = TextAdjuster._get_font(resolved_main_font, m_size)
                     
                     # EN: Calculate typical font height for scaling / CN: 计算典型字体高度用于缩放
                     ascent, descent = main_font.getmetrics()
@@ -927,12 +934,6 @@ class FilmRenderer:
                     # EN: Paste with alpha mask / CN: 带透明蒙版粘贴
                     draw._image.paste(logo_img, (logo_x, logo_y), logo_img)
                     
-                    logo_drawn = True
-                    timings['logo_render'] = time.perf_counter() - t_logo_sub_start
-                    
-                    # DEBUG: Draw center line
-                    # draw.line([(new_w // 2, top_pad + h), (new_w // 2, new_h)], fill="red", width=2)
-
                     logo_drawn = True
                     timings['logo_render'] = time.perf_counter() - t_logo_sub_start
                 except Exception as e:
@@ -1046,194 +1047,6 @@ class FilmRenderer:
 
 
 
-    def _adjust_font_sizes_to_fit(self, draw, main_text, sub_text, available_width, base_main_size, base_sub_size):
-        """
-        调整字体大小使其适应可用宽度
-        """
-        if available_width <= 0: return 10, 8
-        # EN: Resolve font paths including CJK fallback / CN: 解析字体路径，包含中文字库回退
-        resolved_main, resolved_sub = self._resolve_font_paths(main_text, sub_text)
-
-        # 创建临时绘图对象来测量文本宽度
-        temp_img = Image.new("RGB", (1, 1))
-        temp_draw = ImageDraw.Draw(temp_img)
-        
-        # 检查主文本宽度
-        main_font = self._get_font(resolved_main, base_main_size)
-        main_bbox = temp_draw.textbbox((0, 0), main_text, font=main_font)
-        main_text_width = main_bbox[2] - main_bbox[0]
-        
-        main_scale_factor = min(1.0, available_width / main_text_width) if main_text_width > 0 else 1.0
-        
-        # 检查副文本宽度（使用与 TypoEngine.draw_text 相同的 textlength 累加）
-        sub_font = self._get_font(resolved_sub, base_sub_size)
-        sub_text_width = sum(temp_draw.textlength(c, font=sub_font) for c in list(sub_text))
-        
-        sub_scale_factor = min(1.0, available_width / sub_text_width) if sub_text_width > 0 else 1.0
-        
-        # EN: Decouple scaling to allow main title to grow even if subtitle is long
-        # CN: 解耦主副标题缩放，允许型号名在参数行较长时依然保持独立增长（响应老大反馈）
-        final_main_size = max(10, int(base_main_size * main_scale_factor))
-        final_sub_size = max(8, int(base_sub_size * sub_scale_factor))
-        
-        return final_main_size, final_sub_size, main_scale_factor, sub_scale_factor
-
-    def _get_font(self, font_path, size):
-        """
-        获取字体对象，如果指定字体不存在则使用默认字体
-        """
-        try:
-            actual_path = resolve_path(font_path)
-            if os.path.exists(actual_path):
-                if actual_path.lower().endswith(".ttc"):
-                    return ImageFont.truetype(actual_path, size, index=0)
-                return ImageFont.truetype(actual_path, size)
-            return ImageFont.load_default()
-        except:
-            return ImageFont.load_default()
-
-    def _resolve_font_paths(self, main_text, sub_text):
-        """
-        EN: Resolve final font paths including CJK fallback.
-        CN: 解析最终字体路径，包括中文字体降级逻辑。
-        """
-        # EN: Default paths / CN: 默认路径
-        resolved_main = getattr(self, 'font_main_custom', self.font_main)
-        resolved_sub  = getattr(self, 'font_sub_custom', self.font_sub)
-        
-        # EN: Detect Chinese / CN: 检查中文并降级字库
-        if contains_chinese(main_text) or contains_chinese(sub_text):
-            cjk_path = self._get_system_cjk_font()
-            if cjk_path:
-                resolved_main = cjk_path
-                resolved_sub  = cjk_path
-        
-        # EN: Resolve to absolute paths / CN: 解析为绝对路径
-        from .typography.engine import TypoEngine
-        
-        def _full_resolve(p, default_val):
-            # EN: If None or "Default", use original internal defaults
-            # CN: 如果为 None 或 "Default"，则回退到原始内置默认字体
-            if not p or p == "Default": 
-                p = default_val
-                
-            # EN: Prioritize GT23_Assets/fonts for custom filenames
-            # CN: 对于自定义文件名，优先在资产目录中检索
-            if not os.path.isabs(p) and not p.startswith("assets"):
-                test_path = os.path.join(self.font_dir, p)
-                if os.path.exists(test_path): return test_path
-            
-            return TypoEngine._resolve_font_path(p)
-
-        f_main = _full_resolve(resolved_main, "assets/fonts/palab.ttf")
-        f_sub  = _full_resolve(resolved_sub, "assets/fonts/gara.ttf")
-        return f_main, f_sub
-
-    def _get_system_cjk_font(self):
-        """EN: Find Microsoft YaHei or similar on Windows. / CN: 在 Windows 上寻找微软雅黑。"""
-        if sys.platform == "win32":
-            paths = [
-                "C:\\Windows\\Fonts\\msyh.ttc",    # Microsoft YaHei
-                "C:\\Windows\\Fonts\\msyhbd.ttc",  # YaHei Bold
-                "C:\\Windows\\Fonts\\simhei.ttf"   # SimHei
-            ]
-            for p in paths:
-                if os.path.exists(p): return p
-        return None
 
 
 
-def bootstrap_fonts(resolver_func=None):
-    """
-    EN: Setup external font directory if running as EXE.
-    CN: 引导程序：如果作为 EXE 运行，设置外部 Font 目录并释放默认资源。
-    """
-    # 0. EN: Try User-Defined Path first / CN: 极高优先级：尝试用户自定义路径
-    custom_path = config_manager.get("custom_asset_path")
-    if custom_path and os.path.exists(custom_path):
-        font_sub = os.path.join(custom_path, "fonts")
-        if os.path.exists(font_sub): return font_sub
-        return custom_path
-
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    decoupled_path = os.path.join(base_dir, "GT23_Assets", "fonts")
-    
-    # 1. EN: Try decoupled Assets Repo (Priority) / CN: 优先尝试解耦的资产仓库
-    if os.path.exists(decoupled_path) and os.path.isdir(decoupled_path):
-        internal_font_path = decoupled_path
-    elif resolver_func:
-        # 2. EN: Use provided resolver / CN: 使用提供的路径解析函数
-        internal_font_path = resolver_func("assets/fonts")
-    else:
-        # 3. EN: Fallback resolver for early bootstrap
-        if hasattr(sys, '_MEIPASS'):
-            internal_font_path = os.path.join(sys._MEIPASS, "assets/fonts")
-        else:
-            internal_font_path = os.path.join(base_dir, "assets", "fonts")
-    
-    if getattr(sys, 'frozen', False):
-        exe_dir = os.path.dirname(sys.executable)
-        # EN: Prioritize GT23_Assets folder next to EXE / CN: 优先使用 EXE 旁的 GT23_Assets 目录
-        external_font_path = os.path.join(exe_dir, "GT23_Assets", "fonts")
-        
-        if not os.path.exists(external_font_path):
-            try:
-                import shutil
-                os.makedirs(os.path.dirname(external_font_path), exist_ok=True)
-                shutil.copytree(internal_font_path, external_font_path)
-            except Exception as e:
-                print(f"CN: [!] 无法释放字体资源: {e}")
-        return external_font_path
-    else:
-        return internal_font_path
-
-def bootstrap_logos(resolver_func=None):
-    """
-    EN: Setup external logo directory if running as EXE.
-    CN: 引导程序：如果作为 EXE 运行，设置外部 Logo 目录并释放默认资源。
-    """
-    # 0. EN: Try User-Defined Path first / CN: 极高优先级：尝试用户自定义路径
-    custom_path = config_manager.get("custom_asset_path")
-    if custom_path and os.path.exists(custom_path):
-        # Check for logos subfolder or use direct
-        logo_sub = os.path.join(custom_path, "logos")
-        if os.path.exists(logo_sub): return logo_sub
-        return custom_path
-
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    decoupled_path = os.path.join(base_dir, "GT23_Assets", "logos")
-    
-    # 1. EN: Try decoupled Assets Repo (Priority) / CN: 优先尝试解耦的资产仓库
-    if os.path.exists(decoupled_path) and os.path.isdir(decoupled_path):
-        internal_logo_path = decoupled_path
-    elif resolver_func:
-        # 2. EN: Use provided resolver / CN: 使用提供的路径解析函数
-        internal_logo_path = resolver_func("assets/logo")
-    else:
-        # 3. EN: Fallback resolver for early bootstrap in main.py
-        # CN: main.py 早期引导使用的路径解析方案
-        if hasattr(sys, '_MEIPASS'):
-            internal_logo_path = os.path.join(sys._MEIPASS, "assets/logo")
-        else:
-            internal_logo_path = os.path.join(base_dir, "assets", "logo")
-    
-    if getattr(sys, 'frozen', False):
-        exe_dir = os.path.dirname(sys.executable)
-        # EN: Prioritize GT23_Assets folder next to EXE / CN: 优先使用 EXE 旁的 GT23_Assets 目录
-        external_logo_path = os.path.join(exe_dir, "GT23_Assets", "logos")
-        # EN: Fallback to simple 'logos' for backward compatibility / CN: 备选：直接在 EXE 旁的 'logos' 目录
-        if not os.path.exists(external_logo_path):
-            legacy_path = os.path.join(exe_dir, "logos")
-            if os.path.exists(legacy_path):
-                return legacy_path
-            
-            # EN: Auto-release assets / CN: 自动释放资源
-            try:
-                import shutil
-                os.makedirs(os.path.dirname(external_logo_path), exist_ok=True)
-                shutil.copytree(internal_logo_path, external_logo_path)
-            except Exception as e:
-                print(f"CN: [!] 无法释放 Logo 资源: {e}")
-        return external_logo_path
-    else:
-        return internal_logo_path
