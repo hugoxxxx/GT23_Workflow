@@ -1301,8 +1301,6 @@ class FilmRenderer:
             return ImageFont.load_default()
 
     def _resolve_font_paths(self, main_text, sub_text):
-
-    def _resolve_font_paths(self, main_text, sub_text):
         """
         EN: Resolve final font paths including CJK fallback.
         CN: 解析最终字体路径，包括中文字体降级逻辑。
