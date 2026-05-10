@@ -38,13 +38,26 @@ class LogoFinder:
             if not os.path.exists(l_dir):
                 continue
                 
-            # 1. EN: Try precise model match (MAKE_MODEL.png)
+            # 1. EN: Try precise model match with various separators
+            # CN: 尝试多种分隔符进行精准型号匹配
             if model_u:
-                sanitized_model = model_u.replace(" ", "_").replace("/", "_")
-                model_file = f"{make_u}_{sanitized_model}.png"
-                model_path = os.path.join(l_dir, model_file)
-                if os.path.exists(model_path):
-                    return model_path
+                # EN: Generate candidates based on common naming conventions
+                # CN: 基于常见的命名惯例生成候选文件名
+                clean_model = model_u.replace(" ", "").replace("/", "").replace("-", "").replace("_", "")
+                
+                # EN: Try MAKE-MODEL, MAKE_MODEL, and MAKEMODEL
+                candidates = [
+                    f"{make_u}-{clean_model}.png",
+                    f"{make_u}_{clean_model}.png",
+                    f"{make_u}{clean_model}.png",
+                    f"{make_u}-{model_u.replace(' ', '-')}.png",
+                    f"{make_u}_{model_u.replace(' ', '_')}.png"
+                ]
+                
+                for cand in candidates:
+                    target_path = os.path.join(l_dir, cand)
+                    if os.path.exists(target_path):
+                        return target_path
             
             # 2. EN: Try brand match (MAKE.svg or MAKE.png)
             if make_u:
@@ -72,9 +85,9 @@ class LogoFinder:
                 for f in files:
                     f_up = f.upper()
                     if make_u and make_u in f_up and any(f_up.endswith(ext) for ext in [".PNG", ".SVG", ".JPG"]):
-                        # EN: Safety check: if there's an underscore, it might be another model
-                        # CN: 安全检查：如果包含下划线且不是纯品牌，可能误中其他型号
-                        if "_" not in f or f_up.startswith(make_u + "_LOGO"):
+                        # EN: Safety check: if there's an underscore or dash, it might be another model
+                        # CN: 安全检查：如果包含下划线或横杠且不是纯品牌，可能误中其他型号
+                        if ("_" not in f and "-" not in f) or f_up.startswith(make_u + "_LOGO") or f_up.startswith(make_u + "-LOGO"):
                             return os.path.join(l_dir, f)
             except:
                 pass
