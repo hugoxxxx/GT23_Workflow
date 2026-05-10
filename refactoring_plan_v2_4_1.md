@@ -20,7 +20,7 @@
    - 迁移 `process_image` 中的加载、`exif_transpose`、`rotate` 及 `_smart_resize` 逻辑。
 2. **ExifEditor & Saver 迁移** (`core/io/exif_editor.py`, `core/io/saver.py`) [x]
    - 迁移 `_build_exif_bytes` 及最终的 `flatten` 和 `save` 逻辑。
-3. **辅助函数迁移** (`core/utils/`)
+3. **辅助函数迁移** (`core/utils/`) [x]
    - 迁移颜色插值、几何居中等通用静态方法。
 
 ### 第二阶段：品牌识别与文字系统 (Visual Identity)
