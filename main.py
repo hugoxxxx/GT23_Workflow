@@ -71,7 +71,7 @@ def main():
         # EN: Regular screen - Maximize by default (#1)
         # CN: 常规屏幕 - 默认最大化
         app.state('zoomed')
-        print(f"CN: [✔] 常规屏幕已激活默认最大化模式")
+        print(f"CN: [OK] 常规屏幕已激活默认最大化模式")
 
     # EN: Set window icon (Original PNG source, System-compliant buffer scale)
     # CN: 设置窗口图标（坚持原始 PNG 源，仅在内存中进行系统级兼容性缩放）
@@ -106,7 +106,7 @@ def main():
                 
                 # EN: Critical - persist reference / CN: 必须保持硬引用防止 GC
                 app._icon_photo = img # type: ignore[attr-defined]
-                print(f"CN: [✔] 已成功激活原始图标 (系统兼容模式): {img_pil.size[0]}px -> 256px")
+                print(f"CN: [OK] 已成功激活原始图标 (系统兼容模式): {img_pil.size[0]}px -> 256px")
             except Exception as e:
                 print(f"CN: [!] 兼容性加载失败 (PIL): {e}")
                 try:
@@ -189,7 +189,7 @@ def bootstrap_configs():
                 pass
     
     if exported:
-        print(f"CN: [✔] 已释放默认配置到 GT23_Assets/config: {', '.join(exported)}")
+        print(f"CN: [OK] 已释放默认配置到 GT23_Assets/config: {', '.join(exported)}")
 
 if __name__ == "__main__":
     main()

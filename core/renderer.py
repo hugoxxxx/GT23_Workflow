@@ -939,21 +939,6 @@ class FilmRenderer:
                 except Exception as e:
                     print(f"CN: [!] Logo 渲染失败 fallback to text: {e}")
 
-        # --- EN: ZEISS T* HIGHLIGHT / CN: 蔡司 T* 红色高亮 ---
-        # Zeiss red color: #ed1f25 -> (237, 31, 37)
-        sub_colors = s_color
-        if "T*" in sub_text:
-            sub_colors = [s_color] * len(sub_text)
-            zeiss_red = (237, 31, 37)
-            i = 0
-            while i < len(sub_text) - 1:
-                if sub_text[i:i+2] == "T*":
-                    sub_colors[i] = zeiss_red
-                    sub_colors[i+1] = zeiss_red
-                    i += 2
-                else:
-                    i += 1
-
         # EN: Text drawing / CN: 文字绘制
         t_text_sub_start = time.perf_counter()
         try:

@@ -48,8 +48,6 @@ class LensParser:
             if film_name: info_parts.append(film_name)
         
         base_info = "  |  ".join(info_parts)
-        if not lens:
-            base_info = base_info.strip()
         
         segments = []
         
@@ -59,46 +57,97 @@ class LensParser:
             segments.append({"type": "text", "content": lens + separator + base_info, "color": sub_color})
             return segments
 
-        # --- EN: Brand Specific Logic / CN: 品牌特定逻辑 ---
+        # --- EN: Brand Specific Logic (Ported from v2.4.0 main) / CN: 品牌特定逻辑（同步自 main 分支） ---
         
         # 1. CANON L (Red L)
         if "CANON" in make:
             match = re.search(r'(?<![a-zA-Z])L(?![a-zA-Z])', lens)
             if match:
                 start, end = match.span()
-                separator = "  |  " if (lens or base_info) else ""
-                segments.append({"type": "text", "content": lens[:start], "color": sub_color})
-                segments.append({"type": "text", "content": lens[start:end], "color": (196, 30, 58)}) # Pantone 186 C
-                segments.append({"type": "text", "content": lens[end:] + (separator if lens[end:] or base_info else "") + base_info, "color": sub_color})
+                segments.append({"type": "text", "content": lens[:start].strip(), "color": sub_color})
+                segments.append({"type": "text", "content": "L", "color": (196, 30, 58)}) # Pantone 186 C
+                # EN: Add trailing text and base info with proper separator
+                trailing = lens[end:].strip()
+                separator = "  |  " if (trailing or base_info) else ""
+                segments.append({"type": "text", "content": trailing + separator + base_info, "color": sub_color})
                 return segments
 
-        # 2. ZEISS T* (Red T*)
-        if "T*" in lens:
-            start = lens.find("T*")
-            end = start + 2
-            separator = "  |  " if (lens or base_info) else ""
-            segments.append({"type": "text", "content": lens[:start], "color": sub_color})
-            segments.append({"type": "text", "content": "T*", "color": (210, 15, 35)}) # Zeiss Red
-            segments.append({"type": "text", "content": lens[end:] + (separator if lens[end:] or base_info else "") + base_info, "color": sub_color})
-            return segments
+        # 2. NIKON GOLD (Gold N)
+        if "NIKON" in make:
+            match = re.search(r'(?<![a-zA-Z])N(?![a-zA-Z])', lens, re.IGNORECASE)
+            if match:
+                start, end = match.span()
+                segments.append({"type": "text", "content": lens[:start].strip(), "color": sub_color})
+                segments.append({"type": "text", "content": lens[start:end], "color": (172, 147, 78)}) # Brighter Pantone 871 C
+                trailing = lens[end:].strip()
+                separator = "  |  " if (trailing or base_info) else ""
+                segments.append({"type": "text", "content": trailing + separator + base_info, "color": sub_color})
+                return segments
 
-        # 3. Badge Tokens (Sony GM, G, Sigma Art/C)
-        token_file = None
-        if " GM" in lens.upper() or " G MASTER" in lens.upper():
-            token_file = "SONY-GM.png"
-        elif " G" in lens.upper() and not " GM" in lens.upper():
-            token_file = "SONY-G.png"
-        elif "SIGMA" in lens.upper() and (" ART" in lens.upper() or " | A" in lens.upper()):
-            token_file = "SIGMA-ART.png"
-        elif "SIGMA" in lens.upper() and (" CONTEMPORARY" in lens.upper() or " | C" in lens.upper()):
-            token_file = "SIGMA-CONTEMPORARY.png"
+        # 3. SONY GM (Token)
+        if "SONY" in make:
+            if re.search(r'\bGM\b', lens.upper()):
+                token_path = resolve_path(os.path.join("assets", "lenses", "SONY-GM.png"))
+                if os.path.exists(token_path):
+                    clean_lens = re.sub(r'\bGM\b', '', lens, flags=re.IGNORECASE).strip()
+                    if clean_lens:
+                        segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
+                    segments.append({"type": "image", "path": token_path})
+                    if base_info:
+                        segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
+                    return segments
+
+        # 4. SIGMA (Art/S/C Token)
+        keywords_art = ["ART", "| A", "(A)"]
+        keywords_sport = ["SPORT", "| S", "(S)"]
+        keywords_contemp = ["CONTEMP", "| C", "(C)"]
         
-        separator = "  |  " if (lens and base_info) else ""
-        segments.append({"type": "text", "content": lens + separator + base_info, "color": sub_color})
+        upper_lens = lens.upper()
+        token_file = None
+        if any(k in upper_lens for k in keywords_art):
+            token_file = "SIGMA-ART.png"
+        elif any(k in upper_lens for k in keywords_sport):
+            token_file = "SIGMA-SPORTS.png"
+        elif any(k in upper_lens for k in keywords_contemp):
+            token_file = "SIGMA-CONTEMPORARY.png"
         
         if token_file:
             token_path = resolve_path(os.path.join("assets", "lenses", token_file))
             if os.path.exists(token_path):
+                all_k = ["ART", "SPORTS", "SPORT", "CONTEMPORARY", "CONTEMP"]
+                pattern = r'\b(?:' + r'|'.join([re.escape(k) for k in all_k]) + r')\b|\|\s*[ASC]\b|\([ASC]\)'
+                clean_lens = re.sub(pattern, '', lens, flags=re.IGNORECASE)
+                clean_lens = re.sub(r'\|\s*$', '', clean_lens.strip()).strip()
+                clean_lens = re.sub(r'\s{2,}', ' ', clean_lens)
+                
+                if clean_lens:
+                    segments.append({"type": "text", "content": clean_lens + " ", "color": sub_color})
                 segments.append({"type": "image", "path": token_path})
-                    
+                if base_info:
+                    segments.append({"type": "text", "content": "  |  " + base_info, "color": sub_color})
+                return segments
+
+        # 5. ZEISS T* (Red T*)
+        separator = "  |  " if (lens and base_info) else ""
+        full_text = lens + separator + base_info
+        if "T*" in full_text:
+            segments.append({"type": "text", "content": full_text, "color": LensParser._get_zeiss_colors(full_text, sub_color)})
+            return segments
+
+        # EN: Default Fallback / CN: 默认回退
+        segments.append({"type": "text", "content": full_text, "color": sub_color})
         return segments
+
+    @staticmethod
+    def _get_zeiss_colors(text, base_color):
+        colors = [base_color] * len(text)
+        zeiss_red = (237, 31, 37)
+        i = 0
+        while i < len(text) - 1:
+            if text[i:i+2] == "T*":
+                colors[i] = zeiss_red
+                colors[i+1] = zeiss_red
+                i += 2
+            else:
+                i += 1
+        return colors
