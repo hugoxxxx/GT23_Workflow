@@ -30,7 +30,7 @@
    - 迁移 CJK 降级逻辑 (`FontResolver`) 与字号自适应缩放逻辑 (`TextAdjuster`)。
 
 ### 第三阶段：几何布局与齿孔模式 (Geometry)
-6. **布局解算器迁移** (`core/layout/calculator.py`)
+6. **布局解算器迁移** (`core/layout/calculator.py`) [x]
    - 迁移 `target_ratio` 补边计算与 side/top/bottom 边距分配逻辑。
 7. **齿孔模式模块化** (`core/layout/sprocket.py`)
    - 将齿孔模式下的特殊边距覆盖逻辑独立。

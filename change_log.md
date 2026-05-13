@@ -20,6 +20,23 @@
   - EN: Fixed field visibility switches for Shutter, Aperture, ISO, and Lens. Improved footer aesthetics by automatically removing redundant separators ("|") when leading technical fields are hidden.
   - CN: 修复了快门、光圈、ISO 和镜头的显隐开关失效问题。优化了副标题美学逻辑，当镜头等排头字段隐藏时，会自动清理掉起始位置多余的竖线分隔符。
 
+### 🏗️ 渲染引擎深度解耦与模块化重构 (Renderer Decoupling & Modular Refactor)
+- **[Architecture] “单体化”渲染器上帝对象拆解 / Monolithic Renderer Decoupling**:
+  - EN: Initiated the strategic split of the 1000-line `FilmRenderer` (56KB). Moving away from the "God Object" pattern by redistributing layout, theme, and effect responsibilities into specialized sub-modules.
+  - CN: 启动了对 1000 余行“单体化”渲染器（56KB）的战略拆解。告别“上帝对象”模式，开始将布局计算、主题生成和特效滤镜等职责重分布至专门的子模块中。
+- **[Refactor] 镜头品牌解析模块独立 / Lens Branding Logic Isolation**:
+  - EN: Successfully decoupled the complex lens branding and token identification logic into `core/branding/lens_parser.py`. Restored stable v2.4.0 parity for Canon, Nikon, Sony, Sigma, and Zeiss markers while maintaining a clean, modular interface.
+  - CN: 成功将复杂的镜头品牌与勋章识别逻辑解耦至 `core/branding/lens_parser.py`。在保持模块化接口的同时，完美回归了佳能、尼康、索尼、适马及蔡司标识的 v2.4.0 稳定版表现。
+- **[Aesthetics] 品牌勋章文字冲突剥离 / Keyword Stripping Logic**:
+  - EN: Implemented strict, regex-based keyword stripping within the new `LensParser` module. Automatically cleans model strings (stripping "GM", "Art", etc.) to prevent redundant text rendering when icons are present.
+  - CN: 在新模块 `LensParser` 中实现了基于正则的关键词剥离逻辑。自动清洗镜头名（如剔除 "GM"、"Art" 等），解决了图标与文字重复显示的视觉冗余问题。
+- **[Infrastructure] 主题引擎与特效组件化 / Theme & Effects Assetization**:
+  - EN: Established the infrastructure for `core/theme/` and `core/effects/`. Began migrating theme-specific canvas logic (Frosted, Slate Teal) and filter effects (Shadows, Matte Texture) to allow for easier expansion and testing.
+  - CN: 搭建了 `core/theme/` 与 `core/effects/` 的底层架构。开始将特定主题的画布逻辑（如磨砂玻璃、石板青）和滤镜特效（如阴影、哑光纹理）进行外挂式迁移，极大提升了系统的可扩展性。
+- **[Fix] 环境鲁棒性与编码加固 / Environment & Encoding Stability**:
+  - EN: Consolidated `main.py` and modular components to use standard ASCII markers, resolving Unicode-related crashes in Windows GBK console environments.
+  - CN: 统一了 `main.py` 与各模块的日志输出规范，采用标准 ASCII 标识，彻底解决了 Windows GBK 控制台环境下的 Unicode 编码崩溃隐患。
+
 ### 🖋️ 文字排版与渲染精修 (Typography & Rendering Refinement)
 - **[Feature] 绝对行间距控制 / Absolute Line Spacing**:
   - EN: Added "Line Spacing (px)" control in Advanced Settings. Implemented a resolution-aware absolute gap logic that adjusts the vertical distance between the title and subtitle proportionally to the image's long edge.

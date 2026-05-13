@@ -24,6 +24,7 @@ from .typography.font_resolver import FontResolver
 from .typography.text_adjuster import TextAdjuster
 from .branding.lens_parser import LensParser
 from .branding.logo_finder import LogoFinder
+from .layout.calculator import LayoutCalculator
 from .metadata import MetadataHandler
 
 class FilmRenderer:
@@ -69,7 +70,7 @@ class FilmRenderer:
 
     def process_image(self, img_path, data, output_dir, target_long_edge=4500, manual_rotation=0, 
                     theme="light", is_pure=False, use_lens_branding=True, rainbow_index=0, rainbow_total=1, is_sample=False, 
-                    source_img=None, output_prefix="", comp_v_offset=0, comp_h_offset=0, **kwargs):
+                    source_img=None, output_prefix="", v_offset=0, h_offset=0, **kwargs):
         """
         EN: Main entry point with theme, global rainbow sequence, and sample mode.
         CN: 主渲染入口，增强主题、全局彩虹长卷与 SAMPLE 样品模式支持。
@@ -123,86 +124,20 @@ class FilmRenderer:
             layout = data.get('layout', {})
             layout_name = layout.get('name', 'CUSTOM')
             
-            # EN: Support asymmetrical side padding
-            # CN: 支持非对称侧边距调节 (左/右独立)
-            left_ratio = layout.get('left', layout.get('side', 0.04))
-            right_ratio = layout.get('right', layout.get('side', 0.04))
-            top_ratio = layout.get('top', 0.04)
-            bottom_ratio = layout.get('bottom', 0.13)
+            # --- EN: CALCULATE LAYOUT (Refactored v2.4.1) / CN: 布局计算 (v2.4.1 重构) ---
+            t_layout_start = time.perf_counter()
+            layout_results = LayoutCalculator.calculate_layout(
+                w, h, data, layout, h_offset, v_offset
+            )
             font_base_scale = layout.get('font_scale', 0.032)
             
-            # --- EN: CALCULATE SPACING ---
-            # EN: Use long_edge as a stable reference for all paddings to ensure consistent border thickness
-            # EN: The "inner bottom margin" between image and text area. 
-            # CN: 图像与底部文字区之间的间隙，置 0 以实现底部参数的完全解耦
-            inner_bottom_margin = 0
-            
-            # --- EN: SPROCKET MODE LAYOUT OVERRIDE (v2.4.1) / CN: 齿孔预设布局覆盖 (v2.4.1) ---
-            if data.get('sprocket_enabled', False):
-                # EN: Force 135 film physical proportions: 24mm image height in a 35mm strip
-                # CN: 锁死 135 胶卷物理比例：35mm 总高内嵌 24mm 成像
-                px_per_mm = h / 24.0
-                margin_px = int(5.5 * px_per_mm)
-                top_pad = margin_px
-                bottom_splice = margin_px
-                # EN: Add minimal side padding for a "strip segment" look
-                # CN: 添加微量侧边留白以实现“胶片条切片”感
-                side_pad_left = side_pad_right = int(2.0 * px_per_mm)
-            else:
-                # EN: Standard Manual Layout / CN: 标准手动布局
-                long_edge = max(w, h)
-                side_pad_left = int(long_edge * left_ratio)
-                side_pad_right = int(long_edge * right_ratio)
-                top_pad = int(long_edge * top_ratio)
-                bottom_splice = int(long_edge * bottom_ratio)
-            
-            new_w = w + side_pad_left + side_pad_right
-            new_h = h + top_pad + inner_bottom_margin + bottom_splice
-            
-            # --- EN: TARGET ASPECT RATIO ADAPTATION / CN: 目标画幅比例自适应 ---
-            target_ratio_str = data.get('target_ratio', 'Original')
-            if target_ratio_str and 'Original' not in target_ratio_str and '原图' not in target_ratio_str:
-                # EN: Parse ratio (e.g., "4:5 (LRB)" -> 0.8) / CN: 解析比例字符串
-                import re
-                match = re.search(r'(\d+):(\d+)', target_ratio_str)
-                if match:
-                    tr_w, tr_h = int(match.group(1)), int(match.group(2))
-                    tr = tr_w / tr_h
-                    
-                    current_ratio = new_w / new_h
-                    
-                    # EN: Use epsilon (0.1%) to avoid redundant padding from precision errors
-                    # CN: 增加 0.1% 的容错率，避免因浮点误差导致的二次留白修正
-                    if abs(current_ratio - tr) / tr > 0.001:
-                        if current_ratio < tr:
-                            # EN: Canvas too tall, add side padding
-                            target_new_w = int(new_h * tr)
-                            diff_w = target_new_w - new_w
-                            if diff_w > 0:
-                                # EN: Horizontal distribution (0.5 center by default)
-                                h_off = comp_h_offset / 100.0
-                                dist_h = 0.5 + (h_off / 2.0) # -1 -> 0, 0 -> 0.5, 1 -> 1.0
-                                l_extra = int(diff_w * dist_h)
-                                side_pad_left += l_extra
-                                side_pad_right += (diff_w - l_extra)
-                                new_w = target_new_w
-                        elif current_ratio > tr:
-                            # EN: Canvas too wide, add vertical padding
-                            target_new_h = int(new_w / tr)
-                            diff_h = target_new_h - new_h
-                            if diff_h > 0:
-                                # EN: Use Text Safety Buffer during redistribution
-                                # CN: 在再分配过程中保留文字安全区
-                                TEXT_RESERVE = 550
-                                v = comp_v_offset / 100.0
-                                shift_budget = max(0, diff_h - TEXT_RESERVE)
-                                
-                                dist_v = (0.3 * (1 + v)) if v < 0 else (0.3 + 0.7 * v)
-                                top_extra = int(shift_budget * dist_v)
-                                
-                                top_pad += top_extra
-                                bottom_splice += (diff_h - top_extra)
-                                new_h = target_new_h
+            side_pad_left = layout_results["side_pad_left"]
+            side_pad_right = layout_results["side_pad_right"]
+            top_pad = layout_results["top_pad"]
+            bottom_splice = layout_results["bottom_splice"]
+            new_w = layout_results["new_w"]
+            new_h = layout_results["new_h"]
+            inner_bottom_margin = layout_results["inner_bottom_margin"]
 
             if data.get('sprocket_enabled', False):
                 # EN: Re-force black background after ratio padding might have added white

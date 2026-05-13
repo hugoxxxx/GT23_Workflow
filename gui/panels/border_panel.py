@@ -95,6 +95,9 @@ class BorderPanel:
         
         self._is_syncing_lr = False
         self._param_shadow = {"left": "180", "right": "180", "top": "180", "bottom": "585"}
+        # EN: Baseline defaults for "Original" mode (Never modified)
+        # CN: “原图”模式的基准默认值（初始化后不再修改）
+        self._baseline_params = dict(self._param_shadow)
         # --------------------------------------
         
         # EN: Controller for decoupled logic / CN: 用于逻辑解耦的控制器
@@ -900,10 +903,75 @@ class BorderPanel:
                     if "sub" in p: self.font_sub_px_var.set(str(p["sub"]))
                 finally:
                     self._loading_state = False
+        else:
+            # EN: Reset to baseline defaults for 'Original' / CN: “原图”模式强制重置回基准默认值
+            is_original = not ratio_str or "Original" in ratio_str or "原图" in ratio_str
+            if is_original:
+                self._loading_state = True
+                try:
+                    self._reset_to_json_layout()
+                    # EN: Zero out offsets / CN: 平移归零
+                    self.v_offset_var.set(0)
+                    self.h_offset_var.set(0)
+                finally:
+                    self._loading_state = False
         
         # EN: Final update to preview
         # CN: 最终触发全量预览更新
         self.on_params_changed(sync_all=True)
+
+    def _reset_to_json_layout(self):
+        """
+        EN: Dynamically detect and apply the best layout from JSON based on image aspect ratio.
+        CN: 根据图片宽高比，动态从 JSON 中检测并应用最佳布局预设。
+        """
+        if not getattr(self, 'current_image_path', None):
+            # EN: Fallback to baseline if no image / CN: 如果没图片，退回到初始影子值
+            self.left_px_var.set(self._baseline_params.get("left", "180"))
+            self.right_px_var.set(self._baseline_params.get("right", "180"))
+            self.top_px_var.set(self._baseline_params.get("top", "180"))
+            self.bottom_px_var.set(self._baseline_params.get("bottom", "585"))
+            return
+
+        try:
+            # EN: Get current aspect ratio from cache or file / CN: 获取当前宽高比
+            aspect = self.controller.state.get_width(self.current_image_path)
+            if aspect is None:
+                with Image.open(self.current_image_path) as img:
+                    w, h = img.size
+                    aspect = w / h
+                    self.controller.update_aspect_ratio_cache(self.current_image_path, aspect)
+
+            is_portrait = aspect < 0.95 # EN: Simple threshold / CN: 简单判定横竖屏
+            
+            # EN: Search layouts.json for match / CN: 匹配 layouts.json
+            best_cfg = None
+            for name, entry in self.layout_config.items():
+                r_min, r_max = entry.get("aspect_range", [0, 99])
+                # EN: Handle vertical swap / CN: 处理竖屏范围翻转
+                if is_portrait:
+                    r_min, r_max = 1.0/r_max, 1.0/r_min
+                
+                if r_min <= aspect <= r_max:
+                    best_cfg = entry.get("portrait" if is_portrait else "landscape", entry.get("all"))
+                    break
+            
+            if best_cfg:
+                # EN: Convert ratios to px based on 4500px reference
+                # CN: 将比例转换为基于 4500px 基准的像素值
+                ref = 4500.0
+                self.left_px_var.set(str(int(best_cfg.get("side_ratio", 0.04) * ref)))
+                self.right_px_var.set(str(int(best_cfg.get("side_ratio", 0.04) * ref)))
+                self.top_px_var.set(str(int(best_cfg.get("top_ratio", 0.04) * ref)))
+                self.bottom_px_var.set(str(int(best_cfg.get("bottom_ratio", 0.13) * ref)))
+                if "font_scale" in best_cfg:
+                    self.font_scale_var.set(str(int(best_cfg["font_scale"] * ref)))
+            else:
+                # EN: Last resort fallback / CN: 最后的兜底
+                self.left_px_var.set("180")
+                self.right_px_var.set("585")
+        except Exception as e:
+            print(f"DEBUG: Layout reset failed: {e}")
 
     def on_params_changed(self, sync_all=False):
         if getattr(self, '_loading_state', False): return
