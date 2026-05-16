@@ -7,7 +7,7 @@ class TextAdjuster:
     CN: 负责文字的自适应缩放计算，防止溢出。
     """
     @staticmethod
-    def adjust(draw, main_text, sub_text, available_width, base_main_size, base_sub_size, resolver):
+    def adjust(draw, main_text, sub_text, available_width, base_main_size, base_sub_size, resolver, main_path=None, sub_path=None):
         """
         EN: Adjust font sizes to fit available width.
         CN: 调整字体大小使其适应可用宽度。
@@ -16,7 +16,11 @@ class TextAdjuster:
             return 10, 8, 1.0, 1.0
             
         # EN: Resolve font paths / CN: 解析字体路径
-        resolved_main, resolved_sub = resolver.resolve(main_text, sub_text)
+        # v2.4.1: Support explicit path overrides from caller
+        if main_path and sub_path:
+            resolved_main, resolved_sub = main_path, sub_path
+        else:
+            resolved_main, resolved_sub = resolver.resolve(main_text, sub_text)
 
         # EN: Create temporary draw for measurement / CN: 创建临时绘图对象测量宽度
         temp_img = Image.new("RGB", (1, 1))

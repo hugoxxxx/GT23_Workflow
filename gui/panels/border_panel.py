@@ -1120,27 +1120,30 @@ class BorderPanel:
                 self.right_px_var.set(str(int(new_r)))
                 return
 
-            if "w" in changed:
-                # EN: Width changed -> solve for Bottom (Height) / CN: 宽度变了 -> 补齐高度（Bottom）
-                total_w = ref_w + l + r
-                needed_h_total = total_w / target_r
-                needed_paddings_h = needed_h_total - ref_h
-                new_b = max(10, int(needed_paddings_h - t))
-                self.bottom_px_var.set(str(new_b))
-            elif "h" in changed:
-                # EN: Height changed -> solve for Right (Width) / CN: 高度变了 -> 补齐宽度（Right）
-                total_h = ref_h + t + b
-                needed_w_total = total_h * target_r
-                needed_paddings_w = needed_w_total - ref_w
-                if self.sync_lr_var.get():
-                    new_side = max(10, int(needed_paddings_w / 2))
-                    self.left_px_var.set(str(new_side))
-                    self.right_px_var.set(str(new_side))
-                else:
-                    new_r = max(10, int(needed_paddings_w - l))
-                    self.right_px_var.set(str(new_r))
-        except:
-            pass
+            # EN: Adaptive balancing logic (Only for locked ratios)
+            # CN: 自动平衡补齐逻辑（仅在锁定比例模式下生效）
+            if not is_free_mode:
+                if "w" in changed:
+                    # EN: Width changed -> solve for Bottom (Height) / CN: 宽度变了 -> 补齐高度（Bottom）
+                    total_w = ref_w + l + r
+                    needed_h_total = total_w / target_r
+                    needed_paddings_h = needed_h_total - ref_h
+                    new_b = max(10, int(needed_paddings_h - t))
+                    self.bottom_px_var.set(str(new_b))
+                elif "h" in changed:
+                    # EN: Height changed -> solve for Right (Width) / CN: 高度变了 -> 补齐宽度（Right）
+                    total_h = ref_h + t + b
+                    needed_w_total = total_h * target_r
+                    needed_paddings_w = needed_w_total - ref_w
+                    if self.sync_lr_var.get():
+                        new_side = max(10, int(needed_paddings_w / 2))
+                        self.left_px_var.set(str(new_side))
+                        self.right_px_var.set(str(new_side))
+                    else:
+                        new_r = max(10, int(needed_paddings_w - l))
+                        self.right_px_var.set(str(new_r))
+        except Exception as e:
+            print(f"DEBUG: Ratio sync failed: {e}")
 
     def _set_frame_enabled(self, frame, enabled):
         """EN: Recursively set state for all widgets in a frame / CN: 递归设置框架内所有组件的启用状态"""

@@ -21,8 +21,12 @@
   - CN: 修复了快门、光圈、ISO 和镜头的显隐开关失效问题。优化了副标题美学逻辑，当镜头等排头字段隐藏时，会自动清理掉起始位置多余的竖线分隔符。
 
 ### 🏗️ 渲染引擎深度解耦与模块化重构 (Renderer Decoupling & Modular Refactor)
-- **[Architecture] “单体化”渲染器上帝对象拆解 / Monolithic Renderer Decoupling**:
-  - EN: Initiated the strategic split of the 1000-line `FilmRenderer` (56KB). Moving away from the "God Object" pattern by redistributing layout, theme, and effect responsibilities into specialized sub-modules.
+- **[Architecture] 渲染引擎模块化拆分 / Renderer Modularization**:
+  - EN: Migrated all margin calculation and typography metrics (font sizes, spacing, offsets) to `LayoutCalculator.py`. Renderer now strictly consumes calculated values, fulfilling the core refactoring objective.
+  - CN: 完成了边距计算与排版度量（字号、间距、偏移、字体路径）向 `LayoutCalculator.py` 的迁移。渲染器现在仅负责最终绘图，彻底实现了渲染与布局计算的模块化分离。
+- **[Logic] 比例锁定与边距解耦 / Ratio Lock & Margin Decoupling**:
+  - EN: Decoupled margin adjustments in "Original" mode. Locked font/logo scaling to original image dimensions to prevent distortion when adjusting border width.
+  - CN: 实现了“原图”模式下边距数值的独立调整，不再强制联动。将字号缩放基准锁定为原始图片，彻底解决了因调整边距导致的 Logo 胀大/缩小问题。
   - CN: 启动了对 1000 余行“单体化”渲染器（56KB）的战略拆解。告别“上帝对象”模式，开始将布局计算、主题生成和特效滤镜等职责重分布至专门的子模块中。
 - **[Refactor] 镜头品牌解析模块独立 / Lens Branding Logic Isolation**:
   - EN: Successfully decoupled the complex lens branding and token identification logic into `core/branding/lens_parser.py`. Restored stable v2.4.0 parity for Canon, Nikon, Sony, Sigma, and Zeiss markers while maintaining a clean, modular interface.

@@ -94,42 +94,41 @@ class FilmRenderer:
             
             # --- EN: AUTO-IDENTIFY METADATA (v2.4.1 Parity) ---
             # CN: 自动识别元数据（确保与 v2.4.1 逻辑对齐）
-            # EN: If data is minimal, try to fill it from EXIF
-            # CN: 如果 data 为空或缺少核心信息，尝试从 EXIF 中提取
             if not data.get('Make') or not data.get('Model'):
-                # EN: Use dedicated MetadataHandler for extraction
-                # CN: 使用专业的 MetadataHandler 进行提取
                 handler = MetadataHandler()
                 auto_data = handler.get_data(img_path)
                 
-                # EN: Only fill if manual overrides are not present
-                # CN: 仅在没有手动覆盖值时进行填充
                 for k, v in auto_data.items():
                     if k not in data or not data[k] or data[k] == "Unknown":
                         data[k] = v
             
-            # --- EN: THEME SETUP / CN: 主题颜色设置 ---
-            t_layout_start = time.perf_counter()
             bg_color, main_color, sub_color, line_color = self._apply_theme_colors(theme, index=rainbow_index)
             
-            # EN: Force dark aesthetic for Sprocket Mode (v2.4.1)
-            # CN: 齿孔模式强制开启深色系美学
             if data.get('sprocket_enabled', False):
                 bg_color = (0, 0, 0)
                 main_color = (245, 245, 245)
                 sub_color = (210, 210, 210)
                 line_color = (40, 40, 40)
             
-            # --- EN: DATA INTEGRITY CHECK ---
             layout = data.get('layout', {})
-            layout_name = layout.get('name', 'CUSTOM')
+            
+            # --- EN: TYPOGRAPHY HIERARCHY ---
+            t_draw_start = time.perf_counter()
+            main_text, sub_text = self._prepare_strings(data)
+            
+            # EN: Injection for LayoutCalculator
+            data['main_text'] = main_text
+            data['sub_text'] = sub_text
+            
+            if is_sample:
+                main_text = "SAMPLE SAMPLE"
+                sub_text = "SAMPLE SAMPLE | SAMPLE | SAMPLE"
             
             # --- EN: CALCULATE LAYOUT (Refactored v2.4.1) / CN: 布局计算 (v2.4.1 重构) ---
             t_layout_start = time.perf_counter()
             layout_results = LayoutCalculator.calculate_layout(
-                w, h, data, layout, h_offset, v_offset
+                w, h, data, layout, h_offset, v_offset, font_resolver=self.font_resolver
             )
-            font_base_scale = layout.get('font_scale', 0.032)
             
             side_pad_left = layout_results["side_pad_left"]
             side_pad_right = layout_results["side_pad_right"]
@@ -138,183 +137,109 @@ class FilmRenderer:
             new_w = layout_results["new_w"]
             new_h = layout_results["new_h"]
             inner_bottom_margin = layout_results["inner_bottom_margin"]
+            
+            # Typography metrics from calculator
+            base_main_font_size = layout_results["base_main_font_size"]
+            base_sub_font_size = layout_results["base_sub_font_size"]
+            v_offset_px = layout_results["font_v_offset_px"]
+            resolved_main = layout_results["resolved_main"]
+            resolved_sub = layout_results["resolved_sub"]
+            ref_factor = layout_results["ref_factor"]
 
             if data.get('sprocket_enabled', False):
-                # EN: Re-force black background after ratio padding might have added white
-                # CN: 在比例适配可能引入白边后，再次确保全黑背景
                 bg_color = (0, 0, 0)
             
             timings['layout_calc'] = time.perf_counter() - t_layout_start
             
             # --- EN: DRAWING ---
             t_canvas_start = time.perf_counter()
-            # EN: Rainbow mode uses a global sliced gradient canvas
-            # CN: 彩虹模式使用全局分段横向渐变画布
-            # EN: Rainbow modes (Macaron/Rainbow) use different gradient engines
-            # CN: 彩虹模式：区分长卷系统（彩虹）与随机渐变系统（马卡龙）
             if theme == "rainbow":
-                # EN: Pass specific t_start/t_end for physical continuity / CN: 传递具体的起始/结束比例以实现物理连贯
                 t_range = kwargs.get('rainbow_range', (0.0, 1.0))
                 canvas = self._create_fuji_rainbow_canvas(new_w, new_h, t_range[0], t_range[1])
             elif theme == "macaron":
-                # EN: Dynamic 2-color gradient for Macaron / CN: 马卡龙系统：动态双色随机渐变
+                import hashlib
+                c_idx = rainbow_index if rainbow_index >= 0 else int(hashlib.md5(img_path.encode()).hexdigest(), 16) % 9
                 macaron_palette = [
                     (255, 180, 200), (210, 180, 255), (180, 220, 255), 
                     (180, 255, 220), (255, 250, 190), (255, 210, 180),
                     (200, 255, 255), (255, 220, 255), (220, 255, 180)
                 ]
-                # EN: Resolve color index (Must be deterministic)
-                if rainbow_index >= 0:
-                    c_idx = rainbow_index
-                else:
-                    import hashlib
-                    c_idx = int(hashlib.md5(img_path.encode()).hexdigest(), 16) % len(macaron_palette)
-
-                c1 = macaron_palette[c_idx % len(macaron_palette)]
-                c2 = macaron_palette[(c_idx + 1) % len(macaron_palette)]
+                c1 = macaron_palette[c_idx % 9]
+                c2 = macaron_palette[(c_idx + 1) % 9]
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
             elif theme == "sakura":
-                # EN: Sakura Pink Palette (Varying intensities for better visual distinction)
-                # CN: 樱花粉色库：优化明度，让整体色调更轻盈（响应老大反馈：调淡左侧和暗部）
+                import hashlib
+                c_idx = rainbow_index if rainbow_index >= 0 else int(hashlib.md5(img_path.encode()).hexdigest(), 16) % 9
                 sakura_palette = [
-                    # EN: Interleaved shades (Pale, Soft, Classic) - Lightened for better blending
-                    # CN: 交织色序 (淡妆 -> 柔粉 -> 经典)，整体上移明度，确保背景轻盈
                     (255, 245, 247), (255, 203, 217), (255, 180, 200),
                     (255, 235, 240), (255, 190, 205), (255, 170, 190),
                     (255, 220, 235), (255, 185, 200), (255, 160, 180)
                 ]
-                # EN: Resolve color index (Deterministic based on position/path)
-                if rainbow_index >= 0:
-                    c_idx = rainbow_index
-                else:
-                    import hashlib
-                    c_idx = int(hashlib.md5(img_path.encode()).hexdigest(), 16) % len(sakura_palette)
-
-                # EN: Use a step of 2 to ensure we jump between distinctive shades
-                # CN: 使用跨步采样，确保渐变色对具备明显的明度或色相差
-                base_idx = c_idx % len(sakura_palette)
-                next_idx = (base_idx + 1) % len(sakura_palette)
-                
-                c1 = sakura_palette[base_idx]
-                c2 = sakura_palette[next_idx]
+                c1 = sakura_palette[c_idx % 9]
+                c2 = sakura_palette[(c_idx + 1) % 9]
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c1, c2)
             elif theme == "frosted":
-                # EN: Glassmorphism (Blurred Original) / CN: 磨砂玻璃（基于原图的高斯模糊背景）
                 canvas = self._create_frosted_canvas(img, new_w, new_h)
             elif theme == "slate_teal":
-                # EN: Premium Slate-Teal Gradient (Ultimate Luminous Replica)
-                # CN: 石板青（终极通透版：复刻福伦达“空明石板青”模拟渐变）
-                c_top = (210, 222, 228)    # Luminous Air / 空明青灰
-                c_bottom = (125, 142, 152) # Breathable Slate / 通透石板
-                # EN: Use gamma 1.6 for expansive highlight falloff / CN: 使用伽态 1.6 引导大范围高光衰减
+                c_top = (210, 222, 228)
+                c_bottom = (125, 142, 152)
                 canvas = self._create_linear_gradient_canvas(new_w, new_h, c_top, c_bottom, vertical=True, gamma=1.6)
-                # EN: Apply matte texture for "Fine Art Paper" feel
-                # CN: 应用磨砂纹理，模拟“艺术纸”质感
                 canvas = self._apply_matte_texture(canvas, intensity=0.06)
             else:
                 canvas = Image.new("RGB", (new_w, new_h), bg_color)
             
             if theme in ["frosted", "slate_teal"]:
-                # EN: Floating Photo Effect (Inner Shadow + Image + Border)
                 self._draw_floating_photo(canvas, img, side_pad_left, top_pad, line_color)
             else:
                 canvas.paste(img, (side_pad_left, top_pad))
-                # EN: 1px inner border
                 ImageDraw.Draw(canvas).rectangle([side_pad_left, top_pad, side_pad_left + w, top_pad + h], outline=line_color, width=1)
             
             draw = ImageDraw.Draw(canvas)
             timings['canvas_paste'] = time.perf_counter() - t_canvas_start
-            # --- EN: TYPOGRAPHY HIERARCHY ---
-            t_draw_start = time.perf_counter()
-            main_text, sub_text = self._prepare_strings(data)
-            
-            if is_sample:
-                main_text = "SAMPLE SAMPLE"
-                sub_text = "SAMPLE SAMPLE | SAMPLE | SAMPLE"
-            
+
             # --- EN: RENDERING PIPELINE / CN: 渲染流水线 ---
             if is_pure:
                 pass
             else:
-                long_edge = max(new_w, new_h)
-                layout = data.get('layout', {})
-                
-                # EN: Resolve independent main/sub font scales (v2.4.1: Priority to manual PX values)
-                # CN: 解决独立的主副标题比例 (v2.4.1: 优先使用手动设置的像素值)
-                ref_factor = long_edge / 4500.0  # EN: Reference for UI px units / CN: UI 像素单位的参考系数
-                
-                ui_font_scale = data.get('font_scale')
-                if ui_font_scale is not None:
-                    # EN: Support both old ratio (0.032) and new PX (144)
-                    # CN: 同时兼容旧比例 (0.032) 与新像素单位 (144)
-                    f_val = float(ui_font_scale)
-                    if f_val >= 1.0:
-                        base_main_font_size = int(f_val * ref_factor)
-                    else:
-                        base_main_font_size = int(long_edge * f_val)
-                else:
-                    font_main_scale = layout.get('font_main_scale', font_base_scale) if layout else font_base_scale
-                    base_main_font_size = int(long_edge * font_main_scale)
-                
-
-
-                ui_font_sub_px = data.get('font_sub_px')
-                if ui_font_sub_px is not None:
-                    base_sub_font_size = int(float(ui_font_sub_px) * ref_factor)
-                else:
-                    font_sub_scale = layout.get('font_sub_scale', font_main_scale * 0.78) if layout else font_base_scale * 0.78
-                    base_sub_font_size = int(long_edge * font_sub_scale)
-
-                # EN: Available width for text (Allow 95% of canvas width, no longer squeezed by side borders)
-                # CN: 文字可用宽度（允许占用画布总宽度的 95%，不再受侧边框宽度的双倍挤压）
+                # EN: Available width for text (Allow 95% of canvas width)
                 available_width = int(new_w * 0.95)
                 
                 # EN: Adaptive Text Coloring for Frosted Mode
-                # CN: 磨砂模式下的文字颜色自适应逻辑 (强化对比度版)
                 if theme == "frosted":
                     from PIL import ImageStat
-                    # EN: Sample the footer area where text is drawn
-                    # CN: 采样底部文字绘制区域的亮度
                     footer_rect = [0, new_h - bottom_splice, new_w, new_h]
                     footer_rect = [max(0, int(v)) for v in footer_rect]
                     footer_sample = canvas.crop(footer_rect).convert("L")
                     avg_lum = ImageStat.Stat(footer_sample).mean[0]
-                    
-                    # EN: Dynamic 5-level Grayscale Palette logic
-                    # CN: 动态五阶灰阶调色板逻辑
-                    if avg_lum > 180: # Very Light
+                    if avg_lum > 180:
                         main_color, sub_color = (0, 0, 0), (45, 45, 45)
-                    elif avg_lum > 135: # Fairly Light
+                    elif avg_lum > 135:
                         main_color, sub_color = (15, 15, 15), (70, 70, 70)
-                    elif avg_lum > 90: # Neutral/Mid
+                    elif avg_lum > 90:
                         main_color, sub_color = (255, 255, 255), (225, 225, 225)
-                    else: # Dark
+                    else:
                         main_color, sub_color = (255, 255, 255), (242, 242, 242)
                 
-                # --- EN: TEXT ADJUSTMENT / CN: 字体自适应调整 ---
                 # EN: Calculate optimal font sizes to fit available width
-                # CN: 计算最佳字号以适应可用宽度
                 actual_main_size, actual_sub_size, m_factor, s_factor = TextAdjuster.adjust(
                     draw, main_text, sub_text, available_width, 
-                    base_main_font_size, base_sub_font_size, self.font_resolver
+                    base_main_font_size, base_sub_font_size, self.font_resolver,
+                    main_path=resolved_main, sub_path=resolved_sub
                 )
 
-                # EN: High-precision calculation of overflow-free max in reference pixels (4500px)
-                # CN: 在 4500px 基准下进行高精度不溢出最大像素值计算 (避开预览图整数舍入误差)
+                # EN: Store metrics for UI feedback / CN: 存储用于 UI 反馈的度量信息
                 timings['max_font_px'] = {
-                    'main': int(font_main_scale * m_factor * 4500),
-                    'sub': int(font_sub_scale * s_factor * 4500),
+                    'main': int(base_main_font_size * m_factor / ref_factor),
+                    'sub': int(base_sub_font_size * s_factor / ref_factor),
                     'main_overflow': m_factor < 0.9999,
                     'sub_overflow': s_factor < 0.9999
                 }
 
                 # EN: Vertical collision detection (CN: 垂直重叠/压图检测)
-                ref_factor = long_edge / 4500.0
-                resolved_main, resolved_sub = self.font_resolver.resolve(main_text, sub_text)
                 m_font = TextAdjuster._get_font(resolved_main, actual_main_size)
                 m_ascent, m_descent = m_font.getmetrics()
-                # EN: Anchor text proportionally to image bottom (38% of space) for tighter visual gestalt
-                # CN: 文字锚点调整至底部留白的 38% 处（微调），让文字与照片的“呼吸感”更紧密，避免在大画幅下显得疏离
+                
+                # EN: Anchor text proportionally to image bottom (38% of space)
                 total_bottom_space = inner_bottom_margin + bottom_splice
                 base_y = top_pad + h + int(total_bottom_space * 0.38)
                 v_gap_ref = max(actual_main_size, actual_sub_size)
@@ -326,18 +251,13 @@ class FilmRenderer:
                 timings['max_font_px']['v_overflow'] = v_overflow
                 
                 if v_overflow:
-                    # EN: Approximate max font size that fits vertically (CN: 估算垂直方向能容纳的最大字号)
-                    # Calculation: m_ascent(0.8) + offset(0.55) = 1.35 * font_size < center_gap
+                    # EN: Approximate max font size that fits vertically
                     center_gap = (inner_bottom_margin + bottom_splice) // 2
                     max_v_size = int(center_gap / 1.35 / ref_factor)
-                    # EN: Update suggest if hit vertical limit (CN: 如果垂直溢出，取宽度与高度限制的最小值)
                     timings['max_font_px']['main'] = min(timings['max_font_px']['main'], max_v_size)
 
                 t_logo_start = time.perf_counter()
-                v_offset_ratio = layout.get('font_v_offset', 0) if layout else 0
-                v_offset_px = int(long_edge * v_offset_ratio)
-                
-                self._draw_pro_text(draw, new_w, h, side_pad_left, side_pad_right, top_pad, bottom_splice, 
+                self._draw_pro_text(draw, new_w, w, h, side_pad_left, side_pad_right, top_pad, bottom_splice, 
                                 main_text, sub_text, actual_main_size, actual_sub_size, 
                                 data=data, main_color=main_color, sub_color=sub_color, 
                                 use_lens_branding=use_lens_branding, timings=timings,
@@ -743,7 +663,7 @@ class FilmRenderer:
         sub_text = "".join([s["content"] for s in sub_segments if s["type"] == "text"])
         return main_text, sub_text
 
-    def _draw_pro_text(self, draw, new_w, h, side_pad_left, side_pad_right, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, use_lens_branding=True, timings=None, v_offset=0):
+    def _draw_pro_text(self, draw, new_w, w, h, side_pad_left, side_pad_right, top_pad, bottom_splice, main_text, sub_text, m_size, s_size, data=None, main_color=None, sub_color=None, use_lens_branding=True, timings=None, v_offset=0):
         if timings is None: timings = {}
         
         # v2.4.1: Sprocket Mode Logic
@@ -760,14 +680,24 @@ class FilmRenderer:
             s_color = (235, 235, 235) # Luminous White
         
         # EN: Detect CJK characters and resolve paths / CN: 检测 CJK 字符并解析路径
+        # EN: v2.4.1 - Prioritize manual UI font selection over automatic resolution
+        # CN: v2.4.1 - 优先使用 UI 手动选择的字体，若为 Default 则走自动识别
         resolved_main, resolved_sub = self.font_resolver.resolve(main_text, sub_text)
+        
+        if data:
+            manual_main = data.get('font_main_path', 'Default')
+            manual_sub = data.get('font_sub_path', 'Default')
+            
+            if manual_main != 'Default':
+                resolved_main = manual_main
+            if manual_sub != 'Default':
+                resolved_sub = manual_sub
 
         # --- EN: TEXT SPACING RESOLUTION / CN: 文字间距解析 ---
         # EN: Scale spacing relative to image's long edge for resolution consistency
         # CN: 间距随照片长边等比缩放，确保在不同分辨率下观感一致
-        total_h = top_pad + h + bottom_splice
-        long_edge = max(new_w, total_h)
-        spacing_px = int(data['layout'].get('font_spacing_scale', 0) * long_edge)
+        img_long_edge = max(w, h)
+        spacing_px = int(data['layout'].get('font_spacing_scale', 0) * img_long_edge)
 
         # EN: Positioning Logic
         inner_bottom_margin = 0
