@@ -195,7 +195,7 @@ class TypoEngine:
         processed_items = []
         total_w = 0
         
-        for char in text:
+        for i, char in enumerate(text):
             if char == " ":
                 w = int(ref_h * 0.2) 
                 processed_items.append({"img": None, "type": "space", "w": w})
@@ -215,11 +215,15 @@ class TypoEngine:
             if path and os.path.exists(path):
                 try:
                     img = Image.open(path).convert('RGBA')
+                    
+                    # EN: Support per-character coloring / CN: 支持逐字符着色
+                    char_color = color[i] if isinstance(color, list) else color
+                    
                     r, g, b, a = img.split()
                     img = Image.merge("RGBA", (
-                        Image.new("L", img.size, color[0]),
-                        Image.new("L", img.size, color[1]),
-                        Image.new("L", img.size, color[2]),
+                        Image.new("L", img.size, char_color[0]),
+                        Image.new("L", img.size, char_color[1]),
+                        Image.new("L", img.size, char_color[2]),
                         a
                     ))
                     bbox = img.getbbox()
@@ -255,4 +259,10 @@ class TypoEngine:
             else:
                 x_cursor += item.get("w", 0) + spacing
                 
+        # EN: Final Crop to Ink Area to ensure 'size' means actual text height
+        # CN: 最终裁剪至墨迹区域，确保 UI 设定的 size 即为文字实际高度
+        final_bbox = result.getbbox()
+        if final_bbox:
+            result = result.crop(final_bbox)
+            
         return result

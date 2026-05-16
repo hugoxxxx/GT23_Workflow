@@ -82,11 +82,13 @@ class LayoutCalculator:
         # 1. Resolve Paths
         resolved_main, resolved_sub = "", ""
         if font_resolver:
-            resolved_main, resolved_sub = font_resolver.resolve(main_text, sub_text)
             manual_main = data.get('font_main_path', 'Default')
             manual_sub = data.get('font_sub_path', 'Default')
-            if manual_main != 'Default': resolved_main = manual_main
-            if manual_sub != 'Default': resolved_sub = manual_sub
+            resolved_main, resolved_sub = font_resolver.resolve(
+                main_text, sub_text, 
+                custom_main=manual_main if manual_main != 'Default' else None,
+                custom_sub=manual_sub if manual_sub != 'Default' else None
+            )
             
         # 2. Resolve Sizes
         font_base_scale = layout.get('font_scale', 0.032)

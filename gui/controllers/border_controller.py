@@ -109,7 +109,8 @@ class BorderController:
             'left_px', 'right_px', 'top_px', 'bottom_px', 
             'font_scale', 'font_sub_px', 'font_v_offset', 'font_spacing',
             'font_main_path', 'font_sub_path',
-            'theme', 'branding', 'auto_detect', 'film_combo', 'sync_lr'
+            'theme', 'branding', 'auto_detect', 'film_combo', 'sync_lr',
+            'v_offset', 'h_offset'
         ]
         sync_data = {k: params[k] for k in sync_keys if k in params}
         
@@ -220,8 +221,8 @@ class BorderController:
                 })
                 
                 # EN: Apply Font Overrides / CN: 应用字体覆盖
-                self.renderer.font_main_custom = cfg.get('font_main_path')
-                self.renderer.font_sub_custom = cfg.get('font_sub_path')
+                data['font_main_path'] = cfg.get('font_main_path', 'Default')
+                data['font_sub_path'] = cfg.get('font_sub_path', 'Default')
                 
                 exif_cfg = cfg.get('exif') if cfg else global_cfg.get('exif')
                 if exif_cfg:
@@ -303,8 +304,8 @@ class BorderController:
         })
         
         # EN: Apply Font Overrides / CN: 应用字体覆盖
-        self.renderer.font_main_custom = cfg.get('font_main_path')
-        self.renderer.font_sub_custom = cfg.get('font_sub_path')
+        data['font_main_path'] = cfg.get('font_main_path', 'Default')
+        data['font_sub_path'] = cfg.get('font_sub_path', 'Default')
         
         exif_cfg = cfg.get('exif')
         if exif_cfg:

@@ -1339,6 +1339,14 @@ class BorderPanel:
                 "font_scale": self.font_scale_var.get(),
                 "font_sub_px": self.font_sub_px_var.get(),
                 "font_v_offset": self.font_offset_px_var.get(),
+                "font_spacing": self.font_spacing_var.get(),
+                "font_main_path": self.font_main_path_var.get(),
+                "font_sub_path": self.font_sub_path_var.get(),
+                "v_offset": self.v_offset_var.get(),
+                "h_offset": self.h_offset_var.get(),
+                "rotation": self.rotation_var.get(),
+                "auto_detect": self.auto_detect_var.get(),
+                "film_combo": self.film_combo.get(),
                 "branding": self.use_lens_branding_var.get(),
                 "sync_lr": self.sync_lr_var.get()
             }
@@ -1363,6 +1371,14 @@ class BorderPanel:
                 if "font_v_offset" in p: self.font_offset_px_var.set(p["font_v_offset"])
                 if "branding" in p: self.use_lens_branding_var.set(p["branding"])
                 if "sync_lr" in p: self.sync_lr_var.set(p["sync_lr"])
+                if "v_offset" in p: self.v_offset_var.set(p["v_offset"])
+                if "h_offset" in p: self.h_offset_var.set(p["h_offset"])
+                if "font_spacing" in p: self.font_spacing_var.set(p["font_spacing"])
+                if "font_main_path" in p: self.font_main_path_var.set(p["font_main_path"])
+                if "font_sub_path" in p: self.font_sub_path_var.set(p["font_sub_path"])
+                if "rotation" in p: self.rotation_var.set(p["rotation"])
+                if "auto_detect" in p: self.auto_detect_var.set(p["auto_detect"])
+                if "film_combo" in p: self.film_combo.set(p["film_combo"])
             finally:
                 self._loading_state = False
             self.on_params_changed(sync_all=True)

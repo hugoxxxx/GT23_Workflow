@@ -18,7 +18,7 @@ class TextRenderer:
     """
     
     @staticmethod
-    def draw_pro_text(draw, canvas_size, img_size, pad_info, text_info, data, colors, font_resolver, logo_dir, timings=None):
+    def draw_pro_text(draw, canvas_size, img_size, pad_info, text_info, data, colors, font_resolver, logo_dir, resolved_fonts=None, timings=None):
         if timings is None: timings = {}
         
         new_w, new_h = canvas_size
@@ -29,13 +29,18 @@ class TextRenderer:
         
         is_sprocket = data.get('sprocket_enabled', False)
         
-        # EN: v2.4.1 - Prioritize manual UI font selection
-        resolved_main, resolved_sub = font_resolver.resolve(main_text, sub_text)
-        if data:
-            manual_main = data.get('font_main_path', 'Default')
-            manual_sub = data.get('font_sub_path', 'Default')
-            if manual_main != 'Default': resolved_main = manual_main
-            if manual_sub != 'Default': resolved_sub = manual_sub
+        # EN: Use pre-resolved fonts if provided, otherwise resolve
+        # CN: 如果提供了预解析字体则直接使用，否则进行解析
+        if resolved_fonts:
+            resolved_main, resolved_sub = resolved_fonts
+        else:
+            manual_main = data.get('font_main_path', 'Default') if data else 'Default'
+            manual_sub = data.get('font_sub_path', 'Default') if data else 'Default'
+            resolved_main, resolved_sub = font_resolver.resolve(
+                main_text, sub_text,
+                custom_main=manual_main if manual_main != 'Default' else None,
+                custom_sub=manual_sub if manual_sub != 'Default' else None
+            )
 
         # --- EN: POSITIONING ---
         img_long_edge = max(w, h)
@@ -107,9 +112,13 @@ class TextRenderer:
         # --- EN: TEXT DRAWING ---
         try:
             def draw_text_internal(text, pos, font_path, size, color, key):
-                if "LEICA-1050" in str(font_path).upper():
-                    png_img = TypoEngine.draw_png_text(text, "assets/fonts/1050", spacing_ratio=0.15, color=color)
+                if "1050" in str(font_path).upper():
+                    # EN: Apply Zeiss T* Red logic if applicable
+                    # CN: 应用蔡司 T* 红逻辑
+                    target_colors = LensParser._get_zeiss_colors(text, color) if "T*" in text else color
+                    png_img = TypoEngine.draw_png_text(text, "assets/fonts/1050", spacing_ratio=0.15, color=target_colors)
                     if png_img.height > 0:
+                        # EN: Scaling: png_img is now tightly cropped, so size/height is accurate
                         final_w = int(png_img.width * (size / png_img.height))
                         png_img = png_img.resize((final_w, int(size)), Image.Resampling.LANCZOS)
                     
@@ -124,7 +133,7 @@ class TextRenderer:
             if not logo_drawn:
                 draw_text_internal(main_text, main_draw_pos, resolved_main, m_size, m_color, 'text_main')
             
-            if "LEICA-1050" in str(resolved_sub).upper():
+            if "1050" in str(resolved_sub).upper():
                 draw_text_internal(sub_text, sub_draw_pos, resolved_sub, s_size, s_color, 'text_sub')
             else:
                 sub_segments = LensParser.prepare_segments(data, s_color)

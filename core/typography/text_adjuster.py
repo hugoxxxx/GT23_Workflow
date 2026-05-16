@@ -27,14 +27,24 @@ class TextAdjuster:
         temp_draw = ImageDraw.Draw(temp_img)
         
         # 1. EN: Measure Main Text / CN: 测量主文本
-        main_font = TextAdjuster._get_font(resolved_main, base_main_size)
-        main_bbox = temp_draw.textbbox((0, 0), main_text, font=main_font)
-        main_text_width = main_bbox[2] - main_bbox[0]
+        if "1050" in str(resolved_main):
+            # EN: PNG font 1050 is narrow (avg width ~0.45-0.5x height)
+            # CN: 1050 字体较瘦窄，宽度系数调整为 0.48
+            main_text_width = len(main_text) * (base_main_size * 0.48)
+        else:
+            main_font = TextAdjuster._get_font(resolved_main, base_main_size)
+            main_bbox = temp_draw.textbbox((0, 0), main_text, font=main_font)
+            main_text_width = main_bbox[2] - main_bbox[0]
+            
         main_scale = min(1.0, available_width / main_text_width) if main_text_width > 0 else 1.0
         
         # 2. EN: Measure Sub Text / CN: 测量副文本
-        sub_font = TextAdjuster._get_font(resolved_sub, base_sub_size)
-        sub_text_width = sum(temp_draw.textlength(c, font=sub_font) for c in list(sub_text))
+        if "1050" in str(resolved_sub):
+            sub_text_width = len(sub_text) * (base_sub_size * 0.48)
+        else:
+            sub_font = TextAdjuster._get_font(resolved_sub, base_sub_size)
+            sub_text_width = sum(temp_draw.textlength(c, font=sub_font) for c in list(sub_text))
+            
         sub_scale = min(1.0, available_width / sub_text_width) if sub_text_width > 0 else 1.0
         
         # EN: Decouple scaling to allow main title to grow independently

@@ -229,7 +229,9 @@ class FilmRenderer:
                     draw, (new_w, new_h), (w, h), 
                     (side_pad_left, 0, top_pad, bottom_splice),
                     (main_text, sub_text, actual_main_size, actual_sub_size, v_offset_px),
-                    data, (main_color, sub_color), self.font_resolver, self.logo_dir, timings=timings
+                    data, (main_color, sub_color), self.font_resolver, self.logo_dir, 
+                    resolved_fonts=(resolved_main, resolved_sub),
+                    timings=timings
                 )
                 timings['text_logo_total'] = time.perf_counter() - t_logo_start
             timings['draw_text_outer'] = time.perf_counter() - t_draw_start
