@@ -291,20 +291,23 @@ class BorderController:
         data = self.metadata_handler.get_data(img_path, is_digital_mode=is_digital, manual_film=m_film)
         t_meta = time.perf_counter() - t_start
 
+        defaults = self.get_default_layout_paddings()
         layout_cfg = cfg if cfg else {
-            "left_px": 180, "right_px": 180, "top_px": 180, "bottom_px": 585, 
-            "font_scale": 144, "font_sub_px": 112, "font_v_offset": 0, "font_spacing": 0
+            "left_px": defaults["left_px"], "right_px": defaults["right_px"],
+            "top_px": defaults["top_px"], "bottom_px": defaults["bottom_px"],
+            "font_scale": defaults["font_scale"], "font_sub_px": defaults["font_sub_px"],
+            "font_v_offset": 0, "font_spacing": defaults["font_spacing"]
         }
         ref = 4500.0
         data['layout'].update({
-            "left": layout_cfg.get('left_px', 180) / ref,
-            "right": layout_cfg.get('right_px', 180) / ref,
-            "top": layout_cfg.get('top_px', 180) / ref,
-            "bottom": layout_cfg.get('bottom_px', 585) / ref,
-            "font_main_scale": layout_cfg.get('font_scale', 144) / ref,
-            "font_sub_scale": layout_cfg.get('font_sub_px', 112) / ref,
+            "left": layout_cfg.get('left_px', defaults["left_px"]) / ref,
+            "right": layout_cfg.get('right_px', defaults["right_px"]) / ref,
+            "top": layout_cfg.get('top_px', defaults["top_px"]) / ref,
+            "bottom": layout_cfg.get('bottom_px', defaults["bottom_px"]) / ref,
+            "font_main_scale": layout_cfg.get('font_scale', defaults["font_scale"]) / ref,
+            "font_sub_scale": layout_cfg.get('font_sub_px', defaults["font_sub_px"]) / ref,
             "font_v_offset": layout_cfg.get('font_v_offset', 0) / ref,
-            "font_spacing_scale": layout_cfg.get('font_spacing', 0) / ref
+            "font_spacing_scale": layout_cfg.get('font_spacing', defaults["font_spacing"]) / ref
         })
         
         # EN: Apply Font Overrides / CN: 应用字体覆盖
@@ -830,3 +833,30 @@ class BorderController:
             warnings.append(f"⚠️ 参数溢出，建议 ≤{sub_max}px" if is_zh else f"⚠️ Param overflow, suggest ≤{sub_max}px")
         
         return " | ".join(warnings) if warnings else ""
+
+    def get_default_layout_paddings(self):
+        """EN: Retrieve fallback default paddings solved from layouts.json / CN: 获取由 layouts.json 兜底块解析出的默认边框参数"""
+        try:
+            default_entry = self.layout_config.get("default", {}).get("all", {})
+            if default_entry:
+                ref = 4500.0
+                return {
+                    "left_px": int(default_entry.get("side_ratio", 0.04) * ref),
+                    "right_px": int(default_entry.get("side_ratio", 0.04) * ref),
+                    "top_px": int(default_entry.get("top_ratio", 0.04) * ref),
+                    "bottom_px": int(default_entry.get("bottom_ratio", 0.13) * ref),
+                    "font_scale": int(default_entry.get("font_scale", 0.032) * ref),
+                    "font_sub_px": int(default_entry.get("font_sub_scale", 0.0249) * ref),
+                    "font_spacing": 180
+                }
+        except:
+            pass
+        return {
+            "left_px": 180,
+            "right_px": 180,
+            "top_px": 180,
+            "bottom_px": 585,
+            "font_scale": 144,
+            "font_sub_px": 112,
+            "font_spacing": 180
+        }

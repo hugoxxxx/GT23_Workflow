@@ -37,22 +37,34 @@ class BorderPanel:
         
         # EN: Concurrency management (#20) / CN: 并发管理
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        
+        # EN: Controller for decoupled logic / CN: 用于逻辑解耦的控制器
+        self.controller = BorderController(
+            lang=self.lang,
+            log_callback=self.log,
+            progress_callback=self._process_feedback,
+            complete_callback=self.on_processing_complete,
+            error_callback=self.on_processing_error
+        )
+        
+        defaults = self.controller.get_default_layout_paddings()
+        
         # --- State Variables Consolidation ---
         self.mode_var = tk.StringVar(value="film")
         self.input_folder_var = tk.StringVar()
         self.output_folder_var = tk.StringVar()
         
-        self.left_px_var = tk.StringVar(value="180")
-        self.right_px_var = tk.StringVar(value="180")
-        self.top_px_var = tk.StringVar(value="180")
-        self.bottom_px_var = tk.StringVar(value="585")
+        self.left_px_var = tk.StringVar(value=str(defaults["left_px"]))
+        self.right_px_var = tk.StringVar(value=str(defaults["right_px"]))
+        self.top_px_var = tk.StringVar(value=str(defaults["top_px"]))
+        self.bottom_px_var = tk.StringVar(value=str(defaults["bottom_px"]))
         
-        self.font_scale_var = tk.StringVar(value="144")
-        self.font_sub_px_var = tk.StringVar(value="112")
+        self.font_scale_var = tk.StringVar(value=str(defaults["font_scale"]))
+        self.font_sub_px_var = tk.StringVar(value=str(defaults["font_sub_px"]))
         self.font_offset_px_var = tk.StringVar(value="0")
         self.font_main_path_var = tk.StringVar(value="Default")
         self.font_sub_path_var = tk.StringVar(value="Default")
-        self.font_spacing_var = tk.StringVar(value="180")
+        self.font_spacing_var = tk.StringVar(value=str(defaults["font_spacing"]))
         
         self.v_offset_var = tk.IntVar(value=0)
         self.h_offset_var = tk.IntVar(value=0)
@@ -85,20 +97,16 @@ class BorderPanel:
         self.show_lens_var = tk.IntVar(value=1)
         
         self._is_syncing_lr = False
-        self._param_shadow = {"left": "180", "right": "180", "top": "180", "bottom": "585"}
+        self._param_shadow = {
+            "left": str(defaults["left_px"]), 
+            "right": str(defaults["right_px"]), 
+            "top": str(defaults["top_px"]), 
+            "bottom": str(defaults["bottom_px"])
+        }
         # EN: Baseline defaults for "Original" mode (Never modified)
         # CN: “原图”模式的基准默认值（初始化后不再修改）
         self._baseline_params = dict(self._param_shadow)
         # --------------------------------------
-        
-        # EN: Controller for decoupled logic / CN: 用于逻辑解耦的控制器
-        self.controller = BorderController(
-            lang=self.lang,
-            log_callback=self.log,
-            progress_callback=self._process_feedback,
-            complete_callback=self.on_processing_complete,
-            error_callback=self.on_processing_error
-        )
         
         self.layout_config = self.controller.load_layout_config()
         self.setup_ui()
@@ -880,10 +888,10 @@ class BorderPanel:
         """
         if not getattr(self, 'current_image_path', None):
             # EN: Fallback to baseline if no image / CN: 如果没图片，退回到初始影子值
-            self.left_px_var.set(self._baseline_params.get("left", "180"))
-            self.right_px_var.set(self._baseline_params.get("right", "180"))
-            self.top_px_var.set(self._baseline_params.get("top", "180"))
-            self.bottom_px_var.set(self._baseline_params.get("bottom", "585"))
+            self.left_px_var.set(self._baseline_params.get("left"))
+            self.right_px_var.set(self._baseline_params.get("right"))
+            self.top_px_var.set(self._baseline_params.get("top"))
+            self.bottom_px_var.set(self._baseline_params.get("bottom"))
             return
 
         layout = self.controller.get_layout_from_aspect(self.current_image_path)

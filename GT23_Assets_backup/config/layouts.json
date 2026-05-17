@@ -22,5 +22,9 @@
     "aspect_range": [1.70, 5.0],
     "landscape": { "side_ratio": 0.015, "top_ratio": 0.015, "bottom_ratio": 0.18, "font_scale": 0.024 },
     "portrait": { "side_ratio": 0.06, "top_ratio": 0.06, "bottom_ratio": 0.10, "font_scale": 0.024 }
+  },
+  "default": {
+    "aspect_range": [0.0, 99.0],
+    "all": { "side_ratio": 0.04, "top_ratio": 0.04, "bottom_ratio": 0.13, "font_scale": 0.032, "font_sub_scale": 0.0249 }
   }
 }
