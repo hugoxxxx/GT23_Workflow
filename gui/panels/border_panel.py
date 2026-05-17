@@ -12,6 +12,7 @@ from PIL import Image, ImageTk
 
 from gui.components import ThumbnailStrip, ExifGroup, SettingsGroup, AestheticGroup
 from gui.controllers.border_controller import BorderController
+from core.layout.calculator import LayoutCalculator
 from tkinter import simpledialog
 import concurrent.futures
 
@@ -1014,134 +1015,52 @@ class BorderPanel:
 
     def _handle_ratio_locked_sync(self, ratio_str, is_offset=False):
         """
-        EN: Auto-calculate paddings to maintain target ratio when one side is manually edited
-        CN: 比例锁定联动逻辑：当手动修改一方面值时，自动计算并补齐其余边际
+        EN: Auto-calculate paddings via centralized LayoutCalculator to maintain target ratio.
+        CN: 比例锁定联动逻辑：调用统一解算器自动计算并补齐其余边际。
         """
         try:
-            is_free_mode = "Original" in ratio_str or "原图" in ratio_str
-            
-            parts = ratio_str.split(':')
-            target_r = 1.0 # Placeholder
-            if len(parts) == 2:
-                try: target_r = float(parts[0]) / float(parts[1])
-                except: pass
-            
-            # EN: Get current image base aspect / CN: 获取当前图片的基础比例
+            # 1. Get current image aspect / CN: 获取当前图片的基础比例
             path_norm = os.path.normcase(os.path.normpath(self.current_image_path))
             img_ratio = self.controller.state.get_width(path_norm)
-            
-            # EN: Fallback if cache not found / CN: 如果缓存未命中，则即时打开图片获取比例
-            if not img_ratio:
-                try:
-                    with Image.open(self.current_image_path) as tmp_img:
-                        tw, th = tmp_img.size
-                        img_ratio = tw / th
-                        self.controller.update_aspect_ratio_cache(path_norm, img_ratio)
-                except: return
-            
             if not img_ratio: return
             
-            # EN: Reference size (virtual) / CN: 基准图大小（虚拟）
+            # 2. Virtual reference dimensions / CN: 虚拟基准尺寸
             ref_w = 4000.0
             ref_h = ref_w / img_ratio
             
-            # EN: Get manual inputs / CN: 获取手动输入内容
-            l = self._get_int_safe(self.left_px_var, 0)
-            r = self._get_int_safe(self.right_px_var, 0)
-            t = self._get_int_safe(self.top_px_var, 0)
-            b = self._get_int_safe(self.bottom_px_var, 0)
+            # 3. Base Margins (Use shadow if it's an offset/ratio change to prevent growth)
+            # CN: 基础边距（如果是平移或比例变动，使用变动前的影子值作为基准，防止边距无限增长）
+            if is_offset or getattr(self, '_ratio_just_changed', False):
+                base_p = {
+                    "l": self._get_int_safe(self._param_shadow["left"], 180),
+                    "r": self._get_int_safe(self._param_shadow["right"], 180),
+                    "t": self._get_int_safe(self._param_shadow["top"], 180),
+                    "b": self._get_int_safe(self._param_shadow["bottom"], 585)
+                }
+            else:
+                base_p = {
+                    "l": self._get_int_safe(self.left_px_var, 0),
+                    "r": self._get_int_safe(self.right_px_var, 0),
+                    "t": self._get_int_safe(self.top_px_var, 0),
+                    "b": self._get_int_safe(self.bottom_px_var, 0)
+                }
             
-            # EN: Detect what changed / CN: 检测变化点
-            changed = []
-            if self.left_px_var.get() != str(self._param_shadow["left"]): changed.append("w")
-            if self.right_px_var.get() != str(self._param_shadow["right"]): changed.append("w")
-            if self.top_px_var.get() != str(self._param_shadow["top"]): changed.append("h")
-            if self.bottom_px_var.get() != str(self._param_shadow["bottom"]): changed.append("h")
+            # 4. Call Unified Engine / CN: 调用统一引擎进行预测
+            prediction = LayoutCalculator.preview_ui_paddings(
+                ref_w, ref_h, ratio_str, base_p, 
+                self.h_offset_var.get(), self.v_offset_var.get()
+            )
             
-            v_val = self.v_offset_var.get()
-            h_val = self.h_offset_var.get()
+            # 5. Apply back to UI / CN: 写回 UI
+            self._loading_state = True # Prevent recursion
+            try:
+                self.left_px_var.set(str(prediction["left"]))
+                self.right_px_var.set(str(prediction["right"]))
+                self.top_px_var.set(str(prediction["top"]))
+                self.bottom_px_var.set(str(prediction["bottom"]))
+            finally:
+                self._loading_state = False
             
-            # EN: New logic: distribution by offset / CN: 新逻辑：基于偏移量进行布局分配
-            if is_offset or "target_ratio" in str(getattr(self, '_current_event_source', '')):
-                curr_w_total = ref_w + l + r
-                curr_h_total = ref_h + t + b
-                
-                # EN: Safety buffer for text area (approx 12% of ref 4500)
-                # CN: 为预览图底部的文字区域预留“安全缓冲”，防止文字与照片重叠
-                TEXT_RESERVE = 550 
-                
-                if is_free_mode:
-                    # EN: In Free Mode, we redistribute the EXISTING total padding
-                    # CN: 自由模式下，我们对现有的总留白额度进行重新分配
-                    total_p_h = t + b
-                    total_p_w = l + r
-                else:
-                    # EN: Locked Ratio Mode: Smart Adaptation
-                    # CN: 比例锁定模式：智能适配
-                    # EN: Calculate current and target ratios
-                    curr_r = (ref_w + l + r) / (ref_h + t + b)
-                    
-                    if curr_r > target_r + 0.001:
-                        # EN: Too wide -> Need more Height
-                        needed_h_total = (ref_w + l + r) / target_r
-                        total_p_h = needed_h_total - ref_h
-                        total_p_w = l + r # Keep current width
-                    elif curr_r < target_r - 0.001:
-                        # EN: Too narrow -> Need more Width
-                        needed_w_total = (ref_h + t + b) * target_r
-                        total_p_w = needed_w_total - ref_w
-                        total_p_h = t + b # Keep current height
-                    else:
-                        # EN: Already perfect
-                        total_p_h = t + b
-                        total_p_w = l + r
-
-                # EN: Vertical Distribution with text-aware headroom
-                # CN: 带有文字感知的垂直分配
-                v = v_val / 100.0
-                
-                # EN: Calculate redistributable vertical budget
-                # budget = total - reserve. If total < reserve, we don't shift much
-                shift_budget_v = max(0, total_p_h - TEXT_RESERVE)
-                dist_v = (0.3 * (1 + v)) if v < 0 else (0.3 + 0.7 * v)
-                
-                new_t = int(shift_budget_v * dist_v)
-                new_b = int(total_p_h - new_t) # This includes the TEXT_RESERVE residual
-                
-                self.top_px_var.set(str(int(new_t)))
-                self.bottom_px_var.set(str(int(new_b)))
-                
-                # EN: Apply Linear Horizontal Mapping (0.5 Center)
-                h = h_val / 100.0
-                dist_h = 0.5 + (h / 2.0)
-                new_l = int(total_p_w * dist_h)
-                new_r = int(total_p_w - new_l)
-                self.left_px_var.set(str(int(new_l)))
-                self.right_px_var.set(str(int(new_r)))
-                return
-
-            # EN: Adaptive balancing logic (Only for locked ratios)
-            # CN: 自动平衡补齐逻辑（仅在锁定比例模式下生效）
-            if not is_free_mode:
-                if "w" in changed:
-                    # EN: Width changed -> solve for Bottom (Height) / CN: 宽度变了 -> 补齐高度（Bottom）
-                    total_w = ref_w + l + r
-                    needed_h_total = total_w / target_r
-                    needed_paddings_h = needed_h_total - ref_h
-                    new_b = max(10, int(needed_paddings_h - t))
-                    self.bottom_px_var.set(str(new_b))
-                elif "h" in changed:
-                    # EN: Height changed -> solve for Right (Width) / CN: 高度变了 -> 补齐宽度（Right）
-                    total_h = ref_h + t + b
-                    needed_w_total = total_h * target_r
-                    needed_paddings_w = needed_w_total - ref_w
-                    if self.sync_lr_var.get():
-                        new_side = max(10, int(needed_paddings_w / 2))
-                        self.left_px_var.set(str(new_side))
-                        self.right_px_var.set(str(new_side))
-                    else:
-                        new_r = max(10, int(needed_paddings_w - l))
-                        self.right_px_var.set(str(new_r))
         except Exception as e:
             print(f"DEBUG: Ratio sync failed: {e}")
 

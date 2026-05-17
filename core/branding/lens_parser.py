@@ -151,3 +151,29 @@ class LensParser:
             else:
                 i += 1
         return colors
+
+    @staticmethod
+    def format_display_strings(data):
+        """
+        EN: Generate main and sub display strings based on metadata.
+        CN: 根据元数据生成主标题和副标题显示字符串。
+        """
+        show_make = data.get('show_make', 1)
+        show_model = data.get('show_model', 1)
+        make = str(data.get('Make') or "").strip().upper() if show_make else ""
+        model = str(data.get('Model') or "").strip().upper() if show_model else ""
+        
+        # EN: De-duplicate Make from Model / CN: 从型号中去重品牌名
+        dedup_model = model
+        if make and model and model.startswith(make):
+            dedup_model = model[len(make):].lstrip(" -_/") or model
+            
+        main_text = f"{make} {dedup_model}".strip() if make and dedup_model else (dedup_model or make)
+        if "HASSELBLAD" in make: 
+            main_text = f"HASSELBLAD {dedup_model or model or make}".strip()
+            
+        # EN: Sub-text generation / CN: 副标题字符串生成
+        sub_segments = LensParser.prepare_segments(data, (0,0,0))
+        sub_text = "".join([s["content"] for s in sub_segments if s["type"] == "text"])
+        
+        return main_text, sub_text

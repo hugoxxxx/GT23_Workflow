@@ -108,6 +108,10 @@ class MetadataHandler:
             if os.path.exists(path):
                 return path
 
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+
         raise FileNotFoundError(f"Config file not found: {filename}. Tried: {candidates}")
 
 
@@ -248,3 +252,15 @@ class MetadataHandler:
 
     def get_contact_layout(self, key):
         return self.contact_layouts.get(key, self.contact_layouts["135"])
+
+    def ensure_minimal_data(self, data, img_path):
+        """
+        EN: Ensure data dictionary has core EXIF fields. If Make/Model missing, trigger auto-detection.
+        CN: 确保数据字典包含核心 EXIF 字段。如果 Make/Model 缺失，则触发自动识别并补全。
+        """
+        if not data.get('Make') or not data.get('Model'):
+            auto_data = self.get_data(img_path)
+            for k, v in auto_data.items():
+                if k not in data or not data[k] or data[k] == "Unknown":
+                    data[k] = v
+        return data

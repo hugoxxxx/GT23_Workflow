@@ -66,3 +66,28 @@ class FrostedTheme(BaseTheme):
             offset=self.shadow_offset, 
             intensity=self.shadow_intensity
         )
+
+    def resolve_adaptive_colors(self, canvas, rect, default_main, default_sub):
+        """
+        EN: Adaptive Text Coloring based on footer area brightness.
+        CN: 基于底部区域亮度的自适应文字上色。
+        """
+        from PIL import ImageStat
+        # EN: Crop and convert to Grayscale for luminance check
+        # CN: 裁剪采样区并转为灰度图进行亮度检查
+        footer_rect = [max(0, int(v)) for v in rect]
+        try:
+            footer_sample = canvas.crop(footer_rect).convert("L")
+            avg_lum = ImageStat.Stat(footer_sample).mean[0]
+            
+            # EN: Logic thresholds from v2.4.1 stable
+            if avg_lum > 180:
+                return (0, 0, 0), (45, 45, 45)
+            elif avg_lum > 135:
+                return (15, 15, 15), (70, 70, 70)
+            elif avg_lum > 90:
+                return (255, 255, 255), (225, 225, 225)
+            else:
+                return (255, 255, 255), (242, 242, 242)
+        except:
+            return default_main, default_sub

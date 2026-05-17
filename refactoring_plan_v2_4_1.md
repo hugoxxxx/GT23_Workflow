@@ -41,13 +41,13 @@
 9. **主题渲染器实现** (`core/theme/`)
    - 按照基类接口，将 `Light`, `Dark`, `Frosted`, `SlateTeal` 及各种渐变主题的 `draw` 逻辑搬迁至对应文件。
 
-### 第五阶段：FilmRenderer 深度瘦身 (Integration)
-10. **流水线重组与逻辑外迁** (`core/renderer.py`)
-    - **10.1 元数据校验下放**: 将 `process_image` 开头的元数据补全逻辑移入 `MetadataHandler`。
-    - **10.2 自适应颜色感知识别**: 将磨砂模式亮度检测移至 `BaseTheme.resolve_adaptive_colors`。
-    - **10.3 物理碰撞检测逻辑**: 将垂直压图提醒逻辑移至 `TextAdjuster`。
-    - **10.4 方法解耦重构**: 将 200 行的长方法拆解为 `_prepare_context`, `_draw_base_layer`, `_apply_typography` 等私有子管线。
-    - **10.5 字符串拼接清理**: 移除 `_prepare_strings` 冗余代码，统一调用 `LensParser` 接口。
+### 第五阶段：FilmRenderer 深度瘦身 (Integration) [x]
+10. **流水线重组与逻辑外迁** (`core/renderer.py`) [x]
+    - **10.1 元数据校验下放**: 将 `process_image` 开头的元数据补全逻辑移入 `MetadataHandler`。 [x]
+    - **10.2 自适应颜色感知识别**: 将磨砂模式亮度检测移至 `BaseTheme.resolve_adaptive_colors`。 [x]
+    - **10.3 物理碰撞检测逻辑**: 将垂直压图提醒逻辑移至 `TextAdjuster`。 [x]
+    - **10.4 方法解耦重构**: 将 200 行的长方法拆解为 `_prepare_context`, `_draw_base_layer`, `_apply_typography` 等私有子管线。 [x]
+    - **10.5 字符串拼接清理**: 移除 `_prepare_strings` 冗余代码，统一调用 `LensParser` 接口。 [x]
 
 ---
 

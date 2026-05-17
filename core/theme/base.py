@@ -30,3 +30,10 @@ class BaseTheme(ABC):
         """
         canvas.paste(img, (x, y))
         ImageDraw.Draw(canvas).rectangle([x, y, x + img.width, y + img.height], outline=line_color, width=1)
+
+    def resolve_adaptive_colors(self, canvas, rect, default_main, default_sub):
+        """
+        EN: Optional: Adjust colors based on the sampled rectangle. Default returns inputs.
+        CN: 可选：根据采样区域调整颜色。默认直接返回传入的颜色。
+        """
+        return default_main, default_sub

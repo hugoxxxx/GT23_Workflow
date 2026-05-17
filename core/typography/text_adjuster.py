@@ -65,3 +65,30 @@ class TextAdjuster:
             return ImageFont.load_default()
         except:
             return ImageFont.load_default()
+
+    @staticmethod
+    def check_vertical_collision(actual_main_size, actual_sub_size, resolved_main, h_img, top_pad, inner_bottom_margin, bottom_splice, ref_factor):
+        """
+        EN: Check if text overlaps with the photo and suggest adjustments.
+        CN: 检查文字是否与照片重叠，并给出调整建议。
+        """
+        m_font = TextAdjuster._get_font(resolved_main, actual_main_size)
+        m_ascent, m_descent = m_font.getmetrics()
+        
+        photo_bottom = top_pad + h_img
+        total_bottom_space = inner_bottom_margin + bottom_splice
+        
+        # EN: v2.4.1 Layout logic constants
+        base_y = photo_bottom + int(total_bottom_space * 0.38)
+        v_gap_ref = max(actual_main_size, actual_sub_size)
+        main_y = base_y - int(v_gap_ref * 0.55)
+        
+        v_overflow = (main_y - m_ascent) < photo_bottom
+        
+        suggested_main_px = None
+        if v_overflow:
+            # EN: Approximate max font size that fits vertically without overlapping
+            center_gap = (inner_bottom_margin + bottom_splice) // 2
+            suggested_main_px = int(center_gap / 1.35 / ref_factor)
+            
+        return v_overflow, suggested_main_px
