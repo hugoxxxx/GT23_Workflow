@@ -500,21 +500,36 @@ class BorderPanel:
         
         count = self.controller.scan_folder(folder)
         all_paths = self.controller.state.get_paths()
-        self._update_batch_width_cache(all_paths)
+        self._update_batch_width_cache(all_paths, async_mode=False)
         self.controller.clear_all_configs()
+        
+        # CN: 第一步 - 匹配并加载文件夹的首张图片的动态布局参数到 UI 变量中
+        self.detect_layout_and_load_params(folder)
+        
+        # CN: 第二步 - 刷新缩略图条 (触发 thumbnail click 会自动载入首张图)
         self.refresh_thumb_strip()
         self.update_file_count()
         self.log(f"CN: 已刷新输入文件夹并恢复默认参数，共 {count} 张图片 / EN: Refreshed folder and restored defaults, total {count} images")
         
-        # EN: Force redraw and sync to apply resets
-        # CN: 强制重绘并同步，以应用重置后的构图
+        # CN: 第三步 - 触发全量同步保存，以应用该布局给所有图片
         self.on_params_changed(sync_all=True)
-        self.detect_layout_and_load_params(folder)
 
     def detect_layout_and_load_params(self, folder):
-        layout = self.controller.detect_layout_from_folder_as_dict(folder)
-        if layout:
-            self._apply_config_to_ui(layout)
+        try:
+            valid_exts = ('.jpg', '.jpeg', '.png', '.webp', '.tiff')
+            files = [f for f in os.listdir(folder) if f.lower().endswith(valid_exts)]
+            if files:
+                first_img = os.path.join(folder, files[0])
+                if self.controller.state.get_width(first_img) is None:
+                    with Image.open(first_img) as img:
+                        w, h = img.size
+                        self.controller.update_aspect_ratio_cache(first_img, w/h)
+                
+                layout = self.controller.get_layout_from_aspect(first_img)
+                if layout:
+                    self._apply_config_to_ui(layout)
+        except Exception as e:
+            self.log(f"CN: [!] 匹配文件夹全局布局失败: {e}")
     
     def select_input_folder(self):
         folder = filedialog.askdirectory(
@@ -523,13 +538,16 @@ class BorderPanel:
         )
         if folder:
             self.input_folder_var.set(folder)
-            self.controller.scan_folder(folder) # EN: Mandatory scan / CN: 必须调用扫描逻辑
+            self.controller.scan_folder(folder)
             self.controller.clear_all_configs()
             all_paths = self.controller.state.get_paths()
-            self._update_batch_width_cache(all_paths) # EN: Sync cache / CN: 同步缓存
+            self._update_batch_width_cache(all_paths, async_mode=False)
+            
+            # CN: 匹配首张图片的长宽比布局，并应用到 UI
+            self.detect_layout_and_load_params(folder)
+            
             self.update_file_count()
             self.refresh_thumb_strip()
-            self.detect_layout_and_load_params(folder)
     
     def update_file_count(self):
         folder = self.input_folder_var.get()

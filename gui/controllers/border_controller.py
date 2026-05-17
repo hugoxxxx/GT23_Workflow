@@ -396,7 +396,7 @@ class BorderController:
         return "light"
 
     def detect_layout_from_folder(self, folder):
-        """EN: Detect best layout match for folder / CN: 为文件夹检测最匹配的布局"""
+        """EN: Detect best layout match for folder / CN: 为文件夹检测最匹配 of the layout"""
         try:
             valid_exts = ('.jpg', '.jpeg', '.png', '.webp', '.tiff')
             files = [f for f in os.listdir(folder) if f.lower().endswith(valid_exts)]
@@ -409,18 +409,19 @@ class BorderController:
                 is_portrait = h > w
             
             layout_config = self.load_layout_config()
-            best_match = "default"
-            min_diff = float('inf')
+            best_cfg = None
             
-            for name, cfg in layout_config.items():
-                target_aspect = cfg.get('aspect_ratio', 1.5)
-                diff = abs(aspect - target_aspect)
-                if diff < min_diff:
-                    min_diff, best_match = diff, name
+            for name, entry in layout_config.items():
+                if name == "default": continue
+                r_min, r_max = entry.get("aspect_range", [0, 99])
+                if is_portrait:
+                    r_min, r_max = 1.0/r_max, 1.0/r_min
+                if r_min <= aspect <= r_max:
+                    best_cfg = entry.get("portrait" if is_portrait else "landscape", entry.get("all"))
+                    break
             
-            if min_diff < 0.1:
-                match_cfg = layout_config[best_match]
-                return match_cfg.get("portrait" if is_portrait else "landscape", match_cfg.get("all"))
+            if best_cfg:
+                return best_cfg
         except: pass
         return None
 
@@ -621,6 +622,7 @@ class BorderController:
             is_portrait = aspect < 0.95
             best_cfg = None
             for name, entry in self.layout_config.items():
+                if name == "default": continue
                 r_min, r_max = entry.get("aspect_range", [0, 99])
                 if is_portrait:
                     r_min, r_max = 1.0/r_max, 1.0/r_min
