@@ -66,17 +66,8 @@ class BorderPanel:
         self.sync_lr_var = tk.BooleanVar(value=True)
         self.use_lens_branding_var = tk.BooleanVar(value=True)
         
-        # EN: Force integer values for offsets to avoid decimals in UI
-        # CN: 强制平移百分比为整数，避免 UI 中出现小数点
-        def _force_int(var):
-            try:
-                val = var.get()
-                if isinstance(val, (float, str)):
-                    var.set(int(float(val)))
-            except:
-                pass
-        self.v_offset_var.trace_add("write", lambda *a: _force_int(self.v_offset_var))
-        self.h_offset_var.trace_add("write", lambda *a: _force_int(self.h_offset_var))
+        self.v_offset_var.trace_add("write", lambda *a: self._force_int(self.v_offset_var))
+        self.h_offset_var.trace_add("write", lambda *a: self._force_int(self.h_offset_var))
         
         self.exif_global_var = tk.BooleanVar(value=False)
         self.exif_make_var = tk.StringVar()
@@ -207,28 +198,8 @@ class BorderPanel:
         working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
         self.output_folder_var.set(os.path.join(working_dir, "photos_out"))
 
-        # Variables and shadow state initialized at top
-
-        # EN: Setup traces for sync / CN: 设置同步监听
-        def _sync_lr(source_var, target_var, *args):
-            if self._is_syncing_lr or not self.sync_lr_var.get(): return
-            if getattr(self, '_loading_state', False): return
-            self._is_syncing_lr = True
-            try:
-                # EN: String sync is inherently safe regardless of content
-                # CN: 字符串同步对内容不敏感，即使为空也不会报错
-                s_val = source_var.get()
-                if s_val != target_var.get():
-                    target_var.set(s_val)
-            finally:
-                self._is_syncing_lr = False
-        
-        def _on_px_change(*args):
-            # EN: Refresh preview / CN: 刷新预览
-            self.on_params_changed(sync_all=False)
-
-        self.left_px_var.trace_add('write', lambda *args: _sync_lr(self.left_px_var, self.right_px_var))
-        self.right_px_var.trace_add('write', lambda *args: _sync_lr(self.right_px_var, self.left_px_var))
+        self.left_px_var.trace_add('write', lambda *args: self._sync_lr(self.left_px_var, self.right_px_var))
+        self.right_px_var.trace_add('write', lambda *args: self._sync_lr(self.right_px_var, self.left_px_var))
         
         # EN: Only dropdowns and Booleans trigger immediate redraw
         # CN: 仅下拉框与布尔开关触发立即重绘，输入框改为失焦/回车重绘
@@ -422,45 +393,43 @@ class BorderPanel:
         self.lang = lang
         is_running = self.worker_thread is not None and self.worker_thread.is_alive()
         
-        if lang == "zh":
-            self.mode_frame.config(text="工作模式")
-            self.film_radio.config(text="胶片项目")
-            self.digital_radio.config(text="数码项目")
-            self.pure_radio.config(text="纯净模式")
-            self.folder_frame.config(text="输入文件夹")
-            self.refresh_button.config(text="刷新")
-            self.browse_button.config(text="浏览")
-            self.film_selection_frame.config(text="胶片选择")
-            self.auto_detect_check.config(text="自动识别胶片（从EXIF）")
-            self.manual_label.config(text="手动选择:")
-            self.settings_group.update_language(lang)
-            self.aesthetic_group.update_language(lang)
-            self.exif_group.update_language(lang)
-            self.thumb_strip.update_language(lang)
-            self.redraw_preview()
-            self.process_button.config(text="开始处理" if not is_running else "停止处理 (Stop)")
-            self.log_frame.config(text="处理日志")
-            self.update_film_combo_values()
-        else:
-            self.mode_frame.config(text="Working Mode")
-            self.film_radio.config(text="Film Project")
-            self.digital_radio.config(text="Digital Project")
-            self.pure_radio.config(text="Pure Mode")
-            self.folder_frame.config(text="Input Folder")
-            self.refresh_button.config(text="Refresh")
-            self.browse_button.config(text="Browse")
-            self.film_selection_frame.config(text="Film Selection")
-            self.auto_detect_check.config(text="Auto Detect from EXIF")
-            self.manual_label.config(text="Manual Select:")
-            self.settings_group.update_language(lang)
-            self.aesthetic_group.update_language(lang)
-            self.exif_group.update_language(lang)
-            self.thumb_strip.update_language(lang)
-            self.preview_frame.config(text="Preview (First Image in Folder)")
-            self.redraw_preview()
-            self.process_button.config(text="Start Processing" if not is_running else "Stop Processing (Cancel)")
-            self.log_frame.config(text="Processing Log")
-            self.update_film_combo_values()
+        texts = {
+            "zh": {
+                "mode_frame": "工作模式", "film_radio": "胶片项目", "digital_radio": "数码项目", "pure_radio": "纯净模式",
+                "folder_frame": "输入文件夹", "refresh_button": "刷新", "browse_button": "浏览", "film_selection_frame": "胶片选择",
+                "auto_detect_check": "自动识别胶片（从EXIF）", "manual_label": "手动选择:",
+                "process_button": "开始处理" if not is_running else "停止处理 (Stop)",
+                "log_frame": "处理日志", "preview_frame": "预览（显示文件夹第一张图片）"
+            },
+            "en": {
+                "mode_frame": "Working Mode", "film_radio": "Film Project", "digital_radio": "Digital Project", "pure_radio": "Pure Mode",
+                "folder_frame": "Input Folder", "refresh_button": "Refresh", "browse_button": "Browse", "film_selection_frame": "Film Selection",
+                "auto_detect_check": "Auto Detect from EXIF", "manual_label": "Manual Select:",
+                "process_button": "Start Processing" if not is_running else "Stop Processing (Cancel)",
+                "log_frame": "Processing Log", "preview_frame": "Preview (First Image in Folder)"
+            }
+        }[lang]
+        
+        self.mode_frame.config(text=texts["mode_frame"])
+        self.film_radio.config(text=texts["film_radio"])
+        self.digital_radio.config(text=texts["digital_radio"])
+        self.pure_radio.config(text=texts["pure_radio"])
+        self.folder_frame.config(text=texts["folder_frame"])
+        self.refresh_button.config(text=texts["refresh_button"])
+        self.browse_button.config(text=texts["browse_button"])
+        self.film_selection_frame.config(text=texts["film_selection_frame"])
+        self.auto_detect_check.config(text=texts["auto_detect_check"])
+        self.manual_label.config(text=texts["manual_label"])
+        self.process_button.config(text=texts["process_button"])
+        self.log_frame.config(text=texts["log_frame"])
+        self.preview_frame.config(text=texts["preview_frame"])
+        
+        self.settings_group.update_language(lang)
+        self.aesthetic_group.update_language(lang)
+        self.exif_group.update_language(lang)
+        self.thumb_strip.update_language(lang)
+        self.redraw_preview()
+        self.update_film_combo_values()
         
         self.update_file_count()
         if self.film_list:
@@ -1154,3 +1123,22 @@ class BorderPanel:
         if data:
             self._apply_config_to_ui({"exif": data})
         self.on_params_changed()
+
+    def _force_int(self, var):
+        try:
+            val = var.get()
+            if isinstance(val, (float, str)):
+                var.set(int(float(val)))
+        except:
+            pass
+
+    def _sync_lr(self, source_var, target_var, *args):
+        if getattr(self, '_is_syncing_lr', False) or not self.sync_lr_var.get(): return
+        if getattr(self, '_loading_state', False): return
+        self._is_syncing_lr = True
+        try:
+            s_val = source_var.get()
+            if s_val != target_var.get():
+                target_var.set(s_val)
+        finally:
+            self._is_syncing_lr = False
