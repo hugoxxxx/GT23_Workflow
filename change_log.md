@@ -34,9 +34,12 @@
 - **[Aesthetics] 品牌勋章文字冲突剥离 / Keyword Stripping Logic**:
   - EN: Implemented strict, regex-based keyword stripping within the new `LensParser` module. Automatically cleans model strings (stripping "GM", "Art", etc.) to prevent redundant text rendering when icons are present.
   - CN: 在新模块 `LensParser` 中实现了基于正则的关键词剥离逻辑。自动清洗镜头名（如剔除 "GM"、"Art" 等），解决了图标与文字重复显示的视觉冗余问题。
-- **[Infrastructure] 主题引擎与特效组件化 / Theme & Effects Assetization**:
-  - EN: Established the infrastructure for `core/theme/` and `core/effects/`. Began migrating theme-specific canvas logic (Frosted, Slate Teal) and filter effects (Shadows, Matte Texture) to allow for easier expansion and testing.
-  - CN: 搭建了 `core/theme/` 与 `core/effects/` 的底层架构。开始将特定主题的画布逻辑（如磨砂玻璃、石板青）和滤镜特效（如阴影、哑光纹理）进行外挂式迁移，极大提升了系统的可扩展性。
+- **[Architecture] 主题渲染器与特效引擎落地 / Finalized Theme & Effects Framework**:
+  - EN: Successfully migrated all individual theme-drawing implementations (Light, Classic, Frosted, Slate Teal, Gradient, Rainbow) and pixel shaders (Gaussian diffuse shadows, floating dynamic shadows, matte paper textures) out of the monolithic renderer. Implemented the centralized `ThemeFactory` to dynamically compile theme objects.
+  - CN: 彻底完成了多主题渲染实现（白边、经典黑、磨砂玻璃、石板青、渐变虹霓等 9 个主题文件）以及物理特效滤镜（高斯多层漫反射阴影、悬浮投影、哑光纸张纹理）的外挂式搬迁与模块化落地。引入了统一调度主题的 `ThemeFactory` 设计模式。
+- **[Feature] 齿孔与边码渲染引擎模块化 / Sprocket & Perf Engine Modularization**:
+  - EN: Extracted Kodak-style film sprocket and perforation rendering logic into `core/layout/sprocket.py`. Integrated sprocket layout presets and physical-accurate Corner Radius / Pitch scale calculations.
+  - CN: 完成了胶片齿孔与边码渲染引擎向 `core/layout/sprocket.py` 的解耦。集成了柯达风格物理齿孔、边缘圆角（Corner Radius）与间距缩放（Pitch）的独立计算及覆写机制。
 - **[Fix] 环境鲁棒性与编码加固 / Environment & Encoding Stability**:
   - EN: Consolidated `main.py` and modular components to use standard ASCII markers, resolving Unicode-related crashes in Windows GBK console environments.
   - CN: 统一了 `main.py` 与各模块的日志输出规范，采用标准 ASCII 标识，彻底解决了 Windows GBK 控制台环境下的 Unicode 编码崩溃隐患。
@@ -79,6 +82,9 @@
 - **[Debug] 日志系统注入 / Debug Logging System**:
   - EN: Integrated a dedicated logging system (`GT23.BorderPanel`) recorded in `logs/border_debug.log` to track margin calculations and state transitions.
   - CN: 引入了专用日志系统 (`GT23.BorderPanel`)，记录于 `logs/border_debug.log`，用于实时追踪边距计算逻辑与状态机跳转。
+- **[Feature] 美学预设配置化与外部资产抽取 / Aesthetic Presets Externalization**:
+  - EN: Decoupled hardcoded aspect ratio presets (e.g. 1:1, 3:4, 16:9) from UI code into an external JSON asset config (`assets/config/aesthetic_presets.json`), retrieved dynamically through the new `BorderController` API.
+  - CN: 彻底移除了 UI 代码中硬编码的比例参数（如 1:1, 3:4 等美学预设），将其统一抽离并外置于 `assets/config/aesthetic_presets.json` 配置文件中。通过控制器中新增的读取接口进行动态加载，极大提升了多画幅预设的可扩展性。
 - **[Fix] 比例切换跳变修复 / Aspect Ratio Switch Reset Fix**:
   - EN: Decoupled aspect ratio switching from offset slider events. Switching ratios now correctly applies aesthetic presets without being overwritten by stale offset values.
   - CN: 实现了比例切换与偏移量滑块事件的彻底解耦。切换画幅比例时将精准应用美学预设，不再会被旧的偏移量数值错误覆盖导致边距跳变。
@@ -106,6 +112,12 @@
 - **[Interactive] UI 响应降噪 / UI Response De-noising**:
   - EN: Integrated atomic loading guards during ratio transitions to eliminate intermediate preview flicker and state race conditions.
   - CN: 在比例切换与恢复过程中引入了原子化加载保护，消除了变量批量更新时的中间态预览跳变，提升了操作流畅度。
+- **[Fix] 边距数值安全转换与参数死锁消除 / Float Parsing & Parameter Lock Fix**:
+  - EN: Fixed ValueError when parsing floats like "300.0" from presets, resolving silent fallback to 180px defaults causing asymmetric rendering. Restored directional solver logic in aspect ratio locked mode to prevent UI parameter lock-up when shrinking margins.
+  - CN: 修复了预设加载等场景下浮点字符串（如 "300.0"）在整型解析时触发 `ValueError` 导致默默退回 180px 默认值、进而导致渲染不对称的 Bug。同时在比例锁定模式下恢复了方向性联动解算逻辑，彻底消除了修改大边距回退时的参数“死锁”现象。
+- **[Feature] 左右联动控制修复 / Sync L/R Borders Restoration**:
+  - EN: Re-implemented the trace-based and event-based "Sync L/R Borders" mechanism, ensuring left and right margin adjustments are synchronized correctly across manual entries.
+  - CN: 重新补回并优化了“左右边框同步”机制，确保在手动输入数值或预设切换时左右两侧边距能够实现物理绝对同步。
 
 ### 🛠️ 稳定性与 UI 优化 (Stability & UI Refinement)
 - **[Architecture] 资源引导加固 / Asset Bootstrap Hardening**:

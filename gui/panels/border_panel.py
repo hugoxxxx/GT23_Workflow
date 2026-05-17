@@ -123,7 +123,7 @@ class BorderPanel:
             
         # EN: Initial load of preset lists / CN: 初始加载预设列表
         self.refresh_preset_lists()
-    
+
     def setup_ui(self):
         """
         EN: Setup user interface
@@ -874,18 +874,9 @@ class BorderPanel:
         self._ratio_just_changed = True
         
         ratio_str = self.target_ratio_var.get()
-        # EN: Premium margin presets (based on 4500px ref)
-        # CN: 高级美学预设值（基于 4500px 基准）
-        presets = {
-            "1:1": {"left": 500, "right": 500, "top": 500, "bottom": 1200, "font": 144, "sub": 112},
-            "3:4": {"left": 400, "right": 400, "top": 400, "bottom": 1300, "font": 144, "sub": 112},
-            "4:3": {"left": 450, "right": 450, "top": 400, "bottom": 900, "font": 144, "sub": 112},
-            "5:7": {"left": 350, "right": 350, "top": 350, "bottom": 1100, "font": 140, "sub": 108},
-            "4:5": {"left": 400, "right": 400, "top": 400, "bottom": 1200, "font": 144, "sub": 112},
-            "9:16": {"left": 300, "right": 300, "top": 600, "bottom": 2000, "font": 156, "sub": 120},
-            "3:2": {"left": 350, "right": 350, "top": 350, "bottom": 850, "font": 144, "sub": 112},
-            "16:9": {"left": 300, "right": 300, "top": 500, "bottom": 950, "font": 124, "sub": 96},
-        }
+        # EN: Premium margin presets (loaded from Controller)
+        # CN: 高级美学预设值（从控制器加载）
+        presets = self.controller.get_aesthetic_presets()
         
         # EN: Extract ratio key (e.g., "4:5 (LRB)" -> "4:5")
         import re
@@ -997,6 +988,14 @@ class BorderPanel:
                 if cur_h != 0 and self.sync_lr_var.get():
                     self.sync_lr_var.set(False)
 
+            # EN: Handle Sync L/R Borders / CN: 处理左右边框同步
+            if self.sync_lr_var.get() and not is_offset:
+                try:
+                    left_val = self.left_px_var.get()
+                    if left_val and self.right_px_var.get() != left_val:
+                        self.right_px_var.set(left_val)
+                except: pass
+
             self._handle_ratio_locked_sync(ratio_str, is_offset=is_offset)
 
         # EN: Update shadow state / CN: 更新影子状态
@@ -1032,10 +1031,10 @@ class BorderPanel:
             # CN: 基础边距（如果是平移或比例变动，使用变动前的影子值作为基准，防止边距无限增长）
             if is_offset or getattr(self, '_ratio_just_changed', False):
                 base_p = {
-                    "l": self._get_int_safe(self._param_shadow["left"], 180),
-                    "r": self._get_int_safe(self._param_shadow["right"], 180),
-                    "t": self._get_int_safe(self._param_shadow["top"], 180),
-                    "b": self._get_int_safe(self._param_shadow["bottom"], 585)
+                    "l": self._get_int_safe(self._param_shadow.get("left", "180"), 180),
+                    "r": self._get_int_safe(self._param_shadow.get("right", "180"), 180),
+                    "t": self._get_int_safe(self._param_shadow.get("top", "180"), 180),
+                    "b": self._get_int_safe(self._param_shadow.get("bottom", "585"), 585)
                 }
             else:
                 base_p = {
@@ -1044,6 +1043,47 @@ class BorderPanel:
                     "t": self._get_int_safe(self.top_px_var, 0),
                     "b": self._get_int_safe(self.bottom_px_var, 0)
                 }
+                
+                # EN: Directional solving for manual input changes to prevent lock-up
+                # CN: 手动修改数值时的方向性联动计算，防止参数死锁
+                changed = []
+                if self.left_px_var.get() != str(self._param_shadow.get("left")): changed.append("w")
+                if self.right_px_var.get() != str(self._param_shadow.get("right")): changed.append("w")
+                if self.top_px_var.get() != str(self._param_shadow.get("top")): changed.append("h")
+                if self.bottom_px_var.get() != str(self._param_shadow.get("bottom")): changed.append("h")
+                
+                is_free_mode = "Original" in ratio_str or "原图" in ratio_str
+                if not is_free_mode and changed:
+                    parts = ratio_str.split(':')
+                    target_r = 1.0
+                    if len(parts) == 2:
+                        try: target_r = float(parts[0]) / float(parts[1])
+                        except: pass
+                    
+                    l = base_p["l"]
+                    r = base_p["r"]
+                    t = base_p["t"]
+                    b = base_p["b"]
+                    
+                    if "w" in changed and "h" not in changed:
+                        # Width changed -> solve for Bottom (Height)
+                        total_w = ref_w + l + r
+                        needed_h_total = total_w / target_r
+                        needed_paddings_h = needed_h_total - ref_h
+                        new_b = max(10, int(needed_paddings_h - t))
+                        base_p["b"] = new_b
+                    elif "h" in changed and "w" not in changed:
+                        # Height changed -> solve for Width
+                        total_h = ref_h + t + b
+                        needed_w_total = total_h * target_r
+                        needed_paddings_w = needed_w_total - ref_w
+                        if self.sync_lr_var.get():
+                            new_side = max(10, int(needed_paddings_w / 2))
+                            base_p["l"] = new_side
+                            base_p["r"] = new_side
+                        else:
+                            new_r = max(10, int(needed_paddings_w - l))
+                            base_p["r"] = new_r
             
             # 4. Call Unified Engine / CN: 调用统一引擎进行预测
             prediction = LayoutCalculator.preview_ui_paddings(
@@ -1228,7 +1268,7 @@ class BorderPanel:
     def _get_int_safe(self, var, default=0):
         try:
             val = var.get()
-            return int(val) if val is not None else default
+            return int(float(val)) if val is not None and str(val).strip() != "" else default
         except:
             return default
 

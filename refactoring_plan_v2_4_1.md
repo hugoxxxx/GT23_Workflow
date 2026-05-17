@@ -29,16 +29,16 @@
 5. **排版引擎升级** (`core/typography/`) [x]
    - 迁移 CJK 降级逻辑 (`FontResolver`) 与字号自适应缩放逻辑 (`TextAdjuster`)。
 
-### 第三阶段：几何布局与齿孔模式 (Geometry)
+### 第三阶段：几何布局与齿孔模式 (Geometry) [x]
 6. **布局解算器迁移** (`core/layout/calculator.py`) [x]
    - 迁移 `target_ratio` 补边计算与 side/top/bottom 边距分配逻辑。
-7. **齿孔模式模块化** (`core/layout/sprocket.py`)
+7. **齿孔模式模块化** (`core/layout/sprocket.py`) [x]
    - 将齿孔模式下的特殊边距覆盖逻辑独立。
 
-### 第四阶段：特效引擎与主题重构 (Aesthetics)
-8. **特效剥离** (`core/effects/`)
+### 第四阶段：特效引擎与主题重构 (Aesthetics) [x]
+8. **特效剥离** (`core/effects/`) [x]
    - 迁移 `_apply_pro_shadow`（投影）与 `_apply_matte_texture`（纹理）。
-9. **主题渲染器实现** (`core/theme/`)
+9. **主题渲染器实现** (`core/theme/`) [x]
    - 按照基类接口，将 `Light`, `Dark`, `Frosted`, `SlateTeal` 及各种渐变主题的 `draw` 逻辑搬迁至对应文件。
 
 ### 第五阶段：FilmRenderer 深度瘦身 (Integration) [x]
@@ -51,8 +51,18 @@
 
 ---
 
+### 第六阶段：UI 逻辑解耦与瘦身 (v2.5.0 Target)
+11. **BorderPanel 极致瘦身与逻辑对齐** (`gui/panels/border_panel.py`)
+    - **11.1 布局计算同源化**: [x] 在 `LayoutCalculator` 中提炼 `preview_ui_paddings`，并替换掉 UI 中的数学公式，实现渲染与预览数学模型 100% 对齐。
+    - **11.2 美学预设配置化**: [x] 移除 UI 代码中硬编码的比例参数 (如 1:1, 4:5 预设)，将其抽离至 `assets/config/aesthetic_presets.json`。
+    - **11.3 状态管理收口**: [] 将零散的 `StringVar` / `IntVar` 状态管理以及 `_save_current_to_state` 的存取逻辑统一托管给 `BorderController`。
+    - **11.4 预览调度解耦**: [] 将 `BorderPanel` 中的多线程管理和 JobID 逻辑移入 Controller，UI 仅作触发与状态监听。
+
+---
+
 ## 🚦 验收标准
-- [ ] 核心渲染效果与原版 1:1 像素级一致（通过 Diff 测试）。
-- [ ] `core/renderer.py` 代码量显著下降，逻辑清晰。
-- [ ] 模块间耦合度降低，支持单模块单元测试。
-- [ ] 启动速度与渲染性能无退化。
+- [x] 核心渲染效果与原版 1:1 像素级一致（通过 Diff 测试）。
+- [x] `core/renderer.py` 代码量显著下降，逻辑清晰。
+- [ ] `gui/panels/border_panel.py` 从 1400 行瘦身至 700 行内。
+- [x] 模块间耦合度降低，支持单模块单元测试。
+- [x] 启动速度与渲染性能无退化。

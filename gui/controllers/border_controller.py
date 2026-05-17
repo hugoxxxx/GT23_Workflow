@@ -41,6 +41,9 @@ class BorderController:
         # User settings for presets (Persistence)
         self.user_settings_path = os.path.join(config_manager.config_dir, "user_presets.json")
         self.user_presets = self._load_user_presets()
+        
+        # System aesthetic presets
+        self.aesthetic_presets = self._load_aesthetic_presets()
 
     def log(self, msg):
         if self.log_callback:
@@ -426,6 +429,18 @@ class BorderController:
                 return json.load(f)
         except:
             return {}
+
+    def _load_aesthetic_presets(self):
+        """EN: Load aesthetic presets from JSON / CN: 从JSON加载美学预设"""
+        try:
+            config_path = os.path.join(os.getcwd(), 'assets', 'config', 'aesthetic_presets.json')
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+            
+    def get_aesthetic_presets(self):
+        return self.aesthetic_presets
 
     def load_film_library(self):
         """EN: Load film library from config / CN: 从配置文件加载胶片库"""

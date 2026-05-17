@@ -1,0 +1,10 @@
+{
+  "1:1": {"left": 500, "right": 500, "top": 500, "bottom": 1200, "font": 144, "sub": 112},
+  "3:4": {"left": 400, "right": 400, "top": 400, "bottom": 1300, "font": 144, "sub": 112},
+  "4:3": {"left": 450, "right": 450, "top": 400, "bottom": 900, "font": 144, "sub": 112},
+  "5:7": {"left": 350, "right": 350, "top": 350, "bottom": 1100, "font": 140, "sub": 108},
+  "4:5": {"left": 400, "right": 400, "top": 400, "bottom": 1200, "font": 144, "sub": 112},
+  "9:16": {"left": 300, "right": 300, "top": 600, "bottom": 2000, "font": 156, "sub": 120},
+  "3:2": {"left": 350, "right": 350, "top": 350, "bottom": 850, "font": 144, "sub": 112},
+  "16:9": {"left": 300, "right": 300, "top": 500, "bottom": 950, "font": 124, "sub": 96}
+}
