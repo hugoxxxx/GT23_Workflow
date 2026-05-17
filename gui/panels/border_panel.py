@@ -810,30 +810,8 @@ class BorderPanel:
         self.parent.after(0, apply)
 
     def _check_font_overflow(self, report):
-        if 'render_breakdown' in report and 'max_font_px' in report['render_breakdown']:
-            max_info = report['render_breakdown']['max_font_px']
-            main_max = max_info.get('main', 0)
-            sub_max = max_info.get('sub', 0)
-            
-            main_overflow = max_info.get('main_overflow', False)
-            sub_overflow = max_info.get('sub_overflow', False)
-            v_overflow = max_info.get('v_overflow', False)
-            
-            warnings = []
-            if main_overflow or v_overflow:
-                if v_overflow:
-                    msg = f"⚠️ 型号压图！建议 ≤{main_max}px" if self.lang == "zh" else f"⚠️ Model on photo! Max ≤{main_max}px"
-                else:
-                    msg = f"⚠️ 型号溢出，建议 ≤{main_max}px" if self.lang == "zh" else f"⚠️ Model overflow, suggest ≤{main_max}px"
-                warnings.append(msg)
-
-            if sub_overflow:
-                warnings.append(f"⚠️ 参数溢出，建议 ≤{sub_max}px" if self.lang == "zh" else f"⚠️ Param overflow, suggest ≤{sub_max}px")
-            
-            if warnings:
-                self.overflow_warning_label.config(text=" | ".join(warnings))
-            else:
-                self.overflow_warning_label.config(text="")
+        warning_text = self.controller.format_font_overflow_warnings(report, self.lang == "zh")
+        self.overflow_warning_label.config(text=warning_text)
     
     def on_mode_changed(self):
         mode = self.mode_var.get()
@@ -995,92 +973,25 @@ class BorderPanel:
         EN: Auto-calculate paddings via centralized LayoutCalculator to maintain target ratio.
         CN: 比例锁定联动逻辑：调用统一解算器自动计算并补齐其余边际。
         """
-        try:
-            # 1. Get current image aspect / CN: 获取当前图片的基础比例
-            path_norm = os.path.normcase(os.path.normpath(self.current_image_path))
-            img_ratio = self.controller.state.get_width(path_norm)
-            if not img_ratio: return
-            
-            # 2. Virtual reference dimensions / CN: 虚拟基准尺寸
-            ref_w = 4000.0
-            ref_h = ref_w / img_ratio
-            
-            # 3. Base Margins (Use shadow if it's an offset/ratio change to prevent growth)
-            # CN: 基础边距（如果是平移或比例变动，使用变动前的影子值作为基准，防止边距无限增长）
-            if is_offset or getattr(self, '_ratio_just_changed', False):
-                base_p = {
-                    "l": self._get_int_safe(self._param_shadow.get("left", "180"), 180),
-                    "r": self._get_int_safe(self._param_shadow.get("right", "180"), 180),
-                    "t": self._get_int_safe(self._param_shadow.get("top", "180"), 180),
-                    "b": self._get_int_safe(self._param_shadow.get("bottom", "585"), 585)
-                }
-            else:
-                base_p = {
-                    "l": self._get_int_safe(self.left_px_var, 0),
-                    "r": self._get_int_safe(self.right_px_var, 0),
-                    "t": self._get_int_safe(self.top_px_var, 0),
-                    "b": self._get_int_safe(self.bottom_px_var, 0)
-                }
-                
-                # EN: Directional solving for manual input changes to prevent lock-up
-                # CN: 手动修改数值时的方向性联动计算，防止参数死锁
-                changed = []
-                if self.left_px_var.get() != str(self._param_shadow.get("left")): changed.append("w")
-                if self.right_px_var.get() != str(self._param_shadow.get("right")): changed.append("w")
-                if self.top_px_var.get() != str(self._param_shadow.get("top")): changed.append("h")
-                if self.bottom_px_var.get() != str(self._param_shadow.get("bottom")): changed.append("h")
-                
-                is_free_mode = "Original" in ratio_str or "原图" in ratio_str
-                if not is_free_mode and changed:
-                    parts = ratio_str.split(':')
-                    target_r = 1.0
-                    if len(parts) == 2:
-                        try: target_r = float(parts[0]) / float(parts[1])
-                        except: pass
-                    
-                    l = base_p["l"]
-                    r = base_p["r"]
-                    t = base_p["t"]
-                    b = base_p["b"]
-                    
-                    if "w" in changed and "h" not in changed:
-                        # Width changed -> solve for Bottom (Height)
-                        total_w = ref_w + l + r
-                        needed_h_total = total_w / target_r
-                        needed_paddings_h = needed_h_total - ref_h
-                        new_b = max(10, int(needed_paddings_h - t))
-                        base_p["b"] = new_b
-                    elif "h" in changed and "w" not in changed:
-                        # Height changed -> solve for Width
-                        total_h = ref_h + t + b
-                        needed_w_total = total_h * target_r
-                        needed_paddings_w = needed_w_total - ref_w
-                        if self.sync_lr_var.get():
-                            new_side = max(10, int(needed_paddings_w / 2))
-                            base_p["l"] = new_side
-                            base_p["r"] = new_side
-                        else:
-                            new_r = max(10, int(needed_paddings_w - l))
-                            base_p["r"] = new_r
-            
-            # 4. Call Unified Engine / CN: 调用统一引擎进行预测
-            prediction = LayoutCalculator.preview_ui_paddings(
-                ref_w, ref_h, ratio_str, base_p, 
-                self.h_offset_var.get(), self.v_offset_var.get()
-            )
-            
-            # 5. Apply back to UI / CN: 写回 UI
-            self._loading_state = True # Prevent recursion
+        if not getattr(self, 'current_image_path', None): return
+        
+        cfg = self.controller.resolve_ratio_locked_sync(
+            img_path=self.current_image_path,
+            ratio_str=ratio_str,
+            current_cfg=self._get_config_from_ui(),
+            param_shadow=self._param_shadow,
+            is_offset=is_offset,
+            sync_lr=self.sync_lr_var.get()
+        )
+        if cfg:
+            self._loading_state = True
             try:
-                self.left_px_var.set(str(prediction["left"]))
-                self.right_px_var.set(str(prediction["right"]))
-                self.top_px_var.set(str(prediction["top"]))
-                self.bottom_px_var.set(str(prediction["bottom"]))
+                self.left_px_var.set(cfg["left_px"])
+                self.right_px_var.set(cfg["right_px"])
+                self.top_px_var.set(cfg["top_px"])
+                self.bottom_px_var.set(cfg["bottom_px"])
             finally:
                 self._loading_state = False
-            
-        except Exception as e:
-            print(f"DEBUG: Ratio sync failed: {e}")
 
     def _set_frame_enabled(self, frame, enabled):
         """EN: Recursively set state for all widgets in a frame / CN: 递归设置框架内所有组件的启用状态"""
@@ -1180,34 +1091,8 @@ class BorderPanel:
 
     def _update_preview_info(self, preview_w, preview_h):
         """EN: Update pixel and ratio info / CN: 更新像素与比例信息"""
-        # EN: Convert preview size (1200 edge) back to target size (4500 edge)
-        # CN: 将预览尺寸（1200 基准）换算回目标输出尺寸（4500 基准）
-        scale = 4500.0 / 1200.0
-        final_w = int(preview_w * scale)
-        final_h = int(preview_h * scale)
-        
-        # EN: Calculate aspect ratio / CN: 计算宽高比
-        actual_ratio = final_w / final_h
-        ratio_str = None
-        
-        # EN: Check for common photography ratios first for cleaner display
-        # CN: 优先检查常见的摄影比例以获得更整洁的显示
-        for r_name, r_val in [("3:2", 3/2), ("2:3", 2/3), ("4:3", 4/3), ("3:4", 3/4), 
-                             ("16:9", 16/9), ("9:16", 9/16), ("1:1", 1.0), ("4:5", 4/5), ("5:4", 5/4)]:
-            if abs(actual_ratio - r_val) < 0.02:
-                ratio_str = r_name
-                break
-        
-        # EN: Fallback to decimal format for non-standard ratios (e.g. 1.22:1)
-        # CN: 非标准画幅降级为十进制展示，更直观
-        if not ratio_str:
-            if actual_ratio >= 1:
-                ratio_str = f"{actual_ratio:.2f}:1"
-            else:
-                ratio_str = f"1:{1/actual_ratio:.2f}"
-        
-        prefix = "规格: " if self.lang == "zh" else "Specs: "
-        self.preview_info_label.config(text=f"{prefix}{final_w} x {final_h} px ({ratio_str})")
+        specs_text = self.controller.format_preview_specs(preview_w, preview_h, self.lang == "zh")
+        self.preview_info_label.config(text=specs_text)
 
     def _get_float_safe(self, var, default=0.0):
         try:

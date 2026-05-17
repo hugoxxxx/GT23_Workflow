@@ -15,6 +15,7 @@ from core.renderer import FilmRenderer
 from core.utils.bootstrapper import bootstrap_logos
 from utils.config_manager import config_manager
 
+from core.layout.calculator import LayoutCalculator
 from gui.controllers.batch_state import BatchState
 
 class BorderController:
@@ -701,3 +702,131 @@ class BorderController:
             
         self._worker_thread = threading.Thread(target=run_work, daemon=True)
         self._worker_thread.start()
+
+    def resolve_ratio_locked_sync(self, img_path, ratio_str, current_cfg, param_shadow, is_offset, sync_lr):
+        """
+        EN: Auto-calculate paddings via centralized LayoutCalculator to maintain target ratio.
+        CN: 比例锁定联动逻辑：调用统一解算器自动计算并补齐其余边际并返回更新后的边距 DTO。
+        """
+        try:
+            path_norm = os.path.normcase(os.path.normpath(img_path))
+            img_ratio = self.state.get_width(path_norm)
+            if not img_ratio: return None
+            
+            ref_w = 4000.0
+            ref_h = ref_w / img_ratio
+            
+            def get_int_safe(val, default=180):
+                try: return int(float(val)) if val is not None and str(val).strip() != "" else default
+                except: return default
+
+            if is_offset:
+                base_p = {
+                    "l": get_int_safe(param_shadow.get("left", "180"), 180),
+                    "r": get_int_safe(param_shadow.get("right", "180"), 180),
+                    "t": get_int_safe(param_shadow.get("top", "180"), 180),
+                    "b": get_int_safe(param_shadow.get("bottom", "585"), 585)
+                }
+            else:
+                base_p = {
+                    "l": get_int_safe(current_cfg.get("left_px"), 0),
+                    "r": get_int_safe(current_cfg.get("right_px"), 0),
+                    "t": get_int_safe(current_cfg.get("top_px"), 0),
+                    "b": get_int_safe(current_cfg.get("bottom_px"), 0)
+                }
+                
+                changed = []
+                if str(current_cfg.get("left_px")) != str(param_shadow.get("left")): changed.append("w")
+                if str(current_cfg.get("right_px")) != str(param_shadow.get("right")): changed.append("w")
+                if str(current_cfg.get("top_px")) != str(param_shadow.get("top")): changed.append("h")
+                if str(current_cfg.get("bottom_px")) != str(param_shadow.get("bottom")): changed.append("h")
+                
+                is_free_mode = "Original" in ratio_str or "原图" in ratio_str
+                if not is_free_mode and changed:
+                    parts = ratio_str.split(':')
+                    target_r = 1.0
+                    if len(parts) == 2:
+                        try: target_r = float(parts[0]) / float(parts[1])
+                        except: pass
+                    
+                    l, r, t, b = base_p["l"], base_p["r"], base_p["t"], base_p["b"]
+                    
+                    if "w" in changed and "h" not in changed:
+                        total_w = ref_w + l + r
+                        needed_h_total = total_w / target_r
+                        needed_paddings_h = needed_h_total - ref_h
+                        new_b = max(10, int(needed_paddings_h - t))
+                        base_p["b"] = new_b
+                    elif "h" in changed and "w" not in changed:
+                        total_h = ref_h + t + b
+                        needed_w_total = total_h * target_r
+                        needed_paddings_w = needed_w_total - ref_w
+                        if sync_lr:
+                            new_side = max(10, int(needed_paddings_w / 2))
+                            base_p["l"] = new_side
+                            base_p["r"] = new_side
+                        else:
+                            new_r = max(10, int(needed_paddings_w - l))
+                            base_p["r"] = new_r
+            
+            prediction = LayoutCalculator.preview_ui_paddings(
+                ref_w, ref_h, ratio_str, base_p, 
+                current_cfg.get("h_offset", 0), current_cfg.get("v_offset", 0)
+            )
+            return {
+                "left_px": str(prediction["left"]),
+                "right_px": str(prediction["right"]),
+                "top_px": str(prediction["top"]),
+                "bottom_px": str(prediction["bottom"])
+            }
+        except Exception as e:
+            print(f"DEBUG: Controller Ratio sync failed: {e}")
+        return None
+
+    def format_preview_specs(self, preview_w, preview_h, is_zh=True):
+        """EN: Format specs / CN: 格式化预览参数"""
+        scale = 4500.0 / 1200.0
+        final_w = int(preview_w * scale)
+        final_h = int(preview_h * scale)
+        
+        actual_ratio = final_w / final_h
+        ratio_str = None
+        for r_name, r_val in [("3:2", 3/2), ("2:3", 2/3), ("4:3", 4/3), ("3:4", 3/4), 
+                             ("16:9", 16/9), ("9:16", 9/16), ("1:1", 1.0), ("4:5", 4/5), ("5:4", 5/4)]:
+            if abs(actual_ratio - r_val) < 0.02:
+                ratio_str = r_name
+                break
+        
+        if not ratio_str:
+            if actual_ratio >= 1:
+                ratio_str = f"{actual_ratio:.2f}:1"
+            else:
+                ratio_str = f"1:{1/actual_ratio:.2f}"
+        
+        prefix = "规格: " if is_zh else "Specs: "
+        return f"{prefix}{final_w} x {final_h} px ({ratio_str})"
+
+    def format_font_overflow_warnings(self, report, is_zh=True):
+        """EN: Format font overflow warnings / CN: 格式化字体溢出警告"""
+        if 'render_breakdown' not in report or 'max_font_px' not in report['render_breakdown']:
+            return ""
+        max_info = report['render_breakdown']['max_font_px']
+        main_max = max_info.get('main', 0)
+        sub_max = max_info.get('sub', 0)
+        
+        main_overflow = max_info.get('main_overflow', False)
+        sub_overflow = max_info.get('sub_overflow', False)
+        v_overflow = max_info.get('v_overflow', False)
+        
+        warnings = []
+        if main_overflow or v_overflow:
+            if v_overflow:
+                msg = f"⚠️ 型号压图！建议 ≤{main_max}px" if is_zh else f"⚠️ Model on photo! Max ≤{main_max}px"
+            else:
+                msg = f"⚠️ 型号溢出，建议 ≤{main_max}px" if is_zh else f"⚠️ Model overflow, suggest ≤{main_max}px"
+            warnings.append(msg)
+
+        if sub_overflow:
+            warnings.append(f"⚠️ 参数溢出，建议 ≤{sub_max}px" if is_zh else f"⚠️ Param overflow, suggest ≤{sub_max}px")
+        
+        return " | ".join(warnings) if warnings else ""
