@@ -38,6 +38,7 @@ class BorderController:
         # Load necessary singletons/handlers
         self.renderer = FilmRenderer()
         self.metadata_handler = MetadataHandler(layout_config='layouts.json', films_config='films.json')
+        self.layout_config = self.load_layout_config()
         
         # User settings for presets (Persistence)
         self.user_settings_path = os.path.join(config_manager.config_dir, "user_presets.json")
