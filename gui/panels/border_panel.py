@@ -489,7 +489,7 @@ class BorderPanel:
                 self.log(f"CN: 已自动检测到 photos_in 文件夹，共 {count} 张图片 / EN: Auto-detected photos_in folder with {count} images")
 
     def refresh_input_folder(self):
-        folder = self.controller.input_folder
+        folder = self.input_folder_var.get()
         if not folder: return
         
         # EN: Reset compositional offsets to default / CN: 重置构图平移参数为默认值
