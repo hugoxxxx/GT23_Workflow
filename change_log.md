@@ -126,7 +126,10 @@
   - CN: 重构并解耦了 `BorderPanel` 中的多线程后台渲染及异步生命周期追踪（如 `preview_job_id`），将其全权外迁并托管至 `BorderController`。通过在 UI 层引入线程安全的 Tkinter 主事件循环更新包装器，确保了非阻塞式的界面重绘以及优雅的渲染报错降级处理。
 - **[Refactor] 边框预设与布局加载解耦 / Border Preset & Layout Loading Decoupling**:
   - EN: Outsourced border preset saving/applying, EXIF metadata favorites management, dynamic layouts.json matching, auto-aspect resolution, and thread-spawned batch export tasks from `BorderPanel` directly to `BorderController`, removing over 120 lines of non-view logic from the UI panel.
-  - CN: 将边框美学预设的保存/加载/删除、EXIF 常用机型收藏夹、layouts.json 动态比例匹配、宽高比自适应以及后台多线程批量导出任务等非视图核心逻辑，完全抽离并托管至 `BorderController`。这一重构移除了面板内 120 多行重复冗余的后台代码，实现极简解耦。
+  - CN: 将边框美学预设的保存/加载/删除、EXIF 常用机型收藏夹、layouts.json 动态比例匹配、宽高比自适应以及后台多线程批量导出任务等非视图核心逻辑，完全抽离并托管至 `BorderController`。这一重构移除了面板内 120 多行重复冗余的后台代码，实现极简解耦.
+- **[Refactor] 纯 DTO 的 MVC 彻底解耦 / Pure DTO-Based MVC Decoupling**:
+  - EN: Eliminated the tight coupling of passing Tkinter UI variables directly to the Controller. Unified the View side to unpack/pack all widgets into clean, primitive Python DTOs (dictionaries/strings/integers) and pass them as data transfer objects, relieving the Controller of all UI framework dependencies. Deleted over 170 lines of variable conversion boilerplate from the Controller, greatly improving unit-testability and decoupling.
+  - CN: 彻底根治了 View 层向 Controller 层直接传递 Tkinter UI 变量对象的紧耦合行为。在 View 层统一实现了将所有控件的值打包与解包为纯原生 Python DTO 字典/基本类型，并通过数据传输对象与 Controller 通信，使 Controller 彻底解脱了对 Tkinter 框架的物理依赖。同时删除了 Controller 中 170 多行繁琐的变量取值/转换样板代码，大幅提升了系统的可测试性与解耦度。
 
 
 ### 🛠️ 稳定性与 UI 优化 (Stability & UI Refinement)

@@ -535,11 +535,9 @@ class BorderPanel:
         self.detect_layout_and_load_params(folder)
 
     def detect_layout_and_load_params(self, folder):
-        self._loading_state = True
-        try:
-            self.controller.detect_layout_and_load_params(folder, self._get_ui_vars())
-        finally:
-            self._loading_state = False
+        layout = self.controller.detect_layout_from_folder_as_dict(folder)
+        if layout:
+            self._apply_config_to_ui(layout)
     
     def select_input_folder(self):
         folder = filedialog.askdirectory(
@@ -637,50 +635,108 @@ class BorderPanel:
             "top": self.top_px_var.get(), "bottom": self.bottom_px_var.get()
         }
 
-    def _get_ui_vars(self):
+    def _get_config_from_ui(self):
+        """EN: Retrieve standard Python DTO dictionary from Tkinter widgets / CN: 从 UI 变量中提取标准的纯 Python 字典配置"""
         return {
-            'mode_var': self.mode_var,
-            'left_px_var': self.left_px_var,
-            'right_px_var': self.right_px_var,
-            'top_px_var': self.top_px_var,
-            'bottom_px_var': self.bottom_px_var,
-            'font_scale_var': self.font_scale_var,
-            'font_sub_px_var': self.font_sub_px_var,
-            'font_offset_px_var': self.font_offset_px_var,
-            'font_main_path_var': self.font_main_path_var,
-            'font_sub_path_var': self.font_sub_path_var,
-            'v_offset_var': self.v_offset_var,
-            'h_offset_var': self.h_offset_var,
-            'theme_var': self.theme_var,
-            'rotation_var': self.rotation_var,
-            'auto_detect_var': self.auto_detect_var,
-            'film_combo': self.film_combo,
-            'sync_lr_var': self.sync_lr_var,
-            'target_ratio_var': self.target_ratio_var,
-            'font_spacing_var': self.font_spacing_var,
-            'exif_global_var': self.exif_global_var,
-            'branding': self.use_lens_branding_var,
-            'exif_vars': {
-                'Make': self.exif_make_var, 'Model': self.exif_model_var,
-                'Lens': self.exif_lens_var, 'Shutter': self.exif_shutter_var,
-                'Aperture': self.exif_aperture_var, 'ISO': self.exif_iso_var,
-                'show_make': self.show_make_var, 'show_model': self.show_model_var,
-                'show_shutter': self.show_shutter_var, 'show_aperture': self.show_aperture_var,
-                'show_iso': self.show_iso_var, 'show_lens': self.show_lens_var
+            'mode': self.mode_var.get(),
+            'left_px': self._get_int_safe(self.left_px_var, 180),
+            'right_px': self._get_int_safe(self.right_px_var, 180),
+            'top_px': self._get_int_safe(self.top_px_var, 180),
+            'bottom_px': self._get_int_safe(self.bottom_px_var, 585),
+            'font_scale': self._get_int_safe(self.font_scale_var, 144),
+            'font_sub_px': self._get_int_safe(self.font_sub_px_var, 112),
+            'font_v_offset': self._get_int_safe(self.font_offset_px_var, 0),
+            'font_main_path': self.font_main_path_var.get(),
+            'font_sub_path': self.font_sub_path_var.get(),
+            'v_offset': self._get_int_safe(self.v_offset_var, 0),
+            'h_offset': self._get_int_safe(self.h_offset_var, 0),
+            'theme': self.theme_var.get(),
+            'rotation': self._get_int_safe(self.rotation_var, 0),
+            'auto_detect': bool(self.auto_detect_var.get()),
+            'film_combo': self.film_combo.get(),
+            'sync_lr': bool(self.sync_lr_var.get()),
+            'target_ratio': self.target_ratio_var.get(),
+            'font_spacing': self._get_int_safe(self.font_spacing_var, 0),
+            'exif_global': bool(self.exif_global_var.get()),
+            'branding': bool(self.use_lens_branding_var.get()),
+            'exif': {
+                'Make': self.exif_make_var.get().strip(),
+                'Model': self.exif_model_var.get().strip(),
+                'Lens': self.exif_lens_var.get().strip(),
+                'Shutter': self.exif_shutter_var.get().strip(),
+                'Aperture': self.exif_aperture_var.get().strip(),
+                'ISO': self.exif_iso_var.get().strip(),
+                'show_make': self._get_int_safe(self.show_make_var, 1),
+                'show_model': self._get_int_safe(self.show_model_var, 1),
+                'show_shutter': self._get_int_safe(self.show_shutter_var, 1),
+                'show_aperture': self._get_int_safe(self.show_aperture_var, 1),
+                'show_iso': self._get_int_safe(self.show_iso_var, 1),
+                'show_lens': self._get_int_safe(self.show_lens_var, 1)
             }
         }
 
+    def _apply_config_to_ui(self, cfg):
+        """EN: Set Tkinter variables from standard Python DTO / CN: 从标准的纯 Python 字典配置中设置 UI 变量"""
+        if not cfg: return
+        self._loading_state = True
+        try:
+            def set_val(var, val):
+                if var and hasattr(var, 'set'): var.set(val)
+                
+            if 'mode' in cfg: set_val(self.mode_var, cfg['mode'])
+            if 'left_px' in cfg: set_val(self.left_px_var, cfg['left_px'])
+            if 'right_px' in cfg: set_val(self.right_px_var, cfg['right_px'])
+            if 'top_px' in cfg: set_val(self.top_px_var, cfg['top_px'])
+            if 'bottom_px' in cfg: set_val(self.bottom_px_var, cfg['bottom_px'])
+            if 'font_scale' in cfg: set_val(self.font_scale_var, cfg['font_scale'])
+            if 'font_sub_px' in cfg: set_val(self.font_sub_px_var, cfg['font_sub_px'])
+            if 'font_v_offset' in cfg: set_val(self.font_offset_px_var, cfg['font_v_offset'])
+            if 'font_main_path' in cfg: set_val(self.font_main_path_var, cfg['font_main_path'])
+            if 'font_sub_path' in cfg: set_val(self.font_sub_path_var, cfg['font_sub_path'])
+            if 'v_offset' in cfg: set_val(self.v_offset_var, cfg['v_offset'])
+            if 'h_offset' in cfg: set_val(self.h_offset_var, cfg['h_offset'])
+            if 'theme' in cfg: set_val(self.theme_var, cfg['theme'])
+            if 'rotation' in cfg: set_val(self.rotation_var, cfg['rotation'])
+            if 'auto_detect' in cfg: set_val(self.auto_detect_var, cfg['auto_detect'])
+            if 'film_combo' in cfg: set_val(self.film_combo, cfg['film_combo'])
+            if 'sync_lr' in cfg: set_val(self.sync_lr_var, cfg['sync_lr'])
+            if 'target_ratio' in cfg: set_val(self.target_ratio_var, cfg['target_ratio'])
+            if 'font_spacing' in cfg: set_val(self.font_spacing_var, cfg['font_spacing'])
+            if 'branding' in cfg: set_val(self.use_lens_branding_var, cfg['branding'])
+            
+            exif = cfg.get('exif')
+            if exif:
+                set_val(self.show_make_var, exif.get('show_make', 1))
+                set_val(self.show_model_var, exif.get('show_model', 1))
+                set_val(self.show_shutter_var, exif.get('show_shutter', 1))
+                set_val(self.show_aperture_var, exif.get('show_aperture', 1))
+                set_val(self.show_iso_var, exif.get('show_iso', 1))
+                set_val(self.show_lens_var, exif.get('show_lens', 1))
+                
+                # Check for exif global configuration override
+                is_global = self.exif_global_var.get()
+                if not is_global:
+                    set_val(self.exif_make_var, exif.get('Make', exif.get('make', '')))
+                    set_val(self.exif_model_var, exif.get('Model', exif.get('model', '')))
+                    set_val(self.exif_lens_var, exif.get('Lens', exif.get('lens', '')))
+                    set_val(self.exif_shutter_var, exif.get('Shutter', exif.get('shutter', '')))
+                    set_val(self.exif_aperture_var, exif.get('Aperture', exif.get('aperture', '')))
+                    set_val(self.exif_iso_var, exif.get('ISO', exif.get('iso', '')))
+        finally:
+            self._loading_state = False
+
     def _save_current_to_state(self, path):
         if not path: return
-        self.controller.save_ui_state(path, self._get_ui_vars())
+        self.controller.save_ui_state(path, self._get_config_from_ui())
 
     def _load_state_to_ui(self, path):
         self._loading_state = True
         try:
-            loaded = self.controller.load_ui_state(path, self._get_ui_vars())
-            if not loaded:
+            cfg = self.controller.load_ui_state(path)
+            if not cfg:
                 self.detect_layout_and_load_params(os.path.dirname(path))
             else:
+                self._apply_config_to_ui(cfg)
                 self.on_auto_detect_changed()
         finally:
             self._loading_state = False
@@ -883,7 +939,9 @@ class BorderPanel:
             self.bottom_px_var.set(self._baseline_params.get("bottom", "585"))
             return
 
-        self.controller.reset_to_json_layout(self.current_image_path, self._get_ui_vars())
+        layout = self.controller.get_layout_from_aspect(self.current_image_path)
+        if layout:
+            self._apply_config_to_ui(layout)
 
     def on_params_changed(self, sync_all=False):
         if getattr(self, '_loading_state', False): return
@@ -1072,7 +1130,7 @@ class BorderPanel:
                 working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
                 output_folder = os.path.join(working_dir, "photos_out")
             os.makedirs(output_folder, exist_ok=True)
-            self.controller.start_batch_processing(output_folder, self._get_ui_vars(), self.film_list)
+            self.controller.start_batch_processing_from_dict(output_folder, self._get_config_from_ui(), self.film_list)
         except Exception as e:
             import traceback
             self.parent.after(0, lambda msg=traceback.format_exc(): self.on_processing_error(msg))
@@ -1180,16 +1238,14 @@ class BorderPanel:
         name = simpledialog.askstring(title, prompt, parent=self.parent)
         
         if name:
-            self.controller.save_border_preset(name, self._get_ui_vars())
+            self.controller.save_border_preset(name, self._get_config_from_ui())
             self.refresh_preset_lists()
             self.aesthetic_group.preset_combo.set(name)
 
     def on_apply_border_preset(self, name):
-        self._loading_state = True
-        try:
-            self.controller.load_border_preset(name, self._get_ui_vars())
-        finally:
-            self._loading_state = False
+        cfg = self.controller.load_border_preset(name)
+        if cfg:
+            self._apply_config_to_ui(cfg)
         self.on_params_changed(sync_all=True)
 
     def on_delete_border_preset(self, name):
@@ -1204,10 +1260,12 @@ class BorderPanel:
         name = simpledialog.askstring(title, prompt, parent=self.parent)
         
         if name:
-            self.controller.save_metadata_preset(name, self._get_ui_vars())
+            self.controller.save_metadata_preset(name, self._get_config_from_ui())
             self.refresh_preset_lists()
             self.exif_group.fav_combo.set(name)
 
     def on_apply_metadata_preset(self, name):
-        self.controller.load_metadata_preset(name, self._get_ui_vars())
+        data = self.controller.load_metadata_preset(name)
+        if data:
+            self._apply_config_to_ui({"exif": data})
         self.on_params_changed()

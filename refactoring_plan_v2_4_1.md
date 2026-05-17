@@ -58,6 +58,7 @@
     - **11.3 状态管理收口**: [x] 将零散的 `StringVar` / `IntVar` 状态管理以及 `_save_current_to_state` 的存取逻辑统一托管给 `BorderController`。
     - **11.4 预览调度解耦**: [x] 将 `BorderPanel` 中的多线程管理和 JobID 逻辑移入 Controller，UI 仅作触发与状态监听。
     - **11.5 预设、批量与布局解耦**: [x] 将边框预设、EXIF收藏夹的存储/管理、layouts.json 自适应匹配以及多线程批量导出完全托管至 `BorderController`。
+    - **11.6 纯 DTO 的 MVC 彻底解耦**: [x] 摒弃 View 向 Controller 传递 Tkinter GUI 变量引用的不佳做法。在 View 中使用统一的值 getters/setters 彻底转换为原生 Python 数据结构（DTO 字典），使 Controller 摆脱对 Tkinter UI 框架的物理依赖，极大提升系统的单元测试与移植能力。
 
 ---
 
