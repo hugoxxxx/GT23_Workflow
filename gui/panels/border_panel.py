@@ -31,7 +31,6 @@ class BorderPanel:
         self.parent = parent
         self.worker_thread = None
         self.preview_thread = None
-        self.preview_job_id = 0  # EN: Preview job marker / CN: 预览任务标记
         self.preview_after_id = None # EN: Debounce timer ID / CN: 防抖计时器 ID
         self.film_list = []
         self.lang = lang
@@ -536,20 +535,11 @@ class BorderPanel:
         self.detect_layout_and_load_params(folder)
 
     def detect_layout_and_load_params(self, folder):
-        layout_cfg = self.controller.detect_layout_from_folder(folder)
-        if layout_cfg:
-            self._loading_state = True
-            try:
-                # EN: Convert ratios to pixels for UI (ref=4500)
-                ref = 4500.0
-                side = layout_cfg.get('side_ratio', 0.04)
-                self.left_px_var.set(int(layout_cfg.get('left_ratio', side) * ref))
-                self.right_px_var.set(int(layout_cfg.get('right_ratio', side) * ref))
-                self.top_px_var.set(int(layout_cfg.get('top_ratio', 0.04) * ref))
-                self.bottom_px_var.set(int(layout_cfg.get('bottom_ratio', 0.13) * ref))
-                self.font_scale_var.set(int(layout_cfg.get('font_scale', 0.032) * ref))
-            finally:
-                self._loading_state = False
+        self._loading_state = True
+        try:
+            self.controller.detect_layout_and_load_params(folder, self._get_ui_vars())
+        finally:
+            self._loading_state = False
     
     def select_input_folder(self):
         folder = filedialog.askdirectory(
@@ -647,85 +637,50 @@ class BorderPanel:
             "top": self.top_px_var.get(), "bottom": self.bottom_px_var.get()
         }
 
-    def _save_current_to_state(self, path):
-        if not path: return
-        params = {
-            'left_px': self._get_int_safe(self.left_px_var, 180),
-            'right_px': self._get_int_safe(self.right_px_var, 180),
-            'top_px': self._get_int_safe(self.top_px_var, 180),
-            'bottom_px': self._get_int_safe(self.bottom_px_var, 585),
-            'font_scale': self._get_int_safe(self.font_scale_var, 144),
-            'font_sub_px': self._get_int_safe(self.font_sub_px_var, 112),
-            'font_v_offset': self._get_int_safe(self.font_offset_px_var, 0),
-            'font_main_path': self.font_main_path_var.get(),
-            'font_sub_path': self.font_sub_path_var.get(),
-            'v_offset': self.v_offset_var.get(),
-            'h_offset': self.h_offset_var.get(),
-            'theme': self.theme_var.get(),
-            'rotation': self.rotation_var.get(),
-            'auto_detect': self.auto_detect_var.get(),
-            'film_combo': self.film_combo.get(),
-            'sync_lr': self.sync_lr_var.get(),
-            'target_ratio': self.target_ratio_var.get(),
-            'font_spacing': self._get_int_safe(self.font_spacing_var, 0),
-            'exif': {
-                'Make': self.exif_make_var.get().strip(), 'Model': self.exif_model_var.get().strip(),
-                'Lens': self.exif_lens_var.get().strip(), 'Shutter': self.exif_shutter_var.get().strip(),
-                'Aperture': self.exif_aperture_var.get().strip(), 'ISO': self.exif_iso_var.get().strip(),
-                'show_make': self.show_make_var.get(), 'show_model': self.show_model_var.get(),
-                'show_shutter': self.show_shutter_var.get(), 'show_aperture': self.show_aperture_var.get(),
-                'show_iso': self.show_iso_var.get(), 'show_lens': self.show_lens_var.get()
+    def _get_ui_vars(self):
+        return {
+            'mode_var': self.mode_var,
+            'left_px_var': self.left_px_var,
+            'right_px_var': self.right_px_var,
+            'top_px_var': self.top_px_var,
+            'bottom_px_var': self.bottom_px_var,
+            'font_scale_var': self.font_scale_var,
+            'font_sub_px_var': self.font_sub_px_var,
+            'font_offset_px_var': self.font_offset_px_var,
+            'font_main_path_var': self.font_main_path_var,
+            'font_sub_path_var': self.font_sub_path_var,
+            'v_offset_var': self.v_offset_var,
+            'h_offset_var': self.h_offset_var,
+            'theme_var': self.theme_var,
+            'rotation_var': self.rotation_var,
+            'auto_detect_var': self.auto_detect_var,
+            'film_combo': self.film_combo,
+            'sync_lr_var': self.sync_lr_var,
+            'target_ratio_var': self.target_ratio_var,
+            'font_spacing_var': self.font_spacing_var,
+            'exif_global_var': self.exif_global_var,
+            'branding': self.use_lens_branding_var,
+            'exif_vars': {
+                'Make': self.exif_make_var, 'Model': self.exif_model_var,
+                'Lens': self.exif_lens_var, 'Shutter': self.exif_shutter_var,
+                'Aperture': self.exif_aperture_var, 'ISO': self.exif_iso_var,
+                'show_make': self.show_make_var, 'show_model': self.show_model_var,
+                'show_shutter': self.show_shutter_var, 'show_aperture': self.show_aperture_var,
+                'show_iso': self.show_iso_var, 'show_lens': self.show_lens_var
             }
         }
-        self.controller.update_image_config(path, params)
+
+    def _save_current_to_state(self, path):
+        if not path: return
+        self.controller.save_ui_state(path, self._get_ui_vars())
 
     def _load_state_to_ui(self, path):
-        cfg = self.controller.get_image_config(path)
         self._loading_state = True
         try:
-            if not cfg:
+            loaded = self.controller.load_ui_state(path, self._get_ui_vars())
+            if not loaded:
                 self.detect_layout_and_load_params(os.path.dirname(path))
             else:
-                if 'left_px' in cfg: self.left_px_var.set(cfg['left_px'])
-                if 'right_px' in cfg: self.right_px_var.set(cfg['right_px'])
-                if 'top_px' in cfg: self.top_px_var.set(cfg['top_px'])
-                if 'bottom_px' in cfg: self.bottom_px_var.set(cfg['bottom_px'])
-                if 'font_scale' in cfg:
-                    val = cfg['font_scale']
-                    if val < 1.0: val = int(val * 4500) # Migration
-                    self.font_scale_var.set(int(val))
-                if 'font_sub_px' in cfg: 
-                    self.font_sub_px_var.set(cfg['font_sub_px'])
-                elif 'font_scale' in cfg:
-                    # EN: Dynamic fallback for old configs (CN: 为旧配置提供动态回退)
-                    self.font_sub_px_var.set(int(self.font_scale_var.get() * 0.78))
-                
-                if 'theme' in cfg: self.theme_var.set(cfg['theme'])
-                if 'film_combo' in cfg: self.film_combo.set(cfg['film_combo'])
-                if 'font_v_offset' in cfg: self.font_offset_px_var.set(cfg['font_v_offset'])
-                if 'font_spacing' in cfg: self.font_spacing_var.set(cfg['font_spacing'])
-                if 'font_main_path' in cfg: self.font_main_path_var.set(cfg['font_main_path'])
-                if 'font_sub_path' in cfg: self.font_sub_path_var.set(cfg['font_sub_path'])
-                self.v_offset_var.set(cfg.get('v_offset', 0))
-                self.h_offset_var.set(cfg.get('h_offset', 0))
-                self.sync_lr_var.set(cfg.get('sync_lr', True))
-                self.target_ratio_var.set(cfg.get('target_ratio', 'Original'))
-                self.rotation_var.set(cfg.get('rotation', 0))
-                self.auto_detect_var.set(cfg.get('auto_detect', True))
-                exif = cfg.get('exif', {})
-                self.show_make_var.set(exif.get('show_make', 1))
-                self.show_model_var.set(exif.get('show_model', 1))
-                self.show_shutter_var.set(exif.get('show_shutter', 1))
-                self.show_aperture_var.set(exif.get('show_aperture', 1))
-                self.show_iso_var.set(exif.get('show_iso', 1))
-                self.show_lens_var.set(exif.get('show_lens', 1))
-                if not self.exif_global_var.get():
-                    self.exif_make_var.set(exif.get('Make', ''))
-                    self.exif_model_var.set(exif.get('Model', ''))
-                    self.exif_lens_var.set(exif.get('Lens', ''))
-                    self.exif_shutter_var.set(exif.get('Shutter', ''))
-                    self.exif_aperture_var.set(exif.get('Aperture', ''))
-                    self.exif_iso_var.set(exif.get('ISO', ''))
                 self.on_auto_detect_changed()
         finally:
             self._loading_state = False
@@ -748,52 +703,55 @@ class BorderPanel:
                 for display_name, keyword in self.film_list:
                     if manual_film == display_name: manual_film = keyword; break
             
-            self.preview_job_id += 1
-            job_id = self.preview_job_id
             self._is_loading_preview, self._current_preview_pil = True, None
             self.redraw_preview()
             
-            def worker():
-                try:
-                    final_pil, report = self.controller.get_preview_image(
-                        img_path=img_path, is_digital=(self.mode_var.get()=="digital"),
-                        is_pure=(self.mode_var.get()=="pure"), manual_film=manual_film,
-                        rotation=self.rotation_var.get(), use_branding=self.use_lens_branding_var.get(),
-                        panel_job_id=job_id # EN: Pass job_id to controller / CN: 传入 Job ID
-                    )
-                    # EN: If final_pil is None, it means the job was discarded as stale (#4). Exit silently.
-                    # CN: 如果返回 None，说明该任务已被判定为过时并丢弃。保持沉默并退出，不要触发错误降级逻辑。
-                    if final_pil is None: return
-                    
-                    img_copy = final_pil.copy()
-                    def apply():
-                        # EN: Final safety check for panel-level job ID
-                        if job_id != self.preview_job_id: return
-                        self._is_loading_preview, self._current_preview_pil = False, img_copy
-                        self._update_preview_info(img_copy.width, img_copy.height)
-                        self.redraw_preview()
-                        self.log(f"Render: {report['total']*1000:.0f}ms")
-                        self._check_font_overflow(report)
-                    self.parent.after(0, apply)
-                except Exception as e:
-                    import traceback
-                    traceback.print_exc() # EN: Print error for diagnostics / CN: 打印错误以供排查
-                    err_msg = str(e)
-                    self.parent.after(0, lambda m=err_msg, j=job_id: self._handle_preview_error(img_path, m, j))
-            threading.Thread(target=worker, daemon=True).start()
-        except: pass
+            # EN: Delegate preview thread and job scheduling to Controller
+            # CN: 将预览线程和任务调度全面委托给控制器
+            self.controller.request_preview(
+                img_path=img_path,
+                is_digital=(self.mode_var.get() == "digital"),
+                is_pure=(self.mode_var.get() == "pure"),
+                manual_film=manual_film,
+                rotation=self.rotation_var.get(),
+                use_branding=self.use_lens_branding_var.get(),
+                success_callback=self._on_preview_success,
+                error_callback=self._on_preview_error
+            )
+        except Exception as e:
+            self.log(f"CN: [!] 无法请求预览: {e}")
 
-    def _handle_preview_error(self, path, msg, job_id):
-        if job_id != self.preview_job_id: return
-        self._is_loading_preview = False
-        try:
-            with Image.open(path) as img:
-                img = img.convert("RGB")
-                img.thumbnail((2000, 2000))
-                self._current_preview_pil = img.copy()
-        except: self._current_preview_pil = None
-        self._preview_error_msg = f"Preview error: {msg}"
-        self.redraw_preview()
+    def _on_preview_success(self, final_pil, report, job_id):
+        # EN: Thread-safe UI update
+        # CN: 线程安全的 UI 更新
+        img_copy = final_pil.copy()
+        def apply():
+            # EN: Final safety check for job ID alignment
+            # CN: 最终 Job ID 校验，确保界面不闪烁
+            if not self.controller.state.is_job_current(job_id): return
+            self._is_loading_preview, self._current_preview_pil = False, img_copy
+            self._update_preview_info(img_copy.width, img_copy.height)
+            self.redraw_preview()
+            self.log(f"Render: {report['total']*1000:.0f}ms")
+            self._check_font_overflow(report)
+        self.parent.after(0, apply)
+
+    def _on_preview_error(self, err_msg, job_id):
+        # EN: Thread-safe UI fallback
+        # CN: 线程安全的 UI 错误降级处理
+        def apply():
+            if not self.controller.state.is_job_current(job_id): return
+            self._is_loading_preview = False
+            try:
+                with Image.open(self.current_image_path) as img:
+                    img = img.convert("RGB")
+                    img.thumbnail((2000, 2000))
+                    self._current_preview_pil = img.copy()
+            except: 
+                self._current_preview_pil = None
+            self._preview_error_msg = f"Preview error: {err_msg}"
+            self.redraw_preview()
+        self.parent.after(0, apply)
 
     def _check_font_overflow(self, report):
         if 'render_breakdown' in report and 'max_font_px' in report['render_breakdown']:
@@ -925,45 +883,7 @@ class BorderPanel:
             self.bottom_px_var.set(self._baseline_params.get("bottom", "585"))
             return
 
-        try:
-            # EN: Get current aspect ratio from cache or file / CN: 获取当前宽高比
-            aspect = self.controller.state.get_width(self.current_image_path)
-            if aspect is None:
-                with Image.open(self.current_image_path) as img:
-                    w, h = img.size
-                    aspect = w / h
-                    self.controller.update_aspect_ratio_cache(self.current_image_path, aspect)
-
-            is_portrait = aspect < 0.95 # EN: Simple threshold / CN: 简单判定横竖屏
-            
-            # EN: Search layouts.json for match / CN: 匹配 layouts.json
-            best_cfg = None
-            for name, entry in self.layout_config.items():
-                r_min, r_max = entry.get("aspect_range", [0, 99])
-                # EN: Handle vertical swap / CN: 处理竖屏范围翻转
-                if is_portrait:
-                    r_min, r_max = 1.0/r_max, 1.0/r_min
-                
-                if r_min <= aspect <= r_max:
-                    best_cfg = entry.get("portrait" if is_portrait else "landscape", entry.get("all"))
-                    break
-            
-            if best_cfg:
-                # EN: Convert ratios to px based on 4500px reference
-                # CN: 将比例转换为基于 4500px 基准的像素值
-                ref = 4500.0
-                self.left_px_var.set(str(int(best_cfg.get("side_ratio", 0.04) * ref)))
-                self.right_px_var.set(str(int(best_cfg.get("side_ratio", 0.04) * ref)))
-                self.top_px_var.set(str(int(best_cfg.get("top_ratio", 0.04) * ref)))
-                self.bottom_px_var.set(str(int(best_cfg.get("bottom_ratio", 0.13) * ref)))
-                if "font_scale" in best_cfg:
-                    self.font_scale_var.set(str(int(best_cfg["font_scale"] * ref)))
-            else:
-                # EN: Last resort fallback / CN: 最后的兜底
-                self.left_px_var.set("180")
-                self.right_px_var.set("585")
-        except Exception as e:
-            print(f"DEBUG: Layout reset failed: {e}")
+        self.controller.reset_to_json_layout(self.current_image_path, self._get_ui_vars())
 
     def on_params_changed(self, sync_all=False):
         if getattr(self, '_loading_state', False): return
@@ -1123,7 +1043,7 @@ class BorderPanel:
             self.update_preview_for_path(self.current_image_path)
 
     def on_process_click(self):
-        if self.worker_thread and self.worker_thread.is_alive():
+        if self.controller.is_processing():
             self.controller.request_stop()
             msg = "⚡ 正在停止..." if self.lang == "zh" else "⚡ Stopping..."
             self.process_button.config(text=msg, bootstyle="danger", state="disabled")
@@ -1136,7 +1056,6 @@ class BorderPanel:
     def start_processing(self):
         try:
             self.on_params_changed(sync_all=True)
-            input_folder = self.input_folder_var.get()
             images = self.thumb_strip.get_all_images()
             if not images:
                 msg = "请先添加图片！" if self.lang == "zh" else "Please add images first!"
@@ -1153,34 +1072,7 @@ class BorderPanel:
                 working_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
                 output_folder = os.path.join(working_dir, "photos_out")
             os.makedirs(output_folder, exist_ok=True)
-            global_cfg = {
-                'is_digital': self.mode_var.get() == "digital", 'is_pure': self.mode_var.get() == "pure",
-                'theme': self.theme_var.get(), 'rotation': self.rotation_var.get(),
-                'layout': {
-                    "left_px": self._get_int_safe(self.left_px_var, 180),
-                    "right_px": self._get_int_safe(self.right_px_var, 180),
-                    "top_px": self._get_int_safe(self.top_px_var, 180),
-                    "bottom_px": self._get_int_safe(self.bottom_px_var, 585),
-                    "font_sub_px": self._get_int_safe(self.font_sub_px_var, 112),
-                    "font_v_offset": self._get_int_safe(self.font_offset_px_var, 0)
-                },
-                'exif': {
-                    'Make': self.exif_make_var.get().strip(), 'Model': self.exif_model_var.get().strip(),
-                    'LensModel': self.exif_lens_var.get().strip(), 'ExposureTimeStr': self.exif_shutter_var.get().strip(),
-                    'FNumber': self.exif_aperture_var.get().strip(), 'ISO': self.exif_iso_var.get().strip(),
-                    'show_make': self.show_make_var.get(), 'show_model': self.show_model_var.get(),
-                    'show_shutter': self.show_shutter_var.get(), 'show_aperture': self.show_aperture_var.get(),
-                    'show_iso': self.show_iso_var.get(), 'show_lens': self.show_lens_var.get()
-                },
-                'use_branding': self.use_lens_branding_var.get()
-            }
-            manual_film = None
-            if not global_cfg['is_digital'] and not self.auto_detect_var.get(): manual_film = self.film_combo.get()
-            global_cfg['manual_film'] = manual_film
-            def run_work():
-                self.controller.run_batch(output_dir=output_folder, global_cfg=global_cfg, film_list=self.film_list)
-            self.worker_thread = threading.Thread(target=run_work, daemon=True)
-            self.worker_thread.start()
+            self.controller.start_batch_processing(output_folder, self._get_ui_vars(), self.film_list)
         except Exception as e:
             import traceback
             self.parent.after(0, lambda msg=traceback.format_exc(): self.on_processing_error(msg))
@@ -1288,59 +1180,17 @@ class BorderPanel:
         name = simpledialog.askstring(title, prompt, parent=self.parent)
         
         if name:
-            params = {
-                "theme": self.theme_var.get(),
-                "target_ratio": self.target_ratio_var.get(),
-                "left_px": self.left_px_var.get(),
-                "right_px": self.right_px_var.get(),
-                "top_px": self.top_px_var.get(),
-                "bottom_px": self.bottom_px_var.get(),
-                "font_scale": self.font_scale_var.get(),
-                "font_sub_px": self.font_sub_px_var.get(),
-                "font_v_offset": self.font_offset_px_var.get(),
-                "font_spacing": self.font_spacing_var.get(),
-                "font_main_path": self.font_main_path_var.get(),
-                "font_sub_path": self.font_sub_path_var.get(),
-                "v_offset": self.v_offset_var.get(),
-                "h_offset": self.h_offset_var.get(),
-                "rotation": self.rotation_var.get(),
-                "auto_detect": self.auto_detect_var.get(),
-                "film_combo": self.film_combo.get(),
-                "branding": self.use_lens_branding_var.get(),
-                "sync_lr": self.sync_lr_var.get()
-            }
-            self.controller.add_border_preset(name, params)
+            self.controller.save_border_preset(name, self._get_ui_vars())
             self.refresh_preset_lists()
             self.aesthetic_group.preset_combo.set(name)
 
     def on_apply_border_preset(self, name):
-        presets = self.controller.get_border_presets()
-        if name in presets:
-            p = presets[name]
-            self._loading_state = True # Prevent traces
-            try:
-                if "theme" in p: self.theme_var.set(p["theme"])
-                if "target_ratio" in p: self.target_ratio_var.set(p["target_ratio"])
-                if "left_px" in p: self.left_px_var.set(p["left_px"])
-                if "right_px" in p: self.right_px_var.set(p["right_px"])
-                if "top_px" in p: self.top_px_var.set(p["top_px"])
-                if "bottom_px" in p: self.bottom_px_var.set(p["bottom_px"])
-                if "font_scale" in p: self.font_scale_var.set(p["font_scale"])
-                if "font_sub_px" in p: self.font_sub_px_var.set(p["font_sub_px"])
-                if "font_v_offset" in p: self.font_offset_px_var.set(p["font_v_offset"])
-                if "branding" in p: self.use_lens_branding_var.set(p["branding"])
-                if "sync_lr" in p: self.sync_lr_var.set(p["sync_lr"])
-                if "v_offset" in p: self.v_offset_var.set(p["v_offset"])
-                if "h_offset" in p: self.h_offset_var.set(p["h_offset"])
-                if "font_spacing" in p: self.font_spacing_var.set(p["font_spacing"])
-                if "font_main_path" in p: self.font_main_path_var.set(p["font_main_path"])
-                if "font_sub_path" in p: self.font_sub_path_var.set(p["font_sub_path"])
-                if "rotation" in p: self.rotation_var.set(p["rotation"])
-                if "auto_detect" in p: self.auto_detect_var.set(p["auto_detect"])
-                if "film_combo" in p: self.film_combo.set(p["film_combo"])
-            finally:
-                self._loading_state = False
-            self.on_params_changed(sync_all=True)
+        self._loading_state = True
+        try:
+            self.controller.load_border_preset(name, self._get_ui_vars())
+        finally:
+            self._loading_state = False
+        self.on_params_changed(sync_all=True)
 
     def on_delete_border_preset(self, name):
         confirm = messagebox.askyesno("Confirm", f"Delete preset '{name}'?" if self.lang == "en" else f"确定删除预设 '{name}'?")
@@ -1354,20 +1204,10 @@ class BorderPanel:
         name = simpledialog.askstring(title, prompt, parent=self.parent)
         
         if name:
-            data = {
-                "make": self.exif_make_var.get(),
-                "model": self.exif_model_var.get(),
-                "lens": self.exif_lens_var.get()
-            }
-            self.controller.add_metadata_preset(name, data)
+            self.controller.save_metadata_preset(name, self._get_ui_vars())
             self.refresh_preset_lists()
             self.exif_group.fav_combo.set(name)
 
     def on_apply_metadata_preset(self, name):
-        presets = self.controller.get_metadata_presets()
-        if name in presets:
-            p = presets[name]
-            self.exif_make_var.set(p.get("make", ""))
-            self.exif_model_var.set(p.get("model", ""))
-            self.exif_lens_var.set(p.get("lens", ""))
-            self.on_params_changed()
+        self.controller.load_metadata_preset(name, self._get_ui_vars())
+        self.on_params_changed()

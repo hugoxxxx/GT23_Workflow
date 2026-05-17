@@ -118,6 +118,16 @@
 - **[Feature] 左右联动控制修复 / Sync L/R Borders Restoration**:
   - EN: Re-implemented the trace-based and event-based "Sync L/R Borders" mechanism, ensuring left and right margin adjustments are synchronized correctly across manual entries.
   - CN: 重新补回并优化了“左右边框同步”机制，确保在手动输入数值或预设切换时左右两侧边距能够实现物理绝对同步。
+- **[Refactor] UI 状态管理收口与逻辑托管 / UI State Management Consolidation**:
+  - EN: Consolidated and outsourced the fragmented state parsing, type checking, and loading logic (`_save_current_to_state` and `_load_state_to_ui`) from `BorderPanel` to `BorderController`. Implemented a modular UI variable dictionary mapper for complete decoupling of state and view.
+  - CN: 彻底收口了 `BorderPanel` 中零散的界面变量状态管理（如 `_save_current_to_state` 与 `_load_state_to_ui`），将其序列化、反序列化、类型转换及动态回退逻辑统一委托给 `BorderController`。通过在 UI 层引入原子化字典映射器，实现了数据模型与视图的完全解耦，大幅降低了面板的复杂度。
+- **[Refactor] 异步预览调度解耦与逻辑托管 / Async Preview Dispatch Decoupling**:
+  - EN: Refactored and decoupled background worker threading and asynchronous lifecycle tracking (`preview_job_id`) from `BorderPanel` to `BorderController`. Implemented thread-safe Tkinter mainloop update wrappers in the UI layer for non-blocking UI redraws and seamless error fallback.
+  - CN: 重构并解耦了 `BorderPanel` 中的多线程后台渲染及异步生命周期追踪（如 `preview_job_id`），将其全权外迁并托管至 `BorderController`。通过在 UI 层引入线程安全的 Tkinter 主事件循环更新包装器，确保了非阻塞式的界面重绘以及优雅的渲染报错降级处理。
+- **[Refactor] 边框预设与布局加载解耦 / Border Preset & Layout Loading Decoupling**:
+  - EN: Outsourced border preset saving/applying, EXIF metadata favorites management, dynamic layouts.json matching, auto-aspect resolution, and thread-spawned batch export tasks from `BorderPanel` directly to `BorderController`, removing over 120 lines of non-view logic from the UI panel.
+  - CN: 将边框美学预设的保存/加载/删除、EXIF 常用机型收藏夹、layouts.json 动态比例匹配、宽高比自适应以及后台多线程批量导出任务等非视图核心逻辑，完全抽离并托管至 `BorderController`。这一重构移除了面板内 120 多行重复冗余的后台代码，实现极简解耦。
+
 
 ### 🛠️ 稳定性与 UI 优化 (Stability & UI Refinement)
 - **[Architecture] 资源引导加固 / Asset Bootstrap Hardening**:

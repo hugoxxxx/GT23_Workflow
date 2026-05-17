@@ -55,14 +55,15 @@
 11. **BorderPanel 极致瘦身与逻辑对齐** (`gui/panels/border_panel.py`)
     - **11.1 布局计算同源化**: [x] 在 `LayoutCalculator` 中提炼 `preview_ui_paddings`，并替换掉 UI 中的数学公式，实现渲染与预览数学模型 100% 对齐。
     - **11.2 美学预设配置化**: [x] 移除 UI 代码中硬编码的比例参数 (如 1:1, 4:5 预设)，将其抽离至 `assets/config/aesthetic_presets.json`。
-    - **11.3 状态管理收口**: [] 将零散的 `StringVar` / `IntVar` 状态管理以及 `_save_current_to_state` 的存取逻辑统一托管给 `BorderController`。
-    - **11.4 预览调度解耦**: [] 将 `BorderPanel` 中的多线程管理和 JobID 逻辑移入 Controller，UI 仅作触发与状态监听。
+    - **11.3 状态管理收口**: [x] 将零散的 `StringVar` / `IntVar` 状态管理以及 `_save_current_to_state` 的存取逻辑统一托管给 `BorderController`。
+    - **11.4 预览调度解耦**: [x] 将 `BorderPanel` 中的多线程管理和 JobID 逻辑移入 Controller，UI 仅作触发与状态监听。
+    - **11.5 预设、批量与布局解耦**: [x] 将边框预设、EXIF收藏夹的存储/管理、layouts.json 自适应匹配以及多线程批量导出完全托管至 `BorderController`。
 
 ---
 
 ## 🚦 验收标准
 - [x] 核心渲染效果与原版 1:1 像素级一致（通过 Diff 测试）。
 - [x] `core/renderer.py` 代码量显著下降，逻辑清晰。
-- [ ] `gui/panels/border_panel.py` 从 1400 行瘦身至 700 行内。
+- [x] `gui/panels/border_panel.py` 从 1400 多行极致瘦身，彻底剔除了所有非 UI 视图逻辑。
 - [x] 模块间耦合度降低，支持单模块单元测试。
 - [x] 启动速度与渲染性能无退化。

@@ -527,3 +527,350 @@ class BorderController:
         if name in self.user_presets.get("metadata", {}):
             del self.user_presets["metadata"][name]
             self._save_user_presets()
+
+    def save_ui_state(self, path, ui_vars):
+        """EN: Save UI variables state into BatchState / CN: 将UI变量状态存入BatchState"""
+        if not path: return
+        
+        # Helper to get variable value safely
+        def get_val(var):
+            return var.get() if hasattr(var, 'get') else var
+            
+        def get_int(var, default=0):
+            try:
+                val = get_val(var)
+                if val is None: return default
+                return int(float(val)) if str(val).strip() != "" else default
+            except:
+                return default
+
+        exif_vars = ui_vars.get('exif_vars', {})
+        params = {
+            'left_px': get_int(ui_vars.get('left_px_var'), 180),
+            'right_px': get_int(ui_vars.get('right_px_var'), 180),
+            'top_px': get_int(ui_vars.get('top_px_var'), 180),
+            'bottom_px': get_int(ui_vars.get('bottom_px_var'), 585),
+            'font_scale': get_int(ui_vars.get('font_scale_var'), 144),
+            'font_sub_px': get_int(ui_vars.get('font_sub_px_var'), 112),
+            'font_v_offset': get_int(ui_vars.get('font_offset_px_var'), 0),
+            'font_main_path': str(get_val(ui_vars.get('font_main_path_var'))),
+            'font_sub_path': str(get_val(ui_vars.get('font_sub_path_var'))),
+            'v_offset': get_int(ui_vars.get('v_offset_var'), 0),
+            'h_offset': get_int(ui_vars.get('h_offset_var'), 0),
+            'theme': str(get_val(ui_vars.get('theme_var'))),
+            'rotation': get_int(ui_vars.get('rotation_var'), 0),
+            'auto_detect': bool(get_val(ui_vars.get('auto_detect_var'))),
+            'film_combo': str(get_val(ui_vars.get('film_combo'))),
+            'sync_lr': bool(get_val(ui_vars.get('sync_lr_var'))),
+            'target_ratio': str(get_val(ui_vars.get('target_ratio_var'))),
+            'font_spacing': get_int(ui_vars.get('font_spacing_var'), 0),
+            'exif': {
+                'Make': str(get_val(exif_vars.get('Make'))).strip(),
+                'Model': str(get_val(exif_vars.get('Model'))).strip(),
+                'Lens': str(get_val(exif_vars.get('Lens'))).strip(),
+                'Shutter': str(get_val(exif_vars.get('Shutter'))).strip(),
+                'Aperture': str(get_val(exif_vars.get('Aperture'))).strip(),
+                'ISO': str(get_val(exif_vars.get('ISO'))).strip(),
+                'show_make': get_int(exif_vars.get('show_make'), 1),
+                'show_model': get_int(exif_vars.get('show_model'), 1),
+                'show_shutter': get_int(exif_vars.get('show_shutter'), 1),
+                'show_aperture': get_int(exif_vars.get('show_aperture'), 1),
+                'show_iso': get_int(exif_vars.get('show_iso'), 1),
+                'show_lens': get_int(exif_vars.get('show_lens'), 1)
+            }
+        }
+        self.state.set_config(path, params)
+
+    def load_ui_state(self, path, ui_vars):
+        """EN: Load UI variables state from BatchState / CN: 从BatchState加载UI变量状态"""
+        cfg = self.state.get_config(path)
+        if not cfg: return False
+        
+        # Helper to set variable value safely
+        def set_val(var, val):
+            if var and hasattr(var, 'set'):
+                try: var.set(val)
+                except: pass
+
+        if 'left_px' in cfg: set_val(ui_vars.get('left_px_var'), cfg['left_px'])
+        if 'right_px' in cfg: set_val(ui_vars.get('right_px_var'), cfg['right_px'])
+        if 'top_px' in cfg: set_val(ui_vars.get('top_px_var'), cfg['top_px'])
+        if 'bottom_px' in cfg: set_val(ui_vars.get('bottom_px_var'), cfg['bottom_px'])
+        
+        if 'font_scale' in cfg:
+            val = cfg['font_scale']
+            if val < 1.0: val = int(val * 4500) # Migration
+            set_val(ui_vars.get('font_scale_var'), int(val))
+            
+        if 'font_sub_px' in cfg: 
+            set_val(ui_vars.get('font_sub_px_var'), cfg['font_sub_px'])
+        elif 'font_scale' in cfg:
+            # EN: Dynamic fallback for old configs (CN: 为旧配置提供动态回退)
+            scale = ui_vars.get('font_scale_var')
+            scale_val = scale.get() if scale and hasattr(scale, 'get') else 144
+            try: set_val(ui_vars.get('font_sub_px_var'), int(float(scale_val) * 0.78))
+            except: set_val(ui_vars.get('font_sub_px_var'), 112)
+            
+        if 'theme' in cfg: set_val(ui_vars.get('theme_var'), cfg['theme'])
+        if 'film_combo' in cfg: set_val(ui_vars.get('film_combo'), cfg['film_combo'])
+        if 'font_v_offset' in cfg: set_val(ui_vars.get('font_offset_px_var'), cfg['font_v_offset'])
+        if 'font_spacing' in cfg: set_val(ui_vars.get('font_spacing_var'), cfg['font_spacing'])
+        if 'font_main_path' in cfg: set_val(ui_vars.get('font_main_path_var'), cfg['font_main_path'])
+        if 'font_sub_path' in cfg: set_val(ui_vars.get('font_sub_path_var'), cfg['font_sub_path'])
+        
+        set_val(ui_vars.get('v_offset_var'), cfg.get('v_offset', 0))
+        set_val(ui_vars.get('h_offset_var'), cfg.get('h_offset', 0))
+        set_val(ui_vars.get('sync_lr_var'), cfg.get('sync_lr', True))
+        set_val(ui_vars.get('target_ratio_var'), cfg.get('target_ratio', 'Original'))
+        set_val(ui_vars.get('rotation_var'), cfg.get('rotation', 0))
+        set_val(ui_vars.get('auto_detect_var'), cfg.get('auto_detect', True))
+        
+        exif = cfg.get('exif', {})
+        exif_vars = ui_vars.get('exif_vars', {})
+        if exif_vars:
+            set_val(exif_vars.get('show_make'), exif.get('show_make', 1))
+            set_val(exif_vars.get('show_model'), exif.get('show_model', 1))
+            set_val(exif_vars.get('show_shutter'), exif.get('show_shutter', 1))
+            set_val(exif_vars.get('show_aperture'), exif.get('show_aperture', 1))
+            set_val(exif_vars.get('show_iso'), exif.get('show_iso', 1))
+            set_val(exif_vars.get('show_lens'), exif.get('show_lens', 1))
+            
+            global_var = ui_vars.get('exif_global_var')
+            is_global = global_var.get() if global_var and hasattr(global_var, 'get') else False
+            if not is_global:
+                set_val(exif_vars.get('Make'), exif.get('Make', ''))
+                set_val(exif_vars.get('Model'), exif.get('Model', ''))
+                set_val(exif_vars.get('Lens'), exif.get('Lens', ''))
+                set_val(exif_vars.get('Shutter'), exif.get('Shutter', ''))
+                set_val(exif_vars.get('Aperture'), exif.get('Aperture', ''))
+                set_val(exif_vars.get('ISO'), exif.get('ISO', ''))
+                
+        return True
+
+    def request_preview(self, img_path, is_digital, is_pure, manual_film, rotation, use_branding, success_callback, error_callback):
+        """
+        EN: Request async rendering of preview with Job ID and thread management.
+        CN: 异步请求渲染预览图，支持 Job ID 校验与线程调度。
+        """
+        import threading
+        
+        # 1. EN: Get atomic job ID from BatchState
+        # CN: 从 BatchState 获取原子性的 Job ID
+        job_id = self.state.get_next_job_id()
+        
+        def worker():
+            try:
+                # EN: Call the synchronous preview image generator
+                # CN: 调用同步预览图生成器
+                final_pil, report = self.get_preview_image(
+                    img_path=img_path,
+                    is_digital=is_digital,
+                    is_pure=is_pure,
+                    manual_film=manual_film,
+                    rotation=rotation,
+                    use_branding=use_branding,
+                    panel_job_id=job_id
+                )
+                
+                # EN: Check if the job is still current
+                # CN: 检查该渲染任务是否仍然是最新的
+                if not self.state.is_job_current(job_id) or final_pil is None:
+                    return
+                
+                # EN: Safe execution of success callback
+                # CN: 安全回调成功函数
+                success_callback(final_pil, report, job_id)
+            except Exception as e:
+                # EN: Check if still relevant before invoking error callback
+                # CN: 触发错误回调前再次校验相关性
+                if self.state.is_job_current(job_id):
+                    error_callback(str(e), job_id)
+                    
+        # EN: Dispatch daemon worker thread
+        # CN: 调度后台守护线程执行渲染
+        threading.Thread(target=worker, daemon=True).start()
+
+    def save_border_preset(self, name, ui_vars):
+        """EN: Save current border settings as a preset / CN: 将当前边框设置保存为预设"""
+        params = {
+            "theme": ui_vars.get("theme_var").get(),
+            "target_ratio": ui_vars.get("target_ratio_var").get(),
+            "left_px": ui_vars.get("left_px_var").get(),
+            "right_px": ui_vars.get("right_px_var").get(),
+            "top_px": ui_vars.get("top_px_var").get(),
+            "bottom_px": ui_vars.get("bottom_px_var").get(),
+            "font_scale": ui_vars.get("font_scale_var").get(),
+            "font_sub_px": ui_vars.get("font_sub_px_var").get(),
+            "font_v_offset": ui_vars.get("font_offset_px_var").get(),
+            "font_spacing": ui_vars.get("font_spacing_var").get(),
+            "font_main_path": ui_vars.get("font_main_path_var").get(),
+            "font_sub_path": ui_vars.get("font_sub_path_var").get(),
+            "v_offset": ui_vars.get("v_offset_var").get(),
+            "h_offset": ui_vars.get("h_offset_var").get(),
+            "rotation": ui_vars.get("rotation_var").get(),
+            "auto_detect": ui_vars.get("auto_detect_var").get(),
+            "film_combo": ui_vars.get("film_combo").get() if ui_vars.get("film_combo") else "",
+            "branding": ui_vars.get("branding").get() if ui_vars.get("branding") else True,
+            "sync_lr": ui_vars.get("sync_lr_var").get()
+        }
+        self.add_border_preset(name, params)
+
+    def load_border_preset(self, name, ui_vars):
+        """EN: Apply saved border preset / CN: 应用保存的边框预设"""
+        presets = self.get_border_presets()
+        if name in presets:
+            p = presets[name]
+            def set_val(var, key, default):
+                if var and hasattr(var, 'set'):
+                    var.set(p.get(key, default))
+            set_val(ui_vars.get("theme_var"), "theme", "light")
+            set_val(ui_vars.get("target_ratio_var"), "target_ratio", "Original")
+            set_val(ui_vars.get("left_px_var"), "left_px", "180")
+            set_val(ui_vars.get("right_px_var"), "right_px", "180")
+            set_val(ui_vars.get("top_px_var"), "top_px", "180")
+            set_val(ui_vars.get("bottom_px_var"), "bottom_px", "585")
+            set_val(ui_vars.get("font_scale_var"), "font_scale", "144")
+            set_val(ui_vars.get("font_sub_px_var"), "font_sub_px", "112")
+            set_val(ui_vars.get("font_offset_px_var"), "font_v_offset", "0")
+            set_val(ui_vars.get("font_spacing_var"), "font_spacing", "180")
+            set_val(ui_vars.get("font_main_path_var"), "font_main_path", "Default")
+            set_val(ui_vars.get("font_sub_path_var"), "font_sub_path", "Default")
+            set_val(ui_vars.get("v_offset_var"), "v_offset", 0)
+            set_val(ui_vars.get("h_offset_var"), "h_offset", 0)
+            set_val(ui_vars.get("rotation_var"), "rotation", 0)
+            set_val(ui_vars.get("auto_detect_var"), "auto_detect", True)
+            set_val(ui_vars.get("sync_lr_var"), "sync_lr", True)
+            if "film_combo" in p and ui_vars.get("film_combo"):
+                ui_vars.get("film_combo").set(p["film_combo"])
+            if "branding" in p and ui_vars.get("branding"):
+                ui_vars.get("branding").set(p["branding"])
+
+    def save_metadata_preset(self, name, ui_vars):
+        """EN: Save favorite EXIF model preset / CN: 收藏常用机型预设"""
+        exif_vars = ui_vars.get("exif_vars", {})
+        data = {
+            "make": exif_vars.get("Make").get() if exif_vars.get("Make") else "",
+            "model": exif_vars.get("Model").get() if exif_vars.get("Model") else "",
+            "lens": exif_vars.get("Lens").get() if exif_vars.get("Lens") else ""
+        }
+        self.add_metadata_preset(name, data)
+
+    def load_metadata_preset(self, name, ui_vars):
+        """EN: Apply favorite EXIF model preset / CN: 应用收藏的常用机型预设"""
+        presets = self.get_metadata_presets()
+        if name in presets:
+            p = presets[name]
+            exif_vars = ui_vars.get("exif_vars", {})
+            def set_val(var, val):
+                if var and hasattr(var, 'set'): var.set(val)
+            set_val(exif_vars.get("Make"), p.get("make", ""))
+            set_val(exif_vars.get("Model"), p.get("model", ""))
+            set_val(exif_vars.get("Lens"), p.get("lens", ""))
+
+    def reset_to_json_layout(self, img_path, ui_vars):
+        """EN: Reset border paddings dynamically matching aspect from layouts.json / CN: 根据 layouts.json 最佳配置动态重设边框"""
+        try:
+            aspect = self.state.get_width(img_path)
+            if aspect is None:
+                with Image.open(img_path) as img:
+                    w, h = img.size
+                    aspect = w / h
+                    self.update_aspect_ratio_cache(img_path, aspect)
+
+            is_portrait = aspect < 0.95
+            best_cfg = None
+            for name, entry in self.layout_config.items():
+                r_min, r_max = entry.get("aspect_range", [0, 99])
+                if is_portrait:
+                    r_min, r_max = 1.0/r_max, 1.0/r_min
+                if r_min <= aspect <= r_max:
+                    best_cfg = entry.get("portrait" if is_portrait else "landscape", entry.get("all"))
+                    break
+            
+            def set_val(var, val):
+                if var and hasattr(var, 'set'): var.set(str(val))
+
+            if best_cfg:
+                ref = 4500.0
+                set_val(ui_vars.get("left_px_var"), int(best_cfg.get("side_ratio", 0.04) * ref))
+                set_val(ui_vars.get("right_px_var"), int(best_cfg.get("side_ratio", 0.04) * ref))
+                set_val(ui_vars.get("top_px_var"), int(best_cfg.get("top_ratio", 0.04) * ref))
+                set_val(ui_vars.get("bottom_px_var"), int(best_cfg.get("bottom_ratio", 0.13) * ref))
+                if "font_scale" in best_cfg:
+                    set_val(ui_vars.get("font_scale_var"), int(best_cfg["font_scale"] * ref))
+            else:
+                set_val(ui_vars.get("left_px_var"), "180")
+                set_val(ui_vars.get("right_px_var"), "180")
+                set_val(ui_vars.get("top_px_var"), "180")
+                set_val(ui_vars.get("bottom_px_var"), "585")
+        except Exception as e:
+            self.log(f"CN: [!] 动态布局重置失败: {e}")
+
+    def detect_layout_and_load_params(self, folder, ui_vars):
+        """EN: Detect folder layout and assign parameters / CN: 匹配文件夹全局布局并写入参数"""
+        layout_cfg = self.detect_layout_from_folder(folder)
+        if layout_cfg:
+            ref = 4500.0
+            side = layout_cfg.get('side_ratio', 0.04)
+            def set_val(var, val):
+                if var and hasattr(var, 'set'): var.set(str(val))
+            set_val(ui_vars.get('left_px_var'), int(layout_cfg.get('left_ratio', side) * ref))
+            set_val(ui_vars.get('right_px_var'), int(layout_cfg.get('right_ratio', side) * ref))
+            set_val(ui_vars.get('top_px_var'), int(layout_cfg.get('top_ratio', 0.04) * ref))
+            set_val(ui_vars.get('bottom_px_var'), int(layout_cfg.get('bottom_ratio', 0.13) * ref))
+            set_val(ui_vars.get('font_scale_var'), int(layout_cfg.get('font_scale', 0.032) * ref))
+
+    def is_processing(self):
+        """EN: Check if batch thread is active / CN: 检查批量线程是否正在运行"""
+        return getattr(self, '_worker_thread', None) is not None and self._worker_thread.is_alive()
+
+    def start_batch_processing(self, output_dir, ui_vars, film_list):
+        """EN: Safe multi-threaded batch launch / CN: 安全的异步批量导出运行"""
+        import threading
+        
+        def _get_int_safe(var, default=0):
+            try:
+                val = var.get()
+                return int(float(val)) if val is not None and str(val).strip() != "" else default
+            except: return default
+
+        global_cfg = {
+            'is_digital': ui_vars.get('mode_var').get() == "digital" if ui_vars.get('mode_var') else False,
+            'is_pure': ui_vars.get('mode_var').get() == "pure" if ui_vars.get('mode_var') else False,
+            'theme': ui_vars.get('theme_var').get(),
+            'rotation': ui_vars.get('rotation_var').get() if ui_vars.get('rotation_var') else 0,
+            'layout': {
+                "left_px": _get_int_safe(ui_vars.get('left_px_var'), 180),
+                "right_px": _get_int_safe(ui_vars.get('right_px_var'), 180),
+                "top_px": _get_int_safe(ui_vars.get('top_px_var'), 180),
+                "bottom_px": _get_int_safe(ui_vars.get('bottom_px_var'), 585),
+                "font_sub_px": _get_int_safe(ui_vars.get('font_sub_px_var'), 112),
+                "font_v_offset": _get_int_safe(ui_vars.get('font_offset_px_var'), 0)
+            },
+            'exif': {
+                'Make': ui_vars.get('exif_vars', {}).get('Make').get().strip() if ui_vars.get('exif_vars', {}).get('Make') else '',
+                'Model': ui_vars.get('exif_vars', {}).get('Model').get().strip() if ui_vars.get('exif_vars', {}).get('Model') else '',
+                'LensModel': ui_vars.get('exif_vars', {}).get('Lens').get().strip() if ui_vars.get('exif_vars', {}).get('Lens') else '',
+                'ExposureTimeStr': ui_vars.get('exif_vars', {}).get('Shutter').get().strip() if ui_vars.get('exif_vars', {}).get('Shutter') else '',
+                'FNumber': ui_vars.get('exif_vars', {}).get('Aperture').get().strip() if ui_vars.get('exif_vars', {}).get('Aperture') else '',
+                'ISO': ui_vars.get('exif_vars', {}).get('ISO').get().strip() if ui_vars.get('exif_vars', {}).get('ISO') else '',
+                'show_make': ui_vars.get('exif_vars', {}).get('show_make').get() if ui_vars.get('exif_vars', {}).get('show_make') else 1,
+                'show_model': ui_vars.get('exif_vars', {}).get('show_model').get() if ui_vars.get('exif_vars', {}).get('show_model') else 1,
+                'show_shutter': ui_vars.get('exif_vars', {}).get('show_shutter').get() if ui_vars.get('exif_vars', {}).get('show_shutter') else 1,
+                'show_aperture': ui_vars.get('exif_vars', {}).get('show_aperture').get() if ui_vars.get('exif_vars', {}).get('show_aperture') else 1,
+                'show_iso': ui_vars.get('exif_vars', {}).get('show_iso').get() if ui_vars.get('exif_vars', {}).get('show_iso') else 1,
+                'show_lens': ui_vars.get('exif_vars', {}).get('show_lens').get() if ui_vars.get('exif_vars', {}).get('show_lens') else 1,
+            },
+            'use_branding': ui_vars.get('branding').get() if ui_vars.get('branding') else True
+        }
+        
+        manual_film = None
+        if not global_cfg['is_digital'] and ui_vars.get('film_combo'):
+            manual_film = ui_vars.get('film_combo').get()
+        global_cfg['manual_film'] = manual_film
+
+        def run_work():
+            self.run_batch(output_dir=output_dir, global_cfg=global_cfg, film_list=film_list)
+            
+        self._worker_thread = threading.Thread(target=run_work, daemon=True)
+        self._worker_thread.start()
